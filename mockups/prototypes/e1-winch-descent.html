@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STRATA E1 · Winch descent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@500;700&display=swap">
+<style>
+:root{color-scheme:dark;--bg:#0c0f11;--panel:#13171a;--line:#262d32;--ink:#e4ddcf;--muted:#8e958f;--rust:#c96a3b;--glow:#6fdcc0;--warn:#e3a33f;--crit:#e2553f;
+--f-title:"Big Shoulders Stencil Display",Impact,sans-serif;--f-body:"Barlow","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body)}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
+h1{font:800 34px/1 var(--f-title);letter-spacing:.04em;margin:0;text-transform:uppercase}
+h1 small{color:var(--rust);font-size:.55em;letter-spacing:.12em;margin-right:.6em}
+.q{color:var(--muted);margin:6px 0 14px;max-width:70ch}
+.play{display:grid;grid-template-columns:minmax(0,960px) 150px;gap:14px;align-items:start}
+.stage{position:relative;border:1px solid var(--line);background:#000;aspect-ratio:3/2}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;display:block}
+#fx{pointer-events:none}
+.msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:rgba(8,10,12,.72);font:800 30px/1.2 var(--f-title);letter-spacing:.06em;text-transform:uppercase;padding:20px}
+.msg small{display:block;font:400 14px var(--f-mono);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:8px}
+.msg.on{display:flex}
+.side{background:var(--panel);border:1px solid var(--line);padding:12px;text-align:center}
+.side .cap{font:400 11px var(--f-mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.side svg{width:100%;height:auto;max-width:110px}
+.p{fill:#151a1d;stroke:#4a5358;stroke-width:1.5}
+.p.hurt{stroke:var(--warn);fill:rgba(227,163,63,.3)}
+.p.down{stroke:var(--crit);fill:rgba(226,85,63,.3)}
+.strip{display:flex;flex-wrap:wrap;gap:6px 22px;background:var(--panel);border:1px solid var(--line);border-top:0;padding:10px 14px;font:400 13px var(--f-mono);max-width:960px}
+.strip div span{color:var(--muted);margin-right:6px;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+.strip b{font-weight:600}
+.strip .w{color:var(--warn)}.strip .c{color:var(--crit)}
+.led{display:inline-block;width:9px;height:9px;border-radius:50%;background:#26302c;vertical-align:middle;margin-left:4px}
+.led.on{background:var(--glow);box-shadow:0 0 6px var(--glow)}
+.bar{display:inline-block;width:54px;height:5px;background:var(--line);vertical-align:middle;margin-left:6px}
+.bar i{display:block;height:100%;background:var(--muted)}
+#log{max-width:960px;min-height:22px;font:400 13px var(--f-mono);color:var(--rust);padding:6px 2px}
+h2{font:600 18px var(--f-title);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+.tune{background:var(--panel);border:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 28px;max-width:1180px}
+.tune label{display:grid;grid-template-columns:150px 1fr 48px;gap:8px;align-items:center;font-size:13px}
+.tune output{font:400 12px var(--f-mono);color:var(--glow);text-align:right}
+input[type=range]{accent-color:var(--rust);width:100%}
+input:focus-visible,button:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+button{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:6px 14px;font:500 13px var(--f-body);cursor:pointer;margin-top:6px}
+button:hover{border-color:var(--rust)}
+.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px 24px;font-size:13px;color:var(--muted)}
+kbd{font:600 12px var(--f-mono);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:1px 6px;margin-right:6px}
+@media(max-width:900px){.play{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1><small>E1</small>Winch descent</h1>
+<p class="q">Is being lowered into the dark on a rope tense and readable, with nothing else in the game?</p>
+
+<div class="play">
+  <div class="stage">
+    <canvas id="sim" width="240" height="160"></canvas>
+    <canvas id="fx" width="960" height="640"></canvas>
+    <div class="msg" id="banner"></div>
+    <div class="msg" id="pausemsg">Paused<small>press P to resume</small></div>
+  </div>
+  <aside class="side">
+    <div class="cap">body</div>
+    <svg viewBox="0 0 110 220" role="img" aria-label="Body silhouette showing hurt parts">
+      <circle id="b-head" class="p" cx="55" cy="22" r="14"/>
+      <rect id="b-torso" class="p" x="34" y="40" width="42" height="64" rx="10"/>
+      <rect id="b-armL" class="p" x="18" y="44" width="12" height="54" rx="6"/>
+      <rect id="b-armR" class="p" x="80" y="44" width="12" height="54" rx="6"/>
+      <rect class="p b-legL" x="36" y="108" width="16" height="50" rx="7"/>
+      <rect class="p b-legL" x="36" y="160" width="16" height="50" rx="7"/>
+      <rect class="p b-legR" x="58" y="108" width="16" height="50" rx="7"/>
+      <rect class="p b-legR" x="58" y="160" width="16" height="50" rx="7"/>
+    </svg>
+  </aside>
+</div>
+<div class="strip">
+  <div><span>depth</span><b id="r-depth"></b></div>
+  <div><span>rope out</span><b id="r-rope"></b></div>
+  <div><span>air</span><b id="r-air"></b><span class="bar"><i id="a-air"></i></span></div>
+  <div><span>battery</span><b id="r-bat"></b><span class="bar"><i id="a-bat"></i></span></div>
+  <div><span>last landing</span><b id="r-land">-</b></div>
+  <div><span>sensor</span><b id="r-sens"></b><span class="led" id="led"></span></div>
+  <div><span>state</span><b id="r-state"></b></div>
+  <div><span>seed</span><b id="r-seed"></b></div>
+</div>
+<div id="log"></div>
+
+<h2>Tuning</h2>
+<div class="tune" id="tune"></div>
+<button id="reset">Reset to defaults</button>
+
+<h2>Controls</h2>
+<div class="keys">
+  <div><kbd>W</kbd><kbd>S</kbd>reel in / pay out (clipped). W also jumps on foot</div>
+  <div><kbd>A</kbd><kbd>D</kbd>swing on the line, or walk</div>
+  <div><kbd>Space</kbd>clip / unclip (touch the line)</div>
+  <div><kbd>F</kbd>helmet lamp</div>
+  <div><kbd>R</kbd>restart, same seed</div>
+  <div><kbd>N</kbd>new seed</div>
+  <div><kbd>P</kbd>pause (also when tab hidden)</div>
+  <div>Goal: reach the teal sample at the bottom, clip on, get reeled out before the air runs out.</div>
+</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const W = 240, H = 160, N = W * H, K = 4, STEP = 1 / 60;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ---------- tunables (stored in URL hash) ---------- */
+const TUNE = [
+  ['winch', 'Winch speed (cells/s)', 2, 24, .5, 7],
+  ['rope', 'Rope length (cells)', 40, 200, 5, 140],
+  ['cone', 'Lamp cone angle (deg)', 15, 160, 5, 70],
+  ['range', 'Lamp range (cells)', 10, 90, 1, 46],
+  ['battery', 'Battery life (s)', 20, 600, 10, 100],
+  ['air', 'Air supply (s)', 30, 600, 10, 120],
+  ['safe', 'Safe fall speed (c/s)', 15, 120, 1, 45],
+  ['downed', 'Downed fall speed (c/s)', 30, 200, 1, 85],
+  ['swing', 'Swing strength', 5, 120, 1, 40],
+  ['gravity', 'Gravity (c/s²)', 20, 160, 1, 70],
+  ['seed', 'Seed', 1, 9999, 1, 7]
+];
+const V = {};
+TUNE.forEach(t => { V[t[0]] = t[5]; });
+function readHash(){
+  TUNE.forEach(t => V[t[0]] = t[5]);
+  location.hash.slice(1).split('&').forEach(p => {
+    const [k, v] = p.split('='), t = TUNE.find(x => x[0] === k), n = parseFloat(v);
+    if (t && isFinite(n)) V[k] = Math.min(t[3], Math.max(t[2], n));
+  });
+}
+function writeHash(){
+  const s = TUNE.filter(t => V[t[0]] !== t[5]).map(t => t[0] + '=' + V[t[0]]).join('&');
+  try { history.replaceState(null, '', s ? '#' + s : location.pathname + location.search); } catch (e) { /* file:// quirks */ }
+}
+
+/* ---------- sand sim (ported from mockup) ---------- */
+const E=0, ROCK=1, SAND=2, WATER=3, GAS=4, FIRE=5, STEAM=6, LAVA=7, ACID=8, MYC=9, SPORE=10, MOSS=11, OBS=12, SMOKE=13, CO2=14;
+const T = new Uint8Array(N), Lf = new Uint8Array(N), Sh = new Uint8Array(N), Mv = new Uint8Array(N), Bd = new Uint8Array(N);
+const DEN = new Float32Array(16);
+DEN[E]=1; DEN[GAS]=.3; DEN[STEAM]=.4; DEN[SMOKE]=.5; DEN[FIRE]=.6; DEN[SPORE]=.8; DEN[CO2]=1.6; DEN[WATER]=10; DEN[ACID]=11; DEN[LAVA]=14; DEN[SAND]=20;
+const SOLID = new Uint8Array(16); [ROCK, OBS, MYC, MOSS].forEach(k => SOLID[k] = 1);
+const DEC = new Float32Array(16).fill(.4);
+DEC[E]=.93; [GAS, STEAM, SMOKE, FIRE, SPORE, CO2].forEach(k => DEC[k] = .92); [WATER, ACID].forEach(k => DEC[k] = .82); DEC[LAVA]=.6; DEC[SAND]=.45;
+const COL = [[30,29,28],[80,76,72],[152,126,88],[38,88,124],[92,70,112],[255,176,70],[168,176,184],[236,96,34],[128,196,64],[204,194,172],[214,204,156],[96,232,192],[40,34,48],[62,62,64],[74,96,78]];
+const NB = [-1, 1, -W, W];
+let rnd = mulberry(1), stamp = 1, tick = 0;
+
+function set(i, t, l){ T[i] = t; Lf[i] = l || 0; Sh[i] = (rnd()*255) | 0; }
+function swap(i, j){ const t = T[i], l = Lf[i], s = Sh[i]; T[i] = T[j]; Lf[i] = Lf[j]; Sh[i] = Sh[j]; T[j] = t; Lf[j] = l; Sh[j] = s; Mv[i] = stamp; Mv[j] = stamp; }
+const lighter = (j, d) => j >= 0 && j < N && !SOLID[T[j]] && DEN[T[j]] < d;
+const heavier = (j, d) => j >= 0 && j < N && !SOLID[T[j]] && T[j] !== SAND && T[j] !== LAVA && DEN[T[j]] > d;
+function clings(j, from){ for (const o of NB) { const k = j + o; if (k === from || k < 0 || k >= N) continue; const u = T[k]; if (u === ROCK || u === OBS || u === SAND) return true; } return false; }
+function wetNear(x, y){ for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < W && yy < H && T[yy*W + xx] === WATER) return true; } return false; }
+function fall(x, y, i, d){
+  if (y >= H - 1) return;
+  if (lighter(i + W, d)) return swap(i, i + W);
+  const dir = rnd() < .5 ? -1 : 1;
+  if (lighter(i + W + dir, d) && lighter(i + dir, d)) return swap(i, i + W + dir);
+  if (lighter(i + W - dir, d) && lighter(i - dir, d)) return swap(i, i + W - dir);
+}
+function liquid(x, y, i, d, disp){
+  if (y >= H - 1) return;
+  if (lighter(i + W, d)) return swap(i, i + W);
+  const dir = rnd() < .5 ? -1 : 1;
+  if (lighter(i + W + dir, d)) return swap(i, i + W + dir);
+  if (lighter(i + W - dir, d)) return swap(i, i + W - dir);
+  for (const s of [dir, -dir]) {
+    let best = -1;
+    for (let k = 1; k <= disp; k++) { const nx = x + s*k; if (nx < 0 || nx >= W) break; const j = i + s*k; if (!lighter(j, d)) break; best = j; if (lighter(j + W, d)) break; }
+    if (best >= 0) return swap(i, best);
+  }
+}
+function rise(x, y, i, prob, side){
+  if (rnd() > prob) return;
+  if (y === 0) { if (rnd() < .25) set(i, E); return; }
+  const d = DEN[T[i]], dir = rnd() < .5 ? -1 : 1;
+  if (rnd() < side) { if (heavier(i + dir, d)) return swap(i, i + dir); }
+  if (heavier(i - W, d)) return swap(i, i - W);
+  if (heavier(i - W + dir, d)) return swap(i, i - W + dir);
+  if (heavier(i - W - dir, d)) return swap(i, i - W - dir);
+  if (heavier(i + dir, d)) return swap(i, i + dir);
+}
+function sinkGas(x, y, i){
+  if (rnd() > .6) return;
+  const d = DEN[CO2], dir = rnd() < .5 ? -1 : 1;
+  if (lighter(i + W, d)) return swap(i, i + W);
+  if (lighter(i + W + dir, d)) return swap(i, i + W + dir);
+  if (lighter(i + dir, d)) return swap(i, i + dir);
+}
+function drift(x, y, i){
+  if (rnd() > .35) return;
+  const dx = (rnd()*3 | 0) - 1, dy = rnd() < .55 ? -1 : (rnd() < .5 ? 0 : 1);
+  const j = i + dy*W + dx;
+  if (j >= 0 && j < N && T[j] === E) swap(i, j);
+}
+function fire(x, y, i){
+  if (--Lf[i] === 0 || Lf[i] > 250) { set(i, rnd() < .35 ? SMOKE : E, 60); return false; }
+  for (const o of NB) {
+    const j = i + o; if (j < 0 || j >= N) continue;
+    const u = T[j];
+    if (u === WATER) { set(i, STEAM, 70); return false; }
+    if (u === GAS) set(j, FIRE, 22 + (rnd()*20 | 0));
+    else if (u === SPORE && rnd() < .3) set(j, FIRE, 8);
+    else if (u === MYC && rnd() < .05) { set(j, FIRE, 40); for (const o2 of NB) { const k = j + o2; if (k >= 0 && k < N && T[k] === E && rnd() < .7) set(k, SPORE, 200); } }
+    else if (u === MOSS && rnd() < .012) set(j, FIRE, 30);
+  }
+  return true;
+}
+function lava(x, y, i){
+  for (const o of NB) {
+    const j = i + o; if (j < 0 || j >= N) continue;
+    const u = T[j];
+    if (u === WATER) { set(i, OBS); set(j, STEAM, 90); return false; }
+    if (u === GAS || u === MYC || u === SPORE || u === MOSS) set(j, FIRE, 30);
+  }
+  if (i - W >= 0 && T[i - W] === E && rnd() < .002) set(i - W, FIRE, 12);
+  return true;
+}
+function acid(x, y, i){
+  for (const o of NB) {
+    const j = i + o; if (j < 0 || j >= N || Bd[j]) continue;
+    const u = T[j];
+    if ((u === ROCK || u === SAND || u === MYC || u === MOSS || (u === OBS && rnd() < .3)) && rnd() < .05) {
+      set(j, CO2, 220); if (rnd() < .3) { set(i, CO2, 220); return false; }
+    } else if (u === WATER && rnd() < .002) { set(i, WATER); return false; }
+  }
+  return true;
+}
+function decay(i, p, to){ if (rnd() < p && --Lf[i] <= 1) { set(i, to, 0); return false; } return true; }
+function myc(x, y, i){
+  if (Lf[i] > 30 && rnd() < .0015) { const j = i + NB[rnd()*4 | 0]; if (j >= 0 && j < N && T[j] === E) { set(j, SPORE, 200); Lf[i] -= 4; } }
+  if (rnd() > .04) return;
+  const j = i + NB[rnd()*4 | 0]; if (j < 0 || j >= N) return;
+  const u = T[j];
+  if (u === WATER) { Lf[i] = 44; if (rnd() < .15) set(j, E); }
+  else if (u === E && Lf[i] > 1 && clings(j, i)) { set(j, MYC, Lf[i] - 1); }
+  else if (u === MOSS && rnd() < .04) set(j, MYC, Lf[i]);
+}
+function moss(x, y, i){
+  if (rnd() > .012) return;
+  const j = i + NB[rnd()*4 | 0]; if (j < 0 || j >= N || T[j] !== E) return;
+  if (clings(j, i) && wetNear(j % W, (j / W) | 0)) set(j, MOSS);
+}
+function spore(x, y, i){
+  if (rnd() < .3 && --Lf[i] <= 1) { set(i, E); return false; }
+  if (rnd() < .03 && clings(i, -1) && wetNear(x, y)) { set(i, MYC, 30); return false; }
+  return true;
+}
+function update(x, y, i, t){
+  switch (t) {
+    case SAND: fall(x, y, i, 20); break;
+    case WATER: liquid(x, y, i, 10, 4); break;
+    case ACID: if (acid(x, y, i)) liquid(x, y, i, 11, 3); break;
+    case LAVA: if (lava(x, y, i) && tick % 3 === 0) liquid(x, y, i, 14, 1); break;
+    case GAS: rise(x, y, i, .35, .7); break;
+    case FIRE: if (fire(x, y, i)) rise(x, y, i, .6, .5); break;
+    case STEAM:
+      if (decay(i, .6, rnd() < .35 ? WATER : E)) { if (i - W >= 0 && T[i - W] === ROCK && rnd() < .01) { set(i, WATER); break; } rise(x, y, i, .5, .7); }
+      break;
+    case SMOKE: if (decay(i, 1, E)) rise(x, y, i, .5, .6); break;
+    case CO2: if (Lf[i] === 255 || decay(i, .12, E)) sinkGas(x, y, i); break; /* Lf 255 = permanent pocket (prototype tweak) */
+    case SPORE: if (spore(x, y, i)) drift(x, y, i); break;
+    case MYC: myc(x, y, i); break;
+    case MOSS: moss(x, y, i); break;
+  }
+}
+function simStep(){
+  stamp = stamp === 255 ? 1 : stamp + 1; tick++;
+  for (let y = H - 1; y >= 0; y--) {
+    const ltr = rnd() < .5;
+    for (let k = 0; k < W; k++) {
+      const x = ltr ? k : W - 1 - k, i = y*W + x;
+      if (Mv[i] === stamp) continue;
+      const t = T[i];
+      if (t === E || t === ROCK || t === OBS) continue;
+      update(x, y, i, t);
+    }
+  }
+}
+
+/* ---------- cave generation ---------- */
+let shaftX = 40, S = {x: 100, y: 140};
+const AX = () => shaftX + .5, AY = 2.6;
+const cTop = x => 122 + Math.round(4*Math.sin(x*.13 + 1));
+const cFloor = x => H - 9 + Math.round(1.5*Math.sin(x*.2 + 2));
+function makeNoise(r){
+  const p = new Uint16Array(512), a = Array.from({length: 256}, (_, k) => k);
+  for (let k = 255; k > 0; k--) { const j = (r()*(k + 1)) | 0; [a[k], a[j]] = [a[j], a[k]]; }
+  for (let k = 0; k < 512; k++) p[k] = a[k & 255];
+  const v = new Float32Array(256); for (let k = 0; k < 256; k++) v[k] = r();
+  const h = (x, y) => v[p[(p[x & 255] + (y & 255)) & 511]];
+  const n = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf*xf*(3 - 2*xf), w = yf*yf*(3 - 2*yf); const A = h(xi, yi), B = h(xi + 1, yi), C = h(xi, yi + 1), D = h(xi + 1, yi + 1); return A + (B - A)*u + (C - A)*w + (A - B - C + D)*u*w; };
+  return (x, y) => n(x, y)*.6 + n(x*2.1 + 17, y*2.1 + 5)*.28 + n(x*4.3 + 3, y*4.3 + 29)*.12;
+}
+function gen(seed){
+  const r = rnd = mulberry(seed), fbm = makeNoise(r);
+  stamp = 1; tick = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) T[y*W + x] = fbm(x*.055, y*.085) + .12*Math.sin(y/H*Math.PI) > .6 ? E : ROCK;
+  const tmp = new Uint8Array(N);
+  for (let it = 0; it < 3; it++) {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let c = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H || T[yy*W + xx] === ROCK) c++; }
+      const i = y*W + x; tmp[i] = c > 4 ? ROCK : c < 4 ? E : T[i];
+    }
+    T.set(tmp);
+  }
+  shaftX = 40;
+  for (let i = 0; i < N; i++) { const x = i % W, y = (i / W) | 0; Bd[i] = (x < 2 || x >= W - 2 || y >= H - 2 || y < 3) ? 1 : 0; if (Bd[i]) T[i] = ROCK; }
+  /* bottom chamber, with the shaft running straight down into it */
+  for (let x = shaftX - 14; x <= 140; x++) {
+    for (let y = cTop(x); y < cFloor(x); y++) T[y*W + x] = E;
+    for (let y = cFloor(x); y < H - 2; y++) T[y*W + x] = ROCK;
+  }
+  for (let y = 3; y < cTop(shaftX) + 3; y++) for (let x = shaftX - 2; x <= shaftX + 2; x++) { T[y*W + x] = E; Bd[y*W + x] = 0; }
+  for (let i = 0; i < N; i++) { Lf[i] = 0; Sh[i] = (r()*255) | 0; Mv[i] = 0; }
+  for (let x = Math.floor(W*.62); x < W - 2; x++) {   /* lava channel, a distant glow */
+    const top = H - 9 + Math.round(1.5*Math.sin(x*.25));
+    for (let yy = top; yy < H - 2; yy++) T[yy*W + x] = LAVA;
+    for (let yy = top - 6; yy < top; yy++) if (r() < .9) T[yy*W + x] = E;
+  }
+  const blob = (cx, cy, rad, n, t) => { for (let k = 0; k < n; k++) { const x = Math.round(cx + (r() + r() - 1)*rad), yy = Math.round(cy + (r() + r() - 1)*rad*.6); if (x < 0 || yy < 0 || x >= W || yy >= H) continue; const i = yy*W + x; if (T[i] === E && !Bd[i]) set(i, t, 0); } };
+  const openAt = (y0, y1) => { for (let tries = 0; tries < 2000; tries++) { const x = 4 + (r()*(W - 8) | 0), yy = (H*y0 + r()*H*(y1 - y0)) | 0; if (T[yy*W + x] === E && Math.abs(x - shaftX) > 6) return [x, yy]; } return [W/2, H/2]; };
+  for (let k = 0; k < 6; k++) { const [x, yy] = openAt(.3, .8); blob(x, yy, 9, 420, WATER); }
+  for (let k = 0; k < 3; k++) { const [x, yy] = openAt(.15, .55); blob(x, yy, 6, 140, SAND); }
+  for (let k = 0; k < 160; k++) simStep();
+  let seeds = 0;
+  for (let tries = 0; tries < 6000 && seeds < 16; tries++) { const i = (r()*N) | 0; if (T[i] === E && !Bd[i] && clings(i, -1)) { set(i, MYC, 40); seeds++; } }
+  seeds = 0;
+  for (let tries = 0; tries < 20000 && seeds < 18; tries++) { const i = (r()*N) | 0; if (T[i] === E && !Bd[i] && clings(i, -1) && wetNear(i % W, (i / W) | 0)) { set(i, MOSS); seeds++; } }
+  for (let k = 0; k < 360; k++) simStep();
+  /* sample: on a cleared ledge at the far end of the chamber */
+  const sx = shaftX + 66 + (r()*20 | 0), sy = cFloor(sx) - 1;
+  for (let dy = 0; dy >= -7; dy--) for (let dx = -3; dx <= 3; dx++) set((sy + dy)*W + sx + dx, E);
+  for (let dx = -3; dx <= 3; dx++) set((sy + 1)*W + sx + dx, ROCK);
+  S = {x: sx, y: sy};
+  /* invisible gas on the walk: methane under the ceiling, CO2 pooled on the floor */
+  const disc = (cx, cy, rad, t, l) => { for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) { const x = cx + dx, y = cy + dy; if (dx*dx + dy*dy > rad*rad || x < 3 || x > W - 4 || y < 4 || y > H - 4) continue; if (T[y*W + x] === E) set(y*W + x, t, l); } };
+  const mx = shaftX + 22 + (r()*30 | 0), cx = shaftX + 40 + (r()*20 | 0);
+  disc(mx, cTop(mx) + 4, 6, GAS, 0);
+  disc(cx, cFloor(cx) - 2, 6, CO2, 255);
+  for (let k = 0; k < 40; k++) simStep();
+}
+
+/* ---------- figure ---------- */
+const BH = 6;
+const BSOL = new Uint8Array(16); BSOL.set(SOLID); BSOL[SAND] = 1;
+const solidAt = (x, y) => x < 0 || y < 0 || x >= W || y >= H || BSOL[T[y*W + x]] === 1;
+const F = {}, keys = {}, Q = [];
+let log = [], paused = false, acc = 0, lastT = performance.now();
+const $ = id => document.getElementById(id);
+const say = s => { log.unshift(s); log = log.slice(0, 3); $('log').innerHTML = log.map((l, i) => '<div style="opacity:' + (1 - i*.3) + '">' + l + '</div>').join(''); };
+function blocked(px, cy){
+  const x0 = Math.floor(px) - 1, y0 = Math.floor(cy - BH + .001), y1 = Math.floor(cy - .001);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x < x0 + 3; x++) if (solidAt(x, y)) return true;
+  return false;
+}
+function moveX(dx, step){
+  const n = Math.ceil(Math.abs(dx) - 1e-9); if (n < 1) return false;
+  const s = dx / n;
+  for (let k = 0; k < n; k++) {
+    const nx = F.x + s;
+    if (!blocked(nx, F.y)) { F.x = nx; continue; }
+    if (step && F.ground && !blocked(nx, F.y - 1) && !blocked(F.x, F.y - 1)) { F.x = nx; F.y -= 1; continue; }
+    F.vx = 0; return true;
+  }
+  return false;
+}
+function moveY(dy){
+  const n = Math.ceil(Math.abs(dy) - 1e-9); if (n < 1) return 0;
+  const s = dy / n;
+  for (let k = 0; k < n; k++) {
+    const ny = F.y + s;
+    if (!blocked(F.x, ny)) { F.y = ny; continue; }
+    const v = s > 0 ? F.vy : 0;
+    F.y = s > 0 ? Math.floor(ny - .001) : Math.floor(ny - BH + .001) + 1 + BH;
+    F.vy = 0; return v;
+  }
+  return 0;
+}
+function cellsAt(cx, cy, rad, f){ let c = 0, n = 0; for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) { const x = Math.floor(cx) + dx, y = Math.floor(cy) + dy; n++; if (x >= 0 && y >= 0 && x < W && y < H && f(T[y*W + x])) c++; } return c / n; }
+const isGas = t => t === GAS || t === CO2;
+function lineEnd(){ let y = 3; while (y < H - 2 && !solidAt(Math.floor(AX()), y)) y++; return Math.min(AY + F.ropeOut, y); }
+function touching(){ const cy = F.y - 3.5; return Math.abs(F.x - AX()) <= 2.8 && cy >= 3 && cy <= lineEnd() + 4; }
+function toggleClip(){
+  if (F.clipped) { if (F.downed) return say('Too hurt to unclip.'); F.clipped = false; return say('Unclipped. The line stays where it is.'); }
+  if (!touching()) return say('Nothing to clip to: stand at the line.');
+  F.clipped = true; F.ropeOut = Math.min(V.rope, Math.hypot(F.x - AX(), F.y - 4 - AY)); say('Clipped on.');
+}
+function injure(v){
+  if (v >= V.downed) { F.downed = true; return say('Landed at ' + v.toFixed(0) + ' c/s. Down.'); }
+  if (v < V.safe) return;
+  const free = [0, 1].filter(k => !F.legs[k]);
+  if (!free.length) { F.downed = true; return say('Landed hard on bad legs. Down.'); }
+  F.legs[free[rnd() < .5 ? 0 : free.length - 1]] = 1;
+  say('Landed at ' + v.toFixed(0) + ' c/s. A leg gave way.');
+}
+function resetFigure(){
+  Object.assign(F, {x: AX(), y: 10, vx: 0, vy: 0, ground: false, face: 1, clipped: true, ropeOut: 3.5, d: 3.5, legs: [0, 0], downed: false, has: false,
+    air: V.air, airMax: V.air, bat: V.battery, batMax: V.battery, lamp: true, land: 0, gas: 0, gasHead: 0, ph: 0, flash: 0, end: null, t: 0, walk: 0});
+}
+const held = k => keys[k] ? 1 : 0;
+function stepFigure(){
+  const dt = STEP; F.t += dt;
+  while (Q.length) { const e = Q.shift(); if (e === 'f' && F.bat > 0) F.lamp = !F.lamp; else if (e === 'space') toggleClip(); }
+  let g = 0; while (blocked(F.x, F.y) && g++ < 8) F.y -= 1;   /* sand fell onto us */
+  const left = held('KeyA') || held('ArrowLeft'), right = held('KeyD') || held('ArrowRight'), up = held('KeyW') || held('ArrowUp'), down = held('KeyS') || held('ArrowDown');
+  const dir = F.downed ? 0 : right - left, legHurt = F.legs[0] || F.legs[1];
+  if (dir) F.face = dir;
+  /* winch: slow, stops at slack or full length */
+  if (F.clipped) {
+    const ws = V.winch * dt;
+    if (down && !up) { const n = F.ropeOut + ws; if (n <= V.rope && n <= F.d + .25) F.ropeOut = n; }
+    else if (up && !down && F.d - F.ropeOut < 2) F.ropeOut = Math.max(0, F.ropeOut - ws);
+  }
+  F.ropeOut = Math.min(F.ropeOut, V.rope);
+  /* body */
+  const wet = T[Math.floor(F.y - 3)*W + Math.floor(F.x)] === WATER;
+  const walk = 16 * (legHurt ? .5 : 1) * (wet ? .6 : 1);
+  if (F.ground) {
+    F.vx += (dir*walk - F.vx) * .4;
+    if (!F.clipped && up && !legHurt && !F.downed) { F.vy = -32; F.ground = false; }
+  } else if (F.clipped) F.vx += dir * V.swing * dt;
+  else F.vx = Math.max(-walk*1.3, Math.min(walk*1.3, F.vx + dir*60*dt));
+  F.vy = Math.min(130, F.vy + V.gravity*dt);
+  if (wet) { F.vx *= .92; F.vy *= .9; }
+  if (F.clipped && !F.ground) F.vx *= .997;
+  moveX(F.vx*dt, true);
+  const v = moveY(F.vy*dt);
+  if (v >= 10) { F.land = v; injure(v); }
+  /* rope constraint */
+  if (F.clipped) {
+    const dx = F.x - AX(), dy = F.y - 4 - AY, d = Math.hypot(dx, dy);
+    if (d > F.ropeOut && d > 0) {
+      const nx = dx/d, ny = dy/d, ex = d - F.ropeOut;
+      moveX(-nx*ex, false); moveY(-ny*ex);
+      const vr = F.vx*nx + F.vy*ny; if (vr > 0) { F.vx -= vr*nx; F.vy -= vr*ny; }
+    }
+    F.d = Math.hypot(F.x - AX(), F.y - 4 - AY);
+  }
+  F.ground = F.vy >= 0 && blocked(F.x, F.y + .06);
+  if (F.ground) F.walk += Math.abs(F.vx)*dt;
+  /* hazards, air, battery */
+  if (!F.downed && cellsAt(F.x, F.y - 3, 2, t => t === LAVA || t === FIRE) > 0) { F.downed = true; say('Burned. Down.'); }
+  F.gas = cellsAt(F.x, F.y - 3, 2, isGas); F.gasHead = cellsAt(F.x, F.y - 5, 1, isGas);
+  F.air -= (1 + 5*Math.min(1, F.gasHead*3)) * dt;
+  if (F.lamp && F.bat > 0) { F.bat -= dt; if (F.bat <= 0) { F.bat = 0; F.lamp = false; say('Lamp cell dead.'); } }
+  const tick = (1 + 11*Math.min(1, F.gas*3)) * dt;
+  F.ph += tick; if (Math.floor(F.ph) !== Math.floor(F.ph - tick)) F.flash = .12;
+  F.flash = Math.max(0, F.flash - dt);
+  if (!F.has && Math.hypot(F.x - S.x, F.y - 3 - S.y) < 4.5) { F.has = true; say('Sample taken. Get back to the line.'); }
+  if (F.has && F.clipped && F.y - 4 < 9) endRun('win');
+  else if (F.air <= 0) { F.air = 0; endRun('dry'); }
+}
+function endRun(k){
+  F.end = k;
+  $('banner').innerHTML = k === 'win' ? 'Sample recovered<small>out with ' + F.air.toFixed(0) + ' s of air in ' + F.t.toFixed(0) + ' s. R to go again.</small>' : 'Suit air ran out<small>R to try again, N for a new cave.</small>';
+  $('banner').classList.add('on');
+}
+
+/* ---------- light ---------- */
+const LW = new Float32Array(N), LC = new Float32Array(N);
+function cone(){
+  if (!F.lamp || F.bat <= 0) return;
+  const ox = F.x, oy = F.y - 5.2, hang = F.clipped && !F.ground;
+  const a0 = hang ? Math.PI/2 - F.face*.3 : (F.face > 0 ? .2 : Math.PI - .2), half = V.cone*Math.PI/360;
+  const lo = F.bat / F.batMax, R = V.range * (lo < .1 ? .5 + .5*Math.random() : 1);
+  const nr = Math.ceil(2*half*R/.5) + 1;
+  for (let k = 0; k < nr; k++) {
+    const da = nr > 1 ? k/(nr - 1)*2 - 1 : 0, a = a0 + da*half, cx = Math.cos(a), cy = Math.sin(a), edge = .55 + .45*(1 - Math.abs(da));
+    let tr = 1;
+    for (let t = .5; t <= R; t += .5) {
+      const x = Math.floor(ox + cx*t), y = Math.floor(oy + cy*t);
+      if (x < 0 || y < 0 || x >= W || y >= H) break;
+      const i = y*W + x, ty = T[i], I = Math.pow(1 - t/R, 1.3)*edge*tr;
+      if (I > LW[i]) LW[i] = I;
+      if (SOLID[ty] || ty === SAND) break;
+      if (ty === WATER || ty === ACID) tr *= .96;
+    }
+  }
+  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = Math.floor(ox) + dx, y = Math.floor(oy) + dy; if (x < 0 || y < 0 || x >= W || y >= H || dx*dx + dy*dy > 5) continue; const i = y*W + x; if (!SOLID[T[i]] && LW[i] < .4) LW[i] = .4; }
+}
+function light(){
+  for (let i = 0; i < N; i++) {
+    const t = T[i];
+    LW[i] = t === FIRE ? .8 + .2*Math.random() : t === LAVA ? .8 : 0;
+    LC[i] = t === MOSS ? .62 : t === SPORE ? .14 : t === MYC ? .05 : 0;
+  }
+  for (let x = shaftX - 2; x <= shaftX + 2; x++) LW[3*W + x] = .9;           /* daylight at the shaft mouth */
+  if (!F.has) { const si = S.y*W + S.x; LC[si] = LC[si - W] = .95; }          /* the sample glows */
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y*W + x, d = DEC[T[i]], dd = d*.96;
+    let w = LW[i], c = LC[i];
+    if (x > 0) { w = Math.max(w, LW[i - 1]*d); c = Math.max(c, LC[i - 1]*d); }
+    if (y > 0) { const u = i - W; w = Math.max(w, LW[u]*d); c = Math.max(c, LC[u]*d);
+      if (x > 0) { w = Math.max(w, LW[u - 1]*dd); c = Math.max(c, LC[u - 1]*dd); }
+      if (x < W - 1) { w = Math.max(w, LW[u + 1]*dd); c = Math.max(c, LC[u + 1]*dd); } }
+    LW[i] = w; LC[i] = c;
+  }
+  for (let y = H - 1; y >= 0; y--) for (let x = W - 1; x >= 0; x--) {
+    const i = y*W + x, d = DEC[T[i]], dd = d*.96;
+    let w = LW[i], c = LC[i];
+    if (x < W - 1) { w = Math.max(w, LW[i + 1]*d); c = Math.max(c, LC[i + 1]*d); }
+    if (y < H - 1) { const u = i + W; w = Math.max(w, LW[u]*d); c = Math.max(c, LC[u]*d);
+      if (x > 0) { w = Math.max(w, LW[u - 1]*dd); c = Math.max(c, LC[u - 1]*dd); }
+      if (x < W - 1) { w = Math.max(w, LW[u + 1]*dd); c = Math.max(c, LC[u + 1]*dd); } }
+    LW[i] = w; LC[i] = c;
+  }
+  cone();
+}
+
+/* ---------- render ---------- */
+const sctx = $('sim').getContext('2d'), img = sctx.createImageData(W, H), px = img.data, fctx = $('fx').getContext('2d');
+function render(){
+  for (let i = 0, p = 0; i < N; i++, p += 4) {
+    let t = T[i];
+    if (t === GAS || t === CO2) t = E;                  /* gas is invisible */
+    const col = COL[t], s = 1 + (Sh[i] - 128)/128*.12;
+    let r, g, b;
+    if (t === FIRE) { const k = Lf[i] / 40; r = 255; g = 120 + 90*Math.min(1, k); b = 40 + 30*Math.random(); }
+    else if (t === LAVA || t === MOSS) { r = col[0]*s; g = col[1]*s; b = col[2]*s; }
+    else {
+      const w = LW[i], c = LC[i];
+      const fr = Math.min(1.2, w + c*.45), fg = Math.min(1.2, w*.84 + c), fb = Math.min(1.2, w*.62 + c*.9);
+      r = col[0]*s*fr; g = col[1]*s*fg; b = col[2]*s*fb;
+    }
+    px[p] = r; px[p + 1] = g; px[p + 2] = b; px[p + 3] = 255;
+  }
+  sctx.putImageData(img, 0, 0);
+}
+const lit = (x, y) => { x = Math.floor(x); y = Math.floor(y); if (x < 0 || y < 0 || x >= W || y >= H) return 0; const i = y*W + x; return Math.min(1, LW[i] + LC[i]*.6); };
+function drawLine(x0, y0, x1, y1){
+  const len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(len/3));
+  fctx.lineWidth = 1.6;
+  for (let k = 0; k < n; k++) {
+    const a = k/n, b = (k + 1)/n, mx = x0 + (x1 - x0)*(a + b)/2, my = y0 + (y1 - y0)*(a + b)/2;
+    fctx.strokeStyle = 'rgba(214,200,168,' + (.08 + lit(mx, my)*.85).toFixed(2) + ')';
+    fctx.beginPath(); fctx.moveTo((x0 + (x1 - x0)*a)*K, (y0 + (y1 - y0)*a)*K); fctx.lineTo((x0 + (x1 - x0)*b)*K, (y0 + (y1 - y0)*b)*K); fctx.stroke();
+  }
+}
+function overlay(){
+  fctx.clearRect(0, 0, 960, 640);
+  const k = K, ax = AX(), ay = AY;
+  fctx.fillStyle = '#2a2f33'; fctx.fillRect((shaftX - 5)*k, 0, 11*k, 2.9*k);              /* winch housing */
+  fctx.fillStyle = '#c96a3b'; fctx.fillRect((shaftX - 3)*k, .5*k, 7*k, 1.6*k);
+  if (F.clipped) drawLine(ax, ay, F.x, F.y - 4); else drawLine(ax, ay, ax, lineEnd());
+  if (!F.has) {                                                                            /* sample marker */
+    const pulse = .6 + .4*Math.sin(F.t*3), sx = (S.x + .5)*k, sy = (S.y - 1)*k;
+    fctx.fillStyle = 'rgba(111,220,192,' + (.25*pulse) + ')'; fctx.beginPath(); fctx.arc(sx, sy, 7*k*pulse, 0, 7); fctx.fill();
+    fctx.fillStyle = '#6fdcc0'; fctx.beginPath(); fctx.moveTo(sx, sy - 2.2*k); fctx.lineTo(sx + 1.6*k, sy); fctx.lineTo(sx, sy + 2.2*k); fctx.lineTo(sx - 1.6*k, sy); fctx.fill();
+  }
+  const m = Math.max(.3, Math.min(1, lit(F.x, F.y - 3)*1.1 + .3)), sh = (r, g, b) => 'rgb(' + (r*m | 0) + ',' + (g*m | 0) + ',' + (b*m | 0) + ')';
+  fctx.save(); fctx.translate(F.x*k, F.y*k);
+  if (F.downed) { fctx.rotate(F.face*1.35); fctx.translate(0, -.5*k); }
+  const sw = F.ground ? Math.sin(F.walk*.9)*.9 : (F.clipped ? .3*Math.sin(F.t*2) : 0);
+  [0, 1].forEach(l => {
+    fctx.fillStyle = F.legs[l] ? sh(227, 163, 63) : sh(190, 182, 164);
+    const off = (l ? .6 : -.6) + (l ? sw : -sw)*(F.legs[l] ? .4 : 1);
+    fctx.fillRect((off - .5)*k, -2.1*k, 1.1*k, 2.1*k);
+  });
+  fctx.fillStyle = sh(207, 198, 180); fctx.fillRect(-1.3*k, -4.5*k, 2.6*k, 2.6*k);
+  fctx.beginPath(); fctx.arc(0, -5.3*k, 1*k, 0, 7); fctx.fill();
+  fctx.fillStyle = F.lamp && F.bat > 0 ? '#ffe2a8' : '#4a4338'; fctx.fillRect((F.face > 0 ? .2 : -1.1)*k, -5.8*k, .9*k, .8*k);
+  if (F.clipped) { fctx.strokeStyle = '#c96a3b'; fctx.lineWidth = 1.5; fctx.beginPath(); fctx.arc(0, -4*k, .7*k, 0, 7); fctx.stroke(); }
+  fctx.restore();
+}
+
+/* ---------- hud ---------- */
+function hud(){
+  const dn = F.downed ? ' down' : '';
+  ['b-head', 'b-torso', 'b-armL', 'b-armR'].forEach(id => $(id).setAttribute('class', 'p' + dn));
+  [0, 1].forEach(l => document.querySelectorAll('.b-leg' + 'LR'[l]).forEach(e => e.setAttribute('class', 'p b-leg' + 'LR'[l] + (F.downed ? ' down' : F.legs[l] ? ' hurt' : ''))));
+  $('r-depth').textContent = Math.max(0, F.y - 3).toFixed(0) + ' c';
+  $('r-rope').textContent = F.clipped ? F.ropeOut.toFixed(0) + ' / ' + V.rope : 'free (' + F.ropeOut.toFixed(0) + ')';
+  const air = $('r-air'); air.textContent = F.air.toFixed(0) + ' s'; air.className = F.air < 25 ? 'c' : F.air < 50 ? 'w' : '';
+  $('a-air').style.width = (100*F.air/F.airMax).toFixed(0) + '%';
+  const bat = $('r-bat'); bat.textContent = (100*F.bat/F.batMax).toFixed(0) + '%' + (F.lamp ? '' : ' off'); bat.className = F.bat/F.batMax < .15 ? 'c' : '';
+  $('a-bat').style.width = (100*F.bat/F.batMax).toFixed(0) + '%';
+  const l = $('r-land'); l.textContent = F.land ? F.land.toFixed(0) + ' c/s' : '-'; l.className = F.land >= V.downed ? 'c' : F.land >= V.safe ? 'w' : '';
+  $('r-sens').textContent = (1 + 11*Math.min(1, F.gas*3)).toFixed(1) + '/s';
+  $('led').className = 'led' + (F.flash > 0 ? ' on' : '');
+  $('r-state').textContent = (F.downed ? 'down, ' : '') + (F.clipped ? (F.ground ? 'clipped, standing' : 'on the line') : F.ground ? 'on foot' : 'airborne') + (F.has ? ', sample' : '');
+  $('r-seed').textContent = V.seed;
+}
+
+/* ---------- control flow ---------- */
+function restart(){
+  gen(V.seed); resetFigure(); Q.length = 0; log = []; $('log').innerHTML = '';
+  $('banner').classList.remove('on'); acc = 0; say('Lowering. Find the teal sample at the bottom.');
+}
+function setPause(p){ paused = p; $('pausemsg').classList.toggle('on', p); lastT = performance.now(); }
+function frame(now){
+  const dt = Math.min(.1, (now - lastT)/1000); lastT = now;
+  if (!paused) { acc += dt; let n = 0; while (acc >= STEP && n < 5) { if (!F.end) stepFigure(); simStep(); acc -= STEP; n++; } if (n === 5) acc = 0; }
+  light(); render(); overlay(); hud();
+  requestAnimationFrame(frame);
+}
+function buildTune(){
+  const box = $('tune'); box.innerHTML = '';
+  TUNE.forEach(([k, label, mn, mx, st]) => {
+    const l = document.createElement('label'), o = document.createElement('output'), inp = document.createElement('input');
+    inp.type = 'range'; inp.min = mn; inp.max = mx; inp.step = st; inp.value = V[k]; o.textContent = V[k];
+    inp.addEventListener('input', () => {
+      const old = V[k]; V[k] = +inp.value; o.textContent = V[k]; writeHash();
+      if (k === 'seed') restart();
+      else if (k === 'air') { F.airMax = V.air; F.air = Math.min(V.air, F.air*V.air/old); }
+      else if (k === 'battery') { F.batMax = V.battery; F.bat = Math.min(V.battery, F.bat*V.battery/old); }
+    });
+    inp.addEventListener('change', () => inp.blur());
+    l.append(label, inp, o); box.append(l);
+  });
+}
+addEventListener('keydown', e => {
+  const c = e.code;
+  if (e.target.tagName === 'INPUT' && (c === 'Space' || c.startsWith('Arrow'))) return;
+  if (c === 'Space' || c.startsWith('Arrow')) e.preventDefault();
+  if (e.repeat) return;
+  keys[c] = 1;
+  if (c === 'Space') Q.push('space'); else if (c === 'KeyF') Q.push('f');
+  else if (c === 'KeyR') restart();
+  else if (c === 'KeyN') { V.seed = 1 + (Math.random()*9999 | 0); writeHash(); buildTune(); restart(); }
+  else if (c === 'KeyP') setPause(!paused);
+});
+addEventListener('keyup', e => { delete keys[e.code]; });
+addEventListener('blur', () => { for (const k in keys) delete keys[k]; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+addEventListener('hashchange', () => { readHash(); buildTune(); restart(); });
+$('reset').addEventListener('click', e => { TUNE.forEach(t => V[t[0]] = t[5]); writeHash(); buildTune(); restart(); e.target.blur(); });
+
+readHash(); buildTune(); restart();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

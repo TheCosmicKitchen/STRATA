@@ -1,0 +1,12 @@
+# Godot 4
+.godot/
+/android/
+*.import.tmp
+export_presets.cfg
+
+# GDExtension build output
+*.os
+*.obj
+*.o
+*.dblite
+bin/

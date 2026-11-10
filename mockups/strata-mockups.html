@@ -1,0 +1,885 @@
+<title>STRATA Mockups</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@500;700&display=swap">
+<style>
+/* Layout: one long dark column, three "depths": surface, below, on your body. Committed single dark look. */
+:root {
+  color-scheme: dark;
+  --bg: #0c0f11;
+  --panel: #13171a;
+  --line: #262d32;
+  --ink: #e4ddcf;
+  --muted: #8e958f;
+  --rust: #c96a3b;
+  --glow: #6fdcc0;
+  --warn: #e3a33f;
+  --crit: #e2553f;
+  --paper: #e3dbc9;
+  --paper-ink: #2b2621;
+  --paper-rule: #c9bfa9;
+  --f-display: "Big Shoulders Stencil Display", "Arial Narrow", Impact, sans-serif;
+  --f-body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --f-hand: "Caveat", "Segoe Print", "Comic Sans MS", cursive;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+  display: grid;
+  gap: 72px;
+}
+a { color: var(--glow); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+
+/* masthead */
+.mast { display: grid; gap: 14px; }
+.mast h1 {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: clamp(64px, 14vw, 156px);
+  line-height: .82;
+  letter-spacing: .02em;
+  margin: 0;
+  color: var(--ink);
+}
+.mast h1 span { color: var(--rust); }
+.mast p { margin: 0; max-width: 62ch; color: var(--ink); font-size: 18px; text-wrap: pretty; }
+.meta {
+  display: flex; flex-wrap: wrap; gap: 6px 18px;
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted);
+}
+.meta b { color: var(--ink); font-weight: 600; }
+
+/* sections */
+section { display: grid; gap: 18px; min-width: 0; }
+.eyebrow {
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--rust); display: flex; align-items: center; gap: 10px;
+}
+.eyebrow::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+h2 {
+  font-family: var(--f-display); font-weight: 600; font-size: clamp(34px, 5vw, 52px);
+  line-height: 1; margin: 0; letter-spacing: .01em; text-wrap: balance;
+}
+.lede { margin: 0; max-width: 68ch; color: var(--ink); text-wrap: pretty; }
+.lede em { color: var(--glow); font-style: normal; }
+
+.scroller { overflow-x: auto; border: 1px solid var(--line); border-radius: 4px; background: #07090a; }
+#crawler { display: block; width: 100%; min-width: 720px; aspect-ratio: 1200 / 640; }
+.caption { font-family: var(--f-mono); font-size: 12px; color: var(--muted); margin: 0; }
+
+/* sim */
+.simbox { display: grid; gap: 10px; min-width: 0; }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.tools button, .ctrl button {
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .04em;
+  background: var(--panel); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 3px;
+  padding: 6px 10px 6px 8px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.tools button:hover, .ctrl button:hover { border-color: var(--muted); }
+.tools button[aria-pressed="true"] { border-color: var(--glow); background: #17221f; }
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.ctrl { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.stage { position: relative; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: #000; touch-action: none; }
+#sim { display: block; width: 100%; aspect-ratio: 200 / 120; image-rendering: pixelated; image-rendering: crisp-edges; cursor: none; }
+#simfx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.detector {
+  display: flex; flex-wrap: wrap; gap: 6px 22px;
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--muted); padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.detector b { color: var(--ink); font-weight: 600; }
+.detector .warn b { color: var(--warn); }
+.detector .crit b { color: var(--crit); }
+.tries { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 28px; margin: 6px 0 0; padding: 0; list-style: none; }
+.tries li { border-top: 1px solid var(--line); padding-top: 10px; font-size: 15px; color: var(--ink); }
+.tries li b { display: block; font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 400; margin-bottom: 2px; }
+
+/* body + journal */
+.duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .duo { grid-template-columns: minmax(0, 1fr); } }
+
+.hud {
+  background: radial-gradient(120% 90% at 30% 20%, #161c1f 0%, #090b0c 70%);
+  border: 1px solid var(--line); border-radius: 4px; padding: 18px; display: grid; gap: 16px;
+  font-family: var(--f-mono); font-size: 12.5px; min-width: 0;
+}
+.hud-top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.hud-top b { color: var(--ink); font-weight: 600; }
+.hud-body { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 18px; align-items: start; }
+.hud-body svg { width: 110px; height: auto; }
+.conds { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.conds li { border-left: 2px solid var(--line); padding-left: 10px; color: var(--muted); line-height: 1.45; }
+.conds li b { display: block; color: var(--ink); font-weight: 600; letter-spacing: .04em; }
+.conds li.crit { border-color: var(--crit); }
+.conds li.crit b { color: var(--crit); }
+.conds li.warn { border-color: var(--warn); }
+.conds li.warn b { color: var(--warn); }
+.gauges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; }
+.gauge { display: grid; gap: 5px; }
+.gauge .row { display: flex; justify-content: space-between; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-size: 11px; font-variant-numeric: tabular-nums; }
+.gauge .row b { color: var(--ink); font-weight: 600; }
+.bar { height: 5px; background: #20262a; border-radius: 1px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--ink); }
+.bar.warn i { background: var(--warn); }
+.sig { display: flex; gap: 3px; align-items: flex-end; height: 14px; }
+.sig i { width: 5px; background: #2b3236; }
+.sig i.on { background: var(--warn); }
+.radio { border-top: 1px dashed var(--line); padding-top: 12px; display: grid; gap: 7px; line-height: 1.5; }
+.radio p { margin: 0; color: var(--ink); }
+.radio p span { color: var(--muted); }
+.radio .static { color: #5a6266; letter-spacing: .2em; }
+@media (max-width: 420px) { .gauges { grid-template-columns: minmax(0, 1fr); } .hud-body { grid-template-columns: 80px minmax(0, 1fr); } .hud-body svg { width: 80px; } }
+
+.journal {
+  background: var(--paper); color: var(--paper-ink); border-radius: 3px; padding: 22px 22px 26px;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 31px, var(--paper-rule) 31px 32px);
+  background-position: 0 14px;
+  box-shadow: 0 1px 0 #00000040; display: grid; gap: 20px; min-width: 0;
+}
+.journal header { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #6b6254; }
+.entry { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: start; }
+.entry svg { width: 64px; height: 64px; }
+.entry h3 { margin: 0; font-family: var(--f-hand); font-weight: 700; font-size: 28px; line-height: 1; }
+.entry .named { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #7a7061; margin: 4px 0 6px; }
+.obs { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-family: var(--f-hand); font-size: 21px; line-height: 1.25; }
+.obs li { display: flex; gap: 8px; align-items: baseline; }
+.obs .mk { font-family: var(--f-mono); font-size: 10px; letter-spacing: .06em; padding: 1px 5px; border: 1px solid currentColor; border-radius: 2px; flex: none; transform: translateY(-2px); }
+.mk.seen { color: #2f6b55; }
+.mk.once { color: #9a6a1c; }
+.mk.warnmk { color: #a33b28; }
+.scrawl { color: #8c3b26; }
+.foot { font-family: var(--f-mono); font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="meta"><span><b>Mockups v0.1</b></span><span>Working title</span><span>Godot 4 · 2D</span><span>Co-op 2–4 crew</span><span>8 Nov 2026</span></div>
+    <h1>STRA<span>T</span>A</h1>
+    <p>Crew a huge machine across a dead surface with your friends, then climb down into an earth that runs on its own rules. Three mockups follow, one for each place you spend time: on the surface, below it, and inside your own fragile body.</p>
+    <div class="meta"><a href="https://claude.ai/artifact/K4oP3NdUav4ST6iTKnvCZp" target="_blank" rel="noopener">Read the design notes →</a></div>
+  </header>
+
+  <section aria-labelledby="h-crawler">
+    <div class="eyebrow">Surface · cross-section</div>
+    <h2 id="h-crawler">The Crawler, anchored over a shaft</h2>
+    <p class="lede">Two crew hold the machine while two go down. Every station only works with a body standing at it, so Tal is on the radio, Ines is on the winch, and nobody is driving. The delve team below sees only what their lamps and the <em>glowing fungi</em> show them.</p>
+    <div class="scroller"><canvas id="crawler" role="img" aria-label="Side cross-section of the Crawler on the surface at night, anchored with legs down, a winch mast lowering a cable down a shaft into a cave where two crew members explore with helmet lamps."></canvas></div>
+    <p class="caption">Not to scale. Placeholder art. Rooms are bolt-in modules; the layout is one possible build.</p>
+  </section>
+
+  <section aria-labelledby="h-sim">
+    <div class="eyebrow">Below · live simulation</div>
+    <h2 id="h-sim">A cave that runs on rules</h2>
+    <p class="lede">Every pixel here is one cell of material, updated by simple local rules. Pick a material and paint with it; your lamp follows the pointer. Jun stands at the foot of the winch shaft with a helmet lamp. Nothing below is scripted.</p>
+    <div class="simbox">
+      <div class="toolbar">
+        <div class="tools" id="tools" role="group" aria-label="Material to paint"></div>
+        <div class="ctrl">
+          <button id="btn-lights" type="button" aria-pressed="false">Cave lights: off</button>
+          <button id="btn-pause" type="button" aria-pressed="false">Pause</button>
+          <button id="btn-new" type="button">New cave</button>
+        </div>
+      </div>
+      <div class="stage" id="stage">
+        <canvas id="sim" width="200" height="120" aria-label="Falling sand simulation of a cave. Click or drag to paint the selected material."></canvas>
+        <canvas id="simfx" aria-hidden="true"></canvas>
+      </div>
+      <div class="detector" id="detector" aria-live="off">
+        <span>Gas detector</span>
+      </div>
+      <ul class="tries">
+        <li><b>Gas pocket</b>Find the faint purple methane trapped under a ceiling and put a spark to it.</li>
+        <li><b>Grey lace</b>Burn the pale mycelium. It bursts into spores that drift and seed new colonies on wet rock.</li>
+        <li><b>Acid</b>Pour acid on rock. It eats through and gives off CO₂, which is heavier than air and pools in low tunnels.</li>
+        <li><b>Lava and water</b>Pour water into the lava channel. It flashes to steam and leaves black glass behind.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-body">
+    <div class="eyebrow">On your body · HUD and journal</div>
+    <h2 id="h-body">No health bar. A body, and a notebook.</h2>
+    <p class="lede">Injuries are specific and change what you can do. What the crew knows about the world lives in a shared field journal, written only from what someone actually saw.</p>
+    <div class="duo">
+      <div class="hud" aria-label="Delver status mockup">
+        <div class="hud-top"><span><b>Mara Velk</b> · delver</span><span>Depth <b>286 m</b></span></div>
+        <div class="hud-body">
+          <svg viewBox="0 0 110 220" role="img" aria-label="Body diagram: left shin fractured, lungs irritated, right hand bruised">
+            <g fill="none" stroke-width="1.5">
+              <circle cx="55" cy="22" r="14" stroke="#4a5358" fill="#151a1d"/>
+              <rect x="34" y="40" width="42" height="64" rx="10" stroke="#4a5358" fill="#151a1d"/>
+              <path d="M44 56 q-4 16 0 30 h8 v-30z M66 56 q4 16 0 30 h-8 v-30z" stroke="#e3a33f" fill="#e3a33f" fill-opacity=".25"/>
+              <rect x="18" y="44" width="12" height="54" rx="6" stroke="#4a5358" fill="#151a1d"/>
+              <rect x="80" y="44" width="12" height="54" rx="6" stroke="#4a5358" fill="#151a1d"/>
+              <circle cx="86" cy="104" r="6" stroke="#e3a33f" fill="#e3a33f" fill-opacity=".3"/>
+              <rect x="36" y="108" width="16" height="50" rx="7" stroke="#4a5358" fill="#151a1d"/>
+              <rect x="36" y="160" width="16" height="50" rx="7" stroke="#e2553f" fill="#e2553f" fill-opacity=".3"/>
+              <path d="M38 182 l6 -5 l2 6 l6 -5" stroke="#e2553f" stroke-width="1.8"/>
+              <rect x="58" y="108" width="16" height="50" rx="7" stroke="#4a5358" fill="#151a1d"/>
+              <rect x="58" y="160" width="16" height="50" rx="7" stroke="#4a5358" fill="#151a1d"/>
+            </g>
+          </svg>
+          <ul class="conds">
+            <li class="crit"><b>Left shin · fractured</b>Can't climb rope unaided. Splint applied.</li>
+            <li class="warn"><b>Lungs · spore irritation</b>Coughing will start in about 4 min. Filter at 30%.</li>
+            <li class="warn"><b>Right hand · bruised</b>Slower knots and rope work.</li>
+            <li><b>Core temp · 35.9 °C</b>Cold. Hands slowing.</li>
+          </ul>
+        </div>
+        <div class="gauges">
+          <div class="gauge"><div class="row"><span>Air tank</span><b>41 min</b></div><div class="bar"><i style="width:46%"></i></div></div>
+          <div class="gauge"><div class="row"><span>Lamp cell</span><b>62%</b></div><div class="bar"><i style="width:62%"></i></div></div>
+          <div class="gauge"><div class="row"><span>Line out</span><b>286 / 400 m</b></div><div class="bar"><i style="width:71.5%"></i></div></div>
+          <div class="gauge"><div class="row"><span>Radio · Crawler</span><b>Weak</b></div><div class="sig" aria-label="Signal 2 of 5"><i class="on" style="height:4px"></i><i class="on" style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i><i style="height:14px"></i></div></div>
+        </div>
+        <div class="radio">
+          <p><span>TAL / CRAWLER ·</span> Line tension's climbing. Are you snagged?</p>
+          <p><span>MARA ·</span> My leg's gone. Jun's carrying me to the cage.</p>
+          <p class="static">— kssh — — — kssh —</p>
+          <p><span>INES / CRAWLER ·</span> Cage going down, forty seconds. Kill your lamps near that gas.</p>
+        </div>
+      </div>
+
+      <article class="journal" aria-label="Field journal page mockup">
+        <header><span>Field journal · shared</span><span>Site 14 · day 9</span></header>
+        <div class="entry">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="#2b2621" stroke-width="1.6" stroke-linecap="round"><path d="M8 52 q24 -6 48 0"/><path d="M18 51 q2 -14 -2 -22 q8 -6 16 0 q-4 8 -2 22"/><path d="M36 51 q1 -10 -1 -16 q7 -5 13 0 q-3 6 -2 16"/></g><g fill="#2f9c80" fill-opacity=".35"><ellipse cx="24" cy="31" rx="9" ry="4"/><ellipse cx="41" cy="36" rx="7" ry="3"/></g></svg>
+          <div>
+            <h3>Lantern moss</h3>
+            <div class="named">Named by Jun</div>
+            <ul class="obs">
+              <li><span class="mk seen">SEEN 9×</span>Glows teal on its own, no lamp needed</li>
+              <li><span class="mk seen">SEEN 3×</span>Only grows near water</li>
+              <li><span class="mk once">ONCE</span>Burns slowly? smells like pennies</li>
+            </ul>
+          </div>
+        </div>
+        <div class="entry">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="#2b2621" stroke-width="1.4" stroke-linecap="round"><path d="M6 46 h52"/><path d="M10 46 q6 -10 2 -18 M16 46 q2 -8 10 -12 q6 -3 8 -10 M26 46 q4 -6 12 -6 q8 0 10 -8 M40 46 q6 -4 10 -12 M48 46 q4 -4 8 -4"/></g><g fill="#8a8172"><circle cx="20" cy="20" r="1.4"/><circle cx="30" cy="14" r="1.2"/><circle cx="44" cy="18" r="1.4"/><circle cx="36" cy="9" r="1"/></g></svg>
+          <div>
+            <h3>Grey lace</h3>
+            <div class="named">Named by Mara</div>
+            <ul class="obs">
+              <li><span class="mk seen">SEEN 4×</span>Creeps along rock toward water and drinks it</li>
+              <li><span class="mk seen">SEEN 2×</span>Bursts into spores when burnt</li>
+              <li><span class="mk once">ONCE</span>Spores grew new lace on wet rock??</li>
+              <li class="scrawl"><span class="mk warnmk">INES</span>Do NOT burn it in the shaft again</li>
+            </ul>
+          </div>
+        </div>
+        <div class="entry">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="#b4482e" fill-opacity=".45" stroke="#2b2621" stroke-width="1.4"><path d="M10 44 q8 -10 20 -8 q12 -6 22 6 q-4 6 -20 6 q-16 2 -22 -4z"/></g><text x="30" y="26" font-family="Caveat, cursive" font-size="18" fill="#2b2621">?</text></svg>
+          <div>
+            <h3>Unnamed #4</h3>
+            <div class="named">Red crust, warm to the touch</div>
+            <ul class="obs">
+              <li><span class="mk once">ONCE</span>Melted the frost on Tal's glove</li>
+              <li><span class="mk once">ONCE</span>Bring a sample up for the lab bench</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <footer class="foot"><span>Mockups for discussion. All art is placeholder.</span><a href="https://claude.ai/artifact/K4oP3NdUav4ST6iTKnvCZp" target="_blank" rel="noopener">STRATA design notes</a></footer>
+</div>
+
+<script>
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function whenVisible(el, cb){
+  let vis = true;
+  try { const io = new IntersectionObserver(es => { vis = es[0].isIntersecting; cb(vis); }); io.observe(el); } catch(e) { cb(true); }
+  return () => vis;
+}
+
+/* ---------------- Crawler cross-section ---------------- */
+(function(){
+  const cv = document.getElementById('crawler');
+  const ctx = cv.getContext('2d');
+  const VW = 1200, VH = 640;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = VW * dpr; cv.height = VH * dpr;
+  const R = mulberry(7);
+  const gy = 360;
+  const stars = Array.from({length: 140}, () => ({x: R()*VW, y: R()*270, r: R()*1.1 + .3, p: R()*6.28}));
+  const dust = Array.from({length: 80}, () => ({x: R()*VW, y: 90 + R()*270, v: .3 + R()*1.1, a: .04 + R()*.14}));
+  const spores = Array.from({length: 26}, () => ({x: 860 + R()*290, y: 520 + R()*80, v: .1 + R()*.25, p: R()*6.28}));
+  const pebbles = Array.from({length: 420}, () => ({x: R()*VW, y: gy + 10 + R()*280, r: R()*1.6 + .4, a: .05 + R()*.12}));
+  function terr(x){ if (x > 140 && x < 1020) return gy; const k = x <= 140 ? (140 - x)/140 : (x - 1020)/180; return gy - k*(30*Math.sin(x*.013 + 1) + 38) + 6*k*Math.sin(x*.07); }
+  const cx0 = 840, cx1 = 1160;
+  const floorY = x => 600 + 5*Math.sin(x*.045);
+  const ceilY = x => Math.min(floorY(x) - 2, 600 - 96*Math.sin(Math.PI*(x - cx0)/(cx1 - cx0)) + 7*Math.sin(x*.09));
+  const moss = Array.from({length: 46}, () => { const x = cx0 + 12 + R()*(cx1 - cx0 - 24); const top = R() < .35; return {x, y: top ? ceilY(x) + 2 : floorY(x) - 1, p: R()*6.28, r: 1.5 + R()*1.5}; });
+  const ridge = []; for (let x = 0; x <= VW; x += 8) ridge.push([x, 250 + 22*Math.sin(x*.006 + 2) + 12*Math.sin(x*.017) + 6*Math.sin(x*.05)]);
+  const shaftX = 964;
+
+  function cavepath(){ ctx.beginPath(); ctx.moveTo(cx0, ceilY(cx0)); for (let x = cx0; x <= cx1; x += 4) ctx.lineTo(x, ceilY(x)); for (let x = cx1; x >= cx0; x -= 4) ctx.lineTo(x, floorY(x)); ctx.closePath(); }
+  function txt(s, x, y, size, color, weight, align){ ctx.font = (weight||400) + ' ' + size + 'px "JetBrains Mono", Consolas, monospace'; ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.fillText(s, x, y); }
+  function person(x, fy, suit, lampOn, t){
+    ctx.save();
+    ctx.fillStyle = suit; ctx.strokeStyle = suit; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - 3, fy); ctx.lineTo(x - 2, fy - 10); ctx.moveTo(x + 3, fy); ctx.lineTo(x + 2, fy - 10); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(x - 5, fy - 24, 10, 15, 3); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, fy - 29, 5, 0, 7); ctx.fill();
+    if (lampOn) { ctx.fillStyle = '#ffe2a8'; ctx.beginPath(); ctx.arc(x + 4, fy - 31, 1.8, 0, 7); ctx.fill(); }
+    ctx.restore();
+  }
+  function room(label, x, y){ txt(label, x, y, 10.5, '#7f8a90', 600); }
+
+  function draw(t){
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // sky
+    let g = ctx.createLinearGradient(0, 0, 0, gy);
+    g.addColorStop(0, '#07090b'); g.addColorStop(1, '#171b1f');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+    for (const s of stars) { ctx.globalAlpha = .25 + .35*(.5 + .5*Math.sin(t*.0012 + s.p)); ctx.fillStyle = '#d9d4c8'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    // distant ridge
+    ctx.fillStyle = '#111518'; ctx.beginPath(); ctx.moveTo(0, VH); for (const [x, y] of ridge) ctx.lineTo(x, y); ctx.lineTo(VW, VH); ctx.fill();
+    // ground strata
+    const bands = [[0, '#2a231d'], [36, '#24262a'], [104, '#2a2824'], [176, '#1d1f22'], [240, '#16181a']];
+    bands.forEach(([off, col], i) => {
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, VH);
+      for (let x = 0; x <= VW; x += 8) ctx.lineTo(x, terr(x) + off + (i ? 7*Math.sin(x*.008*i + i*1.7) : 0));
+      ctx.lineTo(VW, VH); ctx.fill();
+    });
+    for (const p of pebbles) { if (p.y < terr(p.x) + 4) continue; ctx.globalAlpha = p.a; ctx.fillStyle = '#c8bfae'; ctx.fillRect(p.x, p.y, p.r, p.r); }
+    ctx.globalAlpha = 1;
+    // ground edge
+    ctx.strokeStyle = '#3a342c'; ctx.lineWidth = 2; ctx.beginPath(); for (let x = 0; x <= VW; x += 8) x ? ctx.lineTo(x, terr(x)) : ctx.moveTo(x, terr(x)); ctx.stroke();
+    // floodlight cone
+    g = ctx.createLinearGradient(205, 0, 0, 0);
+    g.addColorStop(0, 'rgba(255,214,150,.22)'); g.addColorStop(1, 'rgba(255,214,150,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(206, gy - 232); ctx.lineTo(0, gy - 150); ctx.lineTo(0, gy + 30); ctx.closePath(); ctx.fill();
+    // shaft
+    const sTop = gy, sBot = ceilY(shaftX) + 4;
+    ctx.fillStyle = '#050607'; ctx.fillRect(shaftX - 13, sTop - 1, 26, sBot - sTop);
+    ctx.strokeStyle = '#2e2a25'; ctx.lineWidth = 1.5; ctx.strokeRect(shaftX - 13, sTop, 26, sBot - sTop);
+    // cave
+    cavepath(); ctx.fillStyle = '#040506'; ctx.fill();
+    ctx.save(); cavepath(); ctx.clip();
+    ctx.globalCompositeOperation = 'lighter';
+    const flick = REDUCED ? 1 : .92 + .08*Math.sin(t*.031) * Math.sin(t*.017);
+    for (const [lx, ly, rad] of [[905, floorY(905) - 31, 95], [1060, floorY(1060) - 31, 95]]) {
+      g = ctx.createRadialGradient(lx, ly, 2, lx, ly, rad*flick);
+      g.addColorStop(0, 'rgba(255,214,150,.42)'); g.addColorStop(1, 'rgba(255,214,150,0)');
+      ctx.fillStyle = g; ctx.fillRect(lx - rad, ly - rad, rad*2, rad*2);
+    }
+    for (const m of moss) {
+      const a = .55 + .35*Math.sin(t*.002 + m.p);
+      g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, 16);
+      g.addColorStop(0, `rgba(111,220,192,${.22*a})`); g.addColorStop(1, 'rgba(111,220,192,0)');
+      ctx.fillStyle = g; ctx.fillRect(m.x - 16, m.y - 16, 32, 32);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    for (const m of moss) { ctx.fillStyle = '#7fe8cc'; ctx.globalAlpha = .7 + .3*Math.sin(t*.002 + m.p); ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    // pool
+    ctx.fillStyle = '#16384a'; ctx.beginPath(); ctx.ellipse(1118, floorY(1118) - 1, 30, 5, 0, 0, 7); ctx.fill();
+    for (const s of spores) { const y = s.y - ((t*.02*s.v) % 90); const x = s.x + 4*Math.sin(t*.001 + s.p); ctx.fillStyle = 'rgba(220,210,170,.5)'; ctx.fillRect(x, y < 505 ? y + 90 : y, 1.5, 1.5); }
+    ctx.restore();
+    // crawler legs
+    ctx.strokeStyle = '#4b5359'; ctx.lineWidth = 9; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(214, gy - 74); ctx.lineTo(156, gy - 6); ctx.moveTo(876, gy - 74); ctx.lineTo(930, gy - 6); ctx.stroke();
+    ctx.fillStyle = '#4b5359'; ctx.fillRect(134, gy - 8, 44, 8); ctx.fillRect(908, gy - 8, 44, 8);
+    // tracks
+    ctx.fillStyle = '#1b1f23'; ctx.strokeStyle = '#3c444a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(196, gy - 50, 690, 46, 23); ctx.fill(); ctx.stroke();
+    for (let x = 222; x <= 862; x += 40) { ctx.fillStyle = '#2b3237'; ctx.beginPath(); ctx.arc(x, gy - 27, 14, 0, 7); ctx.fill(); ctx.fillStyle = '#3d454b'; ctx.beginPath(); ctx.arc(x, gy - 27, 4, 0, 7); ctx.fill(); }
+    ctx.strokeStyle = '#2a3035'; ctx.lineWidth = 1; for (let x = 206; x < 878; x += 12) { ctx.beginPath(); ctx.moveTo(x, gy - 50); ctx.lineTo(x, gy - 45); ctx.moveTo(x, gy - 9); ctx.lineTo(x, gy - 4); ctx.stroke(); }
+    // hull
+    ctx.fillStyle = '#2b3136';
+    ctx.beginPath(); ctx.moveTo(200, gy - 50); ctx.lineTo(200, gy - 170); ctx.lineTo(245, gy - 250); ctx.lineTo(870, gy - 250); ctx.lineTo(890, gy - 230); ctx.lineTo(890, gy - 50); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#101417';
+    ctx.beginPath(); ctx.moveTo(208, gy - 58); ctx.lineTo(208, gy - 168); ctx.lineTo(250, gy - 242); ctx.lineTo(864, gy - 242); ctx.lineTo(882, gy - 226); ctx.lineTo(882, gy - 58); ctx.closePath(); ctx.fill();
+    // bridge window
+    g = ctx.createLinearGradient(210, gy - 170, 250, gy - 240);
+    g.addColorStop(0, '#3a5560'); g.addColorStop(1, '#6c8b8f');
+    ctx.strokeStyle = g; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(214, gy - 186); ctx.lineTo(244, gy - 236); ctx.stroke();
+    // decks
+    ctx.strokeStyle = '#3d454c'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(214, gy - 182); ctx.lineTo(882, gy - 182); ctx.moveTo(208, gy - 118); ctx.lineTo(882, gy - 118); ctx.stroke();
+    ctx.lineWidth = 3; ctx.strokeStyle = '#2c3338';
+    const walls = [[440, gy - 242, gy - 182], [700, gy - 242, gy - 182], [400, gy - 182, gy - 118], [640, gy - 182, gy - 118], [620, gy - 118, gy - 58]];
+    for (const [x, y0, y1] of walls) { ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1 - 30); ctx.stroke(); }
+    // ladders
+    ctx.strokeStyle = '#59636a'; ctx.lineWidth = 1.5;
+    for (const [x, y0, y1] of [[455, gy - 182, gy - 118], [660, gy - 118, gy - 58], [690, gy - 242, gy - 182]]) {
+      ctx.beginPath(); ctx.moveTo(x - 6, y0); ctx.lineTo(x - 6, y1); ctx.moveTo(x + 6, y0); ctx.lineTo(x + 6, y1);
+      for (let y = y0 + 6; y < y1; y += 9) { ctx.moveTo(x - 6, y); ctx.lineTo(x + 6, y); }
+      ctx.stroke();
+    }
+    // room labels
+    room('BRIDGE · HELM + COMMS', 262, gy - 226); room('BUNKS', 452, gy - 226); room('GROW ROOM', 712, gy - 226);
+    room('AIRLOCK + SUITS', 222, gy - 166); room('WORKSHOP', 474, gy - 166); room('LAB', 674, gy - 166);
+    room('ENGINE + REACTOR', 222, gy - 102); room('WINCH DRUM', 676, gy - 102);
+    // bridge console
+    ctx.fillStyle = '#242b30'; ctx.fillRect(282, gy - 204, 70, 20);
+    ctx.fillStyle = `rgba(111,220,192,${.35 + .15*Math.sin(t*.004)})`; ctx.fillRect(288, gy - 212, 26, 10); ctx.fillRect(320, gy - 212, 26, 10);
+    ctx.fillStyle = '#242b30'; ctx.fillRect(380, gy - 198, 40, 14);
+    ctx.fillStyle = 'rgba(227,163,63,.5)'; ctx.fillRect(386, gy - 206, 16, 8);
+    // bunks
+    ctx.fillStyle = '#262c31'; for (const x of [462, 536, 610]) { ctx.fillRect(x, gy - 210, 62, 5); ctx.fillRect(x, gy - 193, 62, 5); ctx.fillStyle = '#4a3f36'; ctx.fillRect(x + 2, gy - 214, 22, 4); ctx.fillStyle = '#262c31'; }
+    // grow room shelves
+    ctx.fillStyle = '#2a3136'; ctx.fillRect(712, gy - 212, 160, 3); ctx.fillRect(712, gy - 194, 160, 3);
+    for (let k = 0; k < 14; k++) { const x = 718 + k*11, shelf = k % 2 ? gy - 212 : gy - 194; const amber = k % 5 === 0; const a = .6 + .4*Math.sin(t*.0025 + k); ctx.fillStyle = amber ? `rgba(227,163,63,${a})` : `rgba(111,220,192,${a})`; ctx.beginPath(); ctx.arc(x, shelf - 3, 2.6, Math.PI, 0); ctx.fill(); }
+    // suits
+    for (const [x, c] of [[300, '#4d5a57'], [326, '#5a4c40'], [352, '#4d5a57']]) { ctx.fillStyle = c; ctx.beginPath(); ctx.roundRect(x, gy - 160, 14, 32, 5); ctx.fill(); ctx.beginPath(); ctx.arc(x + 7, gy - 164, 6, 0, 7); ctx.fill(); }
+    ctx.strokeStyle = '#59636a'; ctx.lineWidth = 2; ctx.strokeRect(212, gy - 160, 18, 38);
+    // workshop + lab benches
+    ctx.fillStyle = '#2a3136'; ctx.fillRect(476, gy - 138, 150, 5); ctx.fillRect(676, gy - 138, 190, 5);
+    ctx.fillStyle = '#59636a'; ctx.fillRect(500, gy - 146, 20, 8); ctx.fillRect(560, gy - 150, 6, 12);
+    for (const [x, c] of [[700, 'rgba(111,220,192,.75)'], [720, 'rgba(227,163,63,.7)'], [742, 'rgba(201,106,59,.7)'], [800, 'rgba(111,220,192,.5)']]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, gy - 143, 4.5, 0, 7); ctx.fill(); ctx.fillRect(x - 1.5, gy - 152, 3, 6); }
+    // reactor
+    const pulse = REDUCED ? .6 : .5 + .3*Math.sin(t*.003);
+    g = ctx.createRadialGradient(340, gy - 86, 2, 340, gy - 86, 70);
+    g.addColorStop(0, `rgba(240,120,50,${.45*pulse})`); g.addColorStop(1, 'rgba(240,120,50,0)');
+    ctx.fillStyle = g; ctx.fillRect(250, gy - 118, 200, 60);
+    ctx.fillStyle = '#2f363b'; ctx.beginPath(); ctx.roundRect(316, gy - 112, 48, 50, 8); ctx.fill();
+    ctx.fillStyle = `rgba(255,150,70,${.5 + .4*pulse})`; ctx.fillRect(328, gy - 100, 24, 26);
+    ctx.strokeStyle = '#3d454c'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(364, gy - 96); ctx.lineTo(600, gy - 96); ctx.moveTo(364, gy - 76); ctx.lineTo(560, gy - 76); ctx.stroke();
+    // winch drum
+    ctx.fillStyle = '#353d43'; ctx.beginPath(); ctx.arc(800, gy - 86, 22, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#8a7f6c'; ctx.lineWidth = 1; for (let r = 8; r < 21; r += 3) { ctx.beginPath(); ctx.arc(800, gy - 86, r, 0, 7); ctx.stroke(); }
+    // mast
+    ctx.strokeStyle = '#4b5359'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(864, gy - 250); ctx.lineTo(962, gy - 332); ctx.moveTo(890, gy - 232); ctx.lineTo(972, gy - 326); ctx.stroke();
+    ctx.lineWidth = 2; for (let k = 0; k < 6; k++) { const a = k/6, b = (k + 1)/6; ctx.beginPath(); ctx.moveTo(864 + 98*a, gy - 250 - 82*a); ctx.lineTo(890 + 82*b, gy - 232 - 94*b); ctx.stroke(); }
+    ctx.fillStyle = '#5b646a'; ctx.beginPath(); ctx.arc(966, gy - 330, 7, 0, 7); ctx.fill();
+    // cable
+    const sway = REDUCED ? 0 : 2.2*Math.sin(t*.0011);
+    const cageY = ceilY(shaftX) - 30;
+    ctx.strokeStyle = '#b8ac95'; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(800, gy - 108); ctx.lineTo(882, gy - 112); ctx.lineTo(898, gy - 112); ctx.lineTo(898, gy - 240); ctx.lineTo(962, gy - 336); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(972, gy - 330); ctx.quadraticCurveTo(972 + sway, (gy - 330 + cageY)/2, 966 + sway, cageY); ctx.stroke();
+    ctx.strokeStyle = '#8f9aa0'; ctx.lineWidth = 1.5; ctx.strokeRect(957 + sway, cageY, 18, 24);
+    ctx.beginPath(); for (let x = 961; x < 975; x += 4) { ctx.moveTo(x + sway, cageY); ctx.lineTo(x + sway, cageY + 24); } ctx.stroke();
+    // antenna + radio
+    ctx.strokeStyle = '#59636a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(300, gy - 250); ctx.lineTo(300, gy - 300); ctx.stroke();
+    if (!REDUCED) for (let k = 0; k < 3; k++) { const ph = ((t*.0006) + k/3) % 1; ctx.strokeStyle = `rgba(227,163,63,${.4*(1 - ph)})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(300, gy - 300, 8 + 60*ph, -Math.PI*.85, -Math.PI*.15); ctx.stroke(); }
+    // crew
+    person(330, gy - 185, '#d79a4a', false, t); person(752, gy - 61, '#c96a3b', false, t);
+    person(905, floorY(905), '#5fb3a1', true, t); person(1060, floorY(1060), '#cfc6b4', true, t);
+    txt('TAL · COMMS', 330, gy - 222 + 2, 10, '#e4ddcf', 600, 'center');
+    txt('INES · WINCH', 752, gy - 98 + 2, 10, '#e4ddcf', 600, 'center');
+    txt('MARA', 905, floorY(905) - 42, 10, '#e4ddcf', 600, 'center');
+    txt('JUN', 1060, floorY(1060) - 42, 10, '#e4ddcf', 600, 'center');
+    // dust
+    if (!REDUCED) for (const d of dust) { d.x -= d.v; if (d.x < -4) d.x = VW + 4; if (d.y > terr(d.x)) continue; ctx.fillStyle = `rgba(200,190,170,${d.a})`; ctx.fillRect(d.x, d.y, 2, 1); }
+    // HUD text
+    txt('SITE 14 · ANCHORED', 24, 34, 12, '#e4ddcf', 600);
+    txt('WIND 11 m/s W · −23 °C · NIGHT', 24, 52, 11, '#8e958f', 400);
+    txt('LINE OUT 286 m', VW - 24, 34, 12, '#e4ddcf', 600, 'right');
+    txt('DELVE TEAM · 2 · RADIO WEAK', VW - 24, 52, 11, '#e3a33f', 400, 'right');
+    // depth marker
+    ctx.strokeStyle = '#5a6266'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+    ctx.beginPath(); ctx.moveTo(1176, gy); ctx.lineTo(1176, floorY(1150)); ctx.stroke(); ctx.setLineDash([]);
+    txt('286 m', 1170, (gy + 600)/2, 10.5, '#8e958f', 400, 'right');
+  }
+  let running = true, last = 0;
+  whenVisible(cv, v => { running = v; });
+  function loop(t){ if (running && t - last > 33) { draw(t); last = t; } requestAnimationFrame(loop); }
+  const start = () => { draw(0); if (!REDUCED) requestAnimationFrame(loop); };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+
+/* ---------------- Particle simulation ---------------- */
+(function(){
+  const W = 200, H = 120, N = W*H;
+  const E=0, ROCK=1, SAND=2, WATER=3, GAS=4, FIRE=5, STEAM=6, LAVA=7, ACID=8, MYC=9, SPORE=10, MOSS=11, OBS=12, SMOKE=13, CO2=14;
+  const T = new Uint8Array(N), Lf = new Uint8Array(N), Sh = new Uint8Array(N), Mv = new Uint8Array(N), Bd = new Uint8Array(N);
+  const DEN = new Float32Array(16);
+  DEN[E]=1; DEN[GAS]=.3; DEN[STEAM]=.4; DEN[SMOKE]=.5; DEN[FIRE]=.6; DEN[SPORE]=.8; DEN[CO2]=1.6; DEN[WATER]=10; DEN[ACID]=11; DEN[LAVA]=14; DEN[SAND]=20;
+  const SOLID = new Uint8Array(16); [ROCK, OBS, MYC, MOSS].forEach(k => SOLID[k] = 1);
+  const DEC = new Float32Array(16).fill(.4);
+  DEC[E]=.93; [GAS, STEAM, SMOKE, FIRE, SPORE, CO2].forEach(k => DEC[k] = .92); [WATER, ACID].forEach(k => DEC[k] = .82); DEC[LAVA]=.6; DEC[SAND]=.45;
+  const COL = [
+    [30,29,28], [80,76,72], [152,126,88], [38,88,124], [92,70,112], [255,176,70], [168,176,184], [236,96,34],
+    [128,196,64], [204,194,172], [214,204,156], [96,232,192], [40,34,48], [62,62,64], [74,96,78]
+  ];
+  const NB = [-1, 1, -W, W];
+  let rnd = Math.random, stamp = 1, tick = 0;
+  let shaftX = 60, shaftBottom = 30, jun = {x: 60, y: 40};
+
+  function set(i, t, l){ T[i] = t; Lf[i] = l || 0; Sh[i] = (rnd()*255) | 0; }
+  function swap(i, j){ const t = T[i], l = Lf[i], s = Sh[i]; T[i] = T[j]; Lf[i] = Lf[j]; Sh[i] = Sh[j]; T[j] = t; Lf[j] = l; Sh[j] = s; Mv[i] = stamp; Mv[j] = stamp; }
+  const lighter = (j, d) => j >= 0 && j < N && !SOLID[T[j]] && DEN[T[j]] < d;
+  const heavier = (j, d) => j >= 0 && j < N && !SOLID[T[j]] && T[j] !== SAND && T[j] !== LAVA && DEN[T[j]] > d;
+  function clings(j, from){ for (const o of NB) { const k = j + o; if (k === from || k < 0 || k >= N) continue; const u = T[k]; if (u === ROCK || u === OBS || u === SAND) return true; } return false; }
+  function wetNear(x, y){ for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < W && yy < H && T[yy*W + xx] === WATER) return true; } return false; }
+
+  function fall(x, y, i, d){
+    if (y >= H - 1) return;
+    if (lighter(i + W, d)) return swap(i, i + W);
+    const dir = rnd() < .5 ? -1 : 1;
+    if (lighter(i + W + dir, d) && lighter(i + dir, d)) return swap(i, i + W + dir);
+    if (lighter(i + W - dir, d) && lighter(i - dir, d)) return swap(i, i + W - dir);
+  }
+  function liquid(x, y, i, d, disp){
+    if (y >= H - 1) return;
+    if (lighter(i + W, d)) return swap(i, i + W);
+    const dir = rnd() < .5 ? -1 : 1;
+    if (lighter(i + W + dir, d)) return swap(i, i + W + dir);
+    if (lighter(i + W - dir, d)) return swap(i, i + W - dir);
+    for (const s of [dir, -dir]) {
+      let best = -1;
+      for (let k = 1; k <= disp; k++) { const nx = x + s*k; if (nx < 0 || nx >= W) break; const j = i + s*k; if (!lighter(j, d)) break; best = j; if (lighter(j + W, d)) break; }
+      if (best >= 0) return swap(i, best);
+    }
+  }
+  function rise(x, y, i, prob, side){
+    if (rnd() > prob) return;
+    if (y === 0) { if (rnd() < .25) set(i, E); return; }
+    const d = DEN[T[i]], dir = rnd() < .5 ? -1 : 1;
+    if (rnd() < side) { if (heavier(i + dir, d)) return swap(i, i + dir); }
+    if (heavier(i - W, d)) return swap(i, i - W);
+    if (heavier(i - W + dir, d)) return swap(i, i - W + dir);
+    if (heavier(i - W - dir, d)) return swap(i, i - W - dir);
+    if (heavier(i + dir, d)) return swap(i, i + dir);
+  }
+  function sinkGas(x, y, i){
+    if (rnd() > .6) return;
+    const d = DEN[CO2], dir = rnd() < .5 ? -1 : 1;
+    if (lighter(i + W, d)) return swap(i, i + W);
+    if (lighter(i + W + dir, d)) return swap(i, i + W + dir);
+    if (lighter(i + dir, d)) return swap(i, i + dir);
+  }
+  function drift(x, y, i){
+    if (rnd() > .35) return;
+    const dx = (rnd()*3 | 0) - 1, dy = rnd() < .55 ? -1 : (rnd() < .5 ? 0 : 1);
+    const j = i + dy*W + dx;
+    if (j >= 0 && j < N && T[j] === E) swap(i, j);
+  }
+
+  function fire(x, y, i){
+    if (--Lf[i] === 0 || Lf[i] > 250) { set(i, rnd() < .35 ? SMOKE : E, 60); return false; }
+    for (const o of NB) {
+      const j = i + o; if (j < 0 || j >= N) continue;
+      const u = T[j];
+      if (u === WATER) { set(i, STEAM, 70); return false; }
+      if (u === GAS) set(j, FIRE, 22 + (rnd()*20 | 0));
+      else if (u === SPORE && rnd() < .3) set(j, FIRE, 8);
+      else if (u === MYC && rnd() < .05) { set(j, FIRE, 40); for (const o2 of NB) { const k = j + o2; if (k >= 0 && k < N && T[k] === E && rnd() < .7) set(k, SPORE, 200); } }
+      else if (u === MOSS && rnd() < .012) set(j, FIRE, 30);
+    }
+    return true;
+  }
+  function lava(x, y, i){
+    for (const o of NB) {
+      const j = i + o; if (j < 0 || j >= N) continue;
+      const u = T[j];
+      if (u === WATER) { set(i, OBS); set(j, STEAM, 90); return false; }
+      if (u === GAS || u === MYC || u === SPORE || u === MOSS) set(j, FIRE, 30);
+    }
+    if (i - W >= 0 && T[i - W] === E && rnd() < .002) set(i - W, FIRE, 12);
+    return true;
+  }
+  function acid(x, y, i){
+    for (const o of NB) {
+      const j = i + o; if (j < 0 || j >= N || Bd[j]) continue;
+      const u = T[j];
+      if ((u === ROCK || u === SAND || u === MYC || u === MOSS || (u === OBS && rnd() < .3)) && rnd() < .05) {
+        set(j, CO2, 220); if (rnd() < .3) { set(i, CO2, 220); return false; }
+      } else if (u === WATER && rnd() < .002) { set(i, WATER); return false; }
+    }
+    return true;
+  }
+  function decay(i, p, to){ if (rnd() < p && --Lf[i] <= 1) { set(i, to, 0); return false; } return true; }
+  function myc(x, y, i){
+    if (Lf[i] > 30 && rnd() < .0015) { const j = i + NB[rnd()*4 | 0]; if (j >= 0 && j < N && T[j] === E) { set(j, SPORE, 200); Lf[i] -= 4; } }
+    if (rnd() > .04) return;
+    const j = i + NB[rnd()*4 | 0]; if (j < 0 || j >= N) return;
+    const u = T[j];
+    if (u === WATER) { Lf[i] = 44; if (rnd() < .15) set(j, E); }
+    else if (u === E && Lf[i] > 1 && clings(j, i)) { const l = Lf[i] - 1; set(j, MYC, l); }
+    else if (u === MOSS && rnd() < .04) set(j, MYC, Lf[i]);
+  }
+  function moss(x, y, i){
+    if (rnd() > .012) return;
+    const j = i + NB[rnd()*4 | 0]; if (j < 0 || j >= N || T[j] !== E) return;
+    if (clings(j, i) && wetNear(j % W, (j / W) | 0)) set(j, MOSS);
+  }
+  function spore(x, y, i){
+    if (rnd() < .3 && --Lf[i] <= 1) { set(i, E); return false; }
+    if (rnd() < .03 && clings(i, -1) && wetNear(x, y)) { set(i, MYC, 30); return false; }
+    return true;
+  }
+
+  function update(x, y, i, t){
+    switch (t) {
+      case SAND: fall(x, y, i, 20); break;
+      case WATER: liquid(x, y, i, 10, 4); break;
+      case ACID: if (acid(x, y, i)) liquid(x, y, i, 11, 3); break;
+      case LAVA: if (lava(x, y, i) && tick % 3 === 0) liquid(x, y, i, 14, 1); break;
+      case GAS: rise(x, y, i, .35, .7); break;
+      case FIRE: if (fire(x, y, i)) rise(x, y, i, .6, .5); break;
+      case STEAM:
+        if (decay(i, .6, rnd() < .35 ? WATER : E)) { if (i - W >= 0 && T[i - W] === ROCK && rnd() < .01) { set(i, WATER); break; } rise(x, y, i, .5, .7); }
+        break;
+      case SMOKE: if (decay(i, 1, E)) rise(x, y, i, .5, .6); break;
+      case CO2: if (decay(i, .12, E)) sinkGas(x, y, i); break;
+      case SPORE: if (spore(x, y, i)) drift(x, y, i); break;
+      case MYC: myc(x, y, i); break;
+      case MOSS: moss(x, y, i); break;
+    }
+  }
+  function step(){
+    stamp = stamp === 255 ? 1 : stamp + 1; tick++;
+    for (let y = H - 1; y >= 0; y--) {
+      const ltr = rnd() < .5;
+      for (let k = 0; k < W; k++) {
+        const x = ltr ? k : W - 1 - k, i = y*W + x;
+        if (Mv[i] === stamp) continue;
+        const t = T[i];
+        if (t === E || t === ROCK || t === OBS) continue;
+        update(x, y, i, t);
+      }
+    }
+  }
+
+  /* generation */
+  function makeNoise(r){
+    const p = new Uint16Array(512), a = Array.from({length: 256}, (_, k) => k);
+    for (let k = 255; k > 0; k--) { const j = (r()*(k + 1)) | 0; [a[k], a[j]] = [a[j], a[k]]; }
+    for (let k = 0; k < 512; k++) p[k] = a[k & 255];
+    const v = new Float32Array(256); for (let k = 0; k < 256; k++) v[k] = r();
+    const h = (x, y) => v[p[(p[x & 255] + (y & 255)) & 511]];
+    const n = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf*xf*(3 - 2*xf), w = yf*yf*(3 - 2*yf); const A = h(xi, yi), B = h(xi + 1, yi), C = h(xi, yi + 1), D = h(xi + 1, yi + 1); return A + (B - A)*u + (C - A)*w + (A - B - C + D)*u*w; };
+    return (x, y) => n(x, y)*.6 + n(x*2.1 + 17, y*2.1 + 5)*.28 + n(x*4.3 + 3, y*4.3 + 29)*.12;
+  }
+  function gen(seed){
+    const r = mulberry(seed); rnd = r;
+    const fbm = makeNoise(r);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const ny = y / H;
+      const v = fbm(x*.055, y*.085) + .12*Math.sin(ny*Math.PI);
+      T[y*W + x] = v > .6 ? E : ROCK;
+    }
+    const tmp = new Uint8Array(N);
+    for (let it = 0; it < 3; it++) {
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        let c = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H || T[yy*W + xx] === ROCK) c++; }
+        const i = y*W + x; tmp[i] = c > 4 ? ROCK : c < 4 ? E : T[i];
+      }
+      T.set(tmp);
+    }
+    shaftX = Math.floor(W*.3);
+    for (let i = 0; i < N; i++) { const x = i % W, y = (i / W) | 0; Bd[i] = (x < 2 || x >= W - 2 || y >= H - 2 || y < 3) ? 1 : 0; if (Bd[i]) T[i] = ROCK; }
+    // winch shaft
+    let y = 0;
+    for (; y < H*.7; y++) {
+      let open = 0; for (let x = shaftX - 2; x <= shaftX + 2; x++) { const i = y*W + x; if (y > 10 && T[i] === E) open++; T[i] = E; Bd[i] = 0; }
+      if (y > 30 && open >= 3) { let below = 0; for (let x = shaftX - 2; x <= shaftX + 2; x++) if (T[(y + 1)*W + x] === E) below++; if (below >= 3) break; }
+    }
+    if (y >= H*.7 - 1) for (let yy = y - 4; yy < y + 3; yy++) for (let x = shaftX - 8; x <= shaftX + 8; x++) T[yy*W + x] = E;
+    shaftBottom = y;
+    for (let i = 0; i < N; i++) { Lf[i] = 0; Sh[i] = (r()*255) | 0; Mv[i] = 0; }
+    // lava channel
+    for (let x = Math.floor(W*.62); x < W - 2; x++) {
+      const top = H - 9 + Math.round(1.5*Math.sin(x*.25));
+      for (let yy = top; yy < H - 2; yy++) T[yy*W + x] = LAVA;
+      for (let yy = top - 6; yy < top; yy++) if (r() < .9) T[yy*W + x] = E;
+    }
+    const blob = (cx, cy, rad, n, t, l) => { for (let k = 0; k < n; k++) { const x = Math.round(cx + (r() + r() - 1)*rad), yy = Math.round(cy + (r() + r() - 1)*rad*.6); if (x < 0 || yy < 0 || x >= W || yy >= H) continue; const i = yy*W + x; if (T[i] === E && !Bd[i]) set(i, t, l); } };
+    const openAt = (y0, y1) => { for (let tries = 0; tries < 2000; tries++) { const x = 4 + (r()*(W - 8) | 0), yy = (H*y0 + r()*H*(y1 - y0)) | 0; if (T[yy*W + x] === E && Math.abs(x - shaftX) > 6) return [x, yy]; } return [W/2, H/2]; };
+    for (let k = 0; k < 6; k++) { const [x, yy] = openAt(.3, .8); blob(x, yy, 9, 420, WATER, 0); }
+    for (let k = 0; k < 3; k++) { const [x, yy] = openAt(.15, .55); blob(x, yy, 6, 140, SAND, 0); }
+    for (let tries = 0; tries < 400; tries++) {
+      const x = 8 + (r()*(W - 16) | 0), yy = (H*.15 + r()*H*.4) | 0, i = yy*W + x;
+      if (Math.abs(x - shaftX) < 14 || T[i] !== E || T[i - W] !== ROCK) continue;
+      for (let dy = -6; dy <= 6; dy++) for (let dx = -7; dx <= 7; dx++) { if (dx*dx + dy*dy > 40) continue; const j = (yy + dy)*W + x + dx; if (j >= 0 && j < N && T[j] === E && !Bd[j]) set(j, GAS, 0); }
+      break;
+    }
+    for (let k = 0; k < 160; k++) step();
+    let seeds = 0;
+    for (let tries = 0; tries < 6000 && seeds < 16; tries++) { const i = (r()*N) | 0; if (T[i] === E && !Bd[i] && clings(i, -1)) { set(i, MYC, 40); seeds++; } }
+    seeds = 0;
+    for (let tries = 0; tries < 20000 && seeds < 18; tries++) { const i = (r()*N) | 0; if (T[i] === E && !Bd[i] && clings(i, -1) && wetNear(i % W, (i / W) | 0)) { set(i, MOSS); seeds++; } }
+    for (let k = 0; k < 360; k++) step();
+    // Jun stands at the foot of the shaft
+    let fy = shaftBottom; while (fy < H - 3 && !SOLID[T[(fy + 1)*W + shaftX]] && T[(fy + 1)*W + shaftX] !== SAND && T[(fy + 1)*W + shaftX] !== WATER) fy++;
+    jun = {x: shaftX, y: fy};
+    rnd = Math.random;
+  }
+
+  /* light + render */
+  const LW = new Float32Array(N), LC = new Float32Array(N);
+  const cv = document.getElementById('sim'), sctx = cv.getContext('2d');
+  const img = sctx.createImageData(W, H), px = img.data;
+  const fx = document.getElementById('simfx'), fctx = fx.getContext('2d');
+  let ambient = .035, pointer = null, painting = false, tool = WATER, paused = false;
+
+  function lamp(x, y, s){
+    const cx = Math.round(x), cy = Math.round(y);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const xx = cx + dx, yy = cy + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue; const i = yy*W + xx; if (!SOLID[T[i]]) LW[i] = Math.max(LW[i], s); }
+  }
+  function light(){
+    for (let i = 0; i < N; i++) {
+      const t = T[i];
+      LW[i] = t === FIRE ? .8 + .2*Math.random() : t === LAVA ? .8 : 0;
+      LC[i] = t === MOSS ? .62 : t === SPORE ? .14 : t === MYC ? .05 : 0;
+    }
+    lamp(jun.x + .5, jun.y - 3, .95);
+    if (pointer) lamp(pointer.x, pointer.y, 1);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y*W + x, d = DEC[T[i]], dd = d*.96;
+      let w = LW[i], c = LC[i];
+      if (x > 0) { w = Math.max(w, LW[i - 1]*d); c = Math.max(c, LC[i - 1]*d); }
+      if (y > 0) { const u = i - W; w = Math.max(w, LW[u]*d); c = Math.max(c, LC[u]*d);
+        if (x > 0) { w = Math.max(w, LW[u - 1]*dd); c = Math.max(c, LC[u - 1]*dd); }
+        if (x < W - 1) { w = Math.max(w, LW[u + 1]*dd); c = Math.max(c, LC[u + 1]*dd); } }
+      LW[i] = w; LC[i] = c;
+    }
+    for (let y = H - 1; y >= 0; y--) for (let x = W - 1; x >= 0; x--) {
+      const i = y*W + x, d = DEC[T[i]], dd = d*.96;
+      let w = LW[i], c = LC[i];
+      if (x < W - 1) { w = Math.max(w, LW[i + 1]*d); c = Math.max(c, LC[i + 1]*d); }
+      if (y < H - 1) { const u = i + W; w = Math.max(w, LW[u]*d); c = Math.max(c, LC[u]*d);
+        if (x > 0) { w = Math.max(w, LW[u - 1]*dd); c = Math.max(c, LC[u - 1]*dd); }
+        if (x < W - 1) { w = Math.max(w, LW[u + 1]*dd); c = Math.max(c, LC[u + 1]*dd); } }
+      LW[i] = w; LC[i] = c;
+    }
+  }
+  function render(){
+    for (let i = 0, p = 0; i < N; i++, p += 4) {
+      const t = T[i], col = COL[t], s = 1 + (Sh[i] - 128)/128*.12;
+      let r, g, b;
+      if (t === FIRE) { const k = Lf[i] / 40; r = 255; g = 120 + 90*Math.min(1, k); b = 40 + 30*Math.random(); }
+      else if (t === LAVA || t === MOSS) { r = col[0]*s; g = col[1]*s; b = col[2]*s; }
+      else {
+        const w = LW[i], c = LC[i];
+        const fr = Math.min(1.2, ambient + w + c*.45), fg = Math.min(1.2, ambient + w*.84 + c), fb = Math.min(1.2, ambient + w*.62 + c*.9);
+        r = col[0]*s*fr; g = col[1]*s*fg; b = col[2]*s*fb;
+      }
+      px[p] = r; px[p + 1] = g; px[p + 2] = b; px[p + 3] = 255;
+    }
+    sctx.putImageData(img, 0, 0);
+  }
+  function overlay(){
+    const rect = fx.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.round(rect.width*dpr), h = Math.round(rect.height*dpr);
+    if (fx.width !== w || fx.height !== h) { fx.width = w; fx.height = h; }
+    const k = w / W;
+    fctx.clearRect(0, 0, w, h);
+    // rope
+    fctx.strokeStyle = 'rgba(200,188,160,.75)'; fctx.lineWidth = Math.max(1, k*.35);
+    fctx.beginPath(); fctx.moveTo((shaftX + 1.5)*k, 0); fctx.lineTo((shaftX + 1.5)*k, (jun.y - 4)*k); fctx.stroke();
+    // Jun
+    const jx = (jun.x + .5)*k, jy = (jun.y + 1)*k;
+    fctx.fillStyle = '#cfc6b4';
+    fctx.fillRect(jx - k*.9, jy - k*4.2, k*1.8, k*3.2);
+    fctx.beginPath(); fctx.arc(jx, jy - k*5, k*.9, 0, 7); fctx.fill();
+    fctx.fillStyle = '#ffe2a8'; fctx.fillRect(jx + k*.3, jy - k*5.6, k*.7, k*.7);
+    fctx.font = `600 ${Math.max(10, k*2.6)}px "JetBrains Mono", Consolas, monospace`; fctx.fillStyle = 'rgba(228,221,207,.85)'; fctx.textAlign = 'center';
+    fctx.fillText('JUN', jx, jy - k*7.5);
+    // brush ring
+    if (pointer) { fctx.strokeStyle = 'rgba(228,221,207,.7)'; fctx.lineWidth = 1; fctx.beginPath(); fctx.arc(pointer.x*k, pointer.y*k, 3*k, 0, 7); fctx.stroke(); }
+  }
+
+  /* detector */
+  const det = document.getElementById('detector');
+  function detect(){
+    const p = pointer || {x: jun.x, y: jun.y - 3};
+    const cx = Math.round(p.x), cy = Math.round(p.y);
+    let n = 0, gas = 0, co2 = 0, sp = 0, hot = 0;
+    for (let dy = -8; dy <= 8; dy++) for (let dx = -8; dx <= 8; dx++) {
+      const x = cx + dx, y = cy + dy; if (x < 0 || y < 0 || x >= W || y >= H || dx*dx + dy*dy > 64) continue;
+      const t = T[y*W + x]; if (SOLID[t] || t === SAND) continue; n++;
+      if (t === GAS) gas++; else if (t === CO2) co2++; else if (t === SPORE) sp++; else if (t === FIRE || t === LAVA) hot++;
+    }
+    const pct = v => n ? (100*v/n) : 0;
+    const m = pct(gas), c = pct(co2);
+    const cls = (v, w, cr) => v >= cr ? 'crit' : v >= w ? 'warn' : '';
+    det.innerHTML =
+      `<span>${pointer ? 'Your lamp' : 'Jun’s detector'}</span>` +
+      `<span class="${cls(m, 1, 5)}">Methane <b>${m.toFixed(1)}%</b>${m >= 5 ? ' · explosive' : ''}</span>` +
+      `<span class="${cls(c, 2, 8)}">CO₂ <b>${c.toFixed(1)}%</b></span>` +
+      `<span class="${sp > 6 ? 'warn' : ''}">Spores <b>${sp === 0 ? 'none' : sp < 7 ? 'trace' : 'heavy'}</b></span>` +
+      `<span class="${hot ? 'crit' : ''}">Heat <b>${hot ? 'danger' : 'normal'}</b></span>`;
+  }
+
+  /* tools */
+  const TOOLS = [
+    ['Dig', E, '#1e1d1c'], ['Rock', ROCK, 'rgb(80,76,72)'], ['Sand', SAND, 'rgb(152,126,88)'], ['Water', WATER, 'rgb(38,88,124)'],
+    ['Methane', GAS, 'rgb(92,70,112)'], ['Spark', FIRE, 'rgb(255,176,70)'], ['Lava', LAVA, 'rgb(236,96,34)'], ['Acid', ACID, 'rgb(128,196,64)'],
+    ['Grey lace', MYC, 'rgb(204,194,172)'], ['Lantern moss', MOSS, 'rgb(96,232,192)'], ['Spores', SPORE, 'rgb(214,204,156)']
+  ];
+  const toolsEl = document.getElementById('tools');
+  TOOLS.forEach(([name, t, c]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.id = 'tool-' + name.toLowerCase().replace(/\s+/g, '-');
+    b.innerHTML = `<span class="sw" style="background:${c}"></span>${name}`;
+    b.setAttribute('aria-pressed', t === tool ? 'true' : 'false');
+    b.addEventListener('click', () => { tool = t; toolsEl.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); });
+    toolsEl.appendChild(b);
+  });
+  const LIFE = {[FIRE]: 30, [STEAM]: 80, [CO2]: 220, [SPORE]: 220, [MYC]: 40, [SMOKE]: 60};
+  function paint(){
+    if (!pointer) return;
+    const r = 3, cx = pointer.x, cy = pointer.y;
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (dx*dx + dy*dy > r*r) continue;
+      const x = Math.round(cx + dx), y = Math.round(cy + dy);
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const i = y*W + x; if (Bd[i]) continue;
+      const u = T[i];
+      if (tool === E) { set(i, E); continue; }
+      if (tool === ROCK) { set(i, ROCK); continue; }
+      if (tool === FIRE) { if ((u === E && Math.random() < .4) || u === GAS || u === MYC || u === SPORE || u === MOSS) set(i, FIRE, 20 + (Math.random()*20 | 0)); continue; }
+      const dens = (tool === GAS || tool === SPORE) ? .35 : .55;
+      if (u === E && Math.random() < dens) set(i, tool, LIFE[tool] || 0);
+    }
+  }
+  const stage = document.getElementById('stage');
+  function toGrid(e){ const r = cv.getBoundingClientRect(); return {x: (e.clientX - r.left)/r.width*W, y: (e.clientY - r.top)/r.height*H}; }
+  cv.addEventListener('pointerdown', e => { painting = true; pointer = toGrid(e); try { cv.setPointerCapture(e.pointerId); } catch (_) {} e.preventDefault(); });
+  cv.addEventListener('pointermove', e => { pointer = toGrid(e); });
+  cv.addEventListener('pointerup', () => { painting = false; });
+  cv.addEventListener('pointercancel', () => { painting = false; pointer = null; });
+  cv.addEventListener('pointerleave', () => { if (!painting) pointer = null; });
+
+  const bL = document.getElementById('btn-lights'), bP = document.getElementById('btn-pause'), bN = document.getElementById('btn-new');
+  bL.addEventListener('click', () => { const on = ambient < .5; ambient = on ? .8 : .035; bL.setAttribute('aria-pressed', String(on)); bL.textContent = 'Cave lights: ' + (on ? 'on' : 'off'); });
+  bP.addEventListener('click', () => { paused = !paused; bP.setAttribute('aria-pressed', String(paused)); bP.textContent = paused ? 'Resume' : 'Pause'; });
+  let seed = 41;
+  bN.addEventListener('click', () => { seed++; gen(seed); });
+
+  gen(seed);
+  let visible = true, frame = 0;
+  whenVisible(stage, v => { visible = v; });
+  function loop(){
+    if (visible) {
+      if (painting) paint();
+      if (!paused) { step(); step(); }
+      light(); render(); overlay();
+      if (frame++ % 8 === 0) detect();
+    }
+    requestAnimationFrame(loop);
+  }
+  light(); render(); overlay(); detect();
+  requestAnimationFrame(loop);
+})();
+</script>

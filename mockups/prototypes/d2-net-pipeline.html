@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>STRATA D2 - Net pipeline</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@500;700&display=swap">
+<style>
+:root{--bg:#0c0f11;--panel:#13171a;--line:#262d32;--ink:#e4ddcf;--muted:#8e958f;--rust:#c96a3b;--glow:#6fdcc0;--warn:#e3a33f;--crit:#e2553f;
+--f-display:"Big Shoulders Stencil Display","Arial Narrow",Impact,sans-serif;--f-body:"Barlow","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;--f-hand:"Caveat","Segoe Print",cursive}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
+main{max-width:1180px;margin:0 auto;padding:20px 20px 48px;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--f-display);font-weight:800;font-size:44px;letter-spacing:.04em;text-transform:uppercase;margin:0;line-height:1}
+h1 span{color:var(--rust)}
+.q{margin:6px 0 0;max-width:72ch;font-size:18px}
+.note{font-family:var(--f-hand);font-size:22px;color:var(--warn)}
+button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+.stage{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:10px}
+.pane h2{margin:0 0 8px;font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--rust);font-weight:600;display:flex;justify-content:space-between}
+.pane h2 em{font-style:normal;color:var(--muted)}
+canvas{display:block;width:100%;image-rendering:pixelated;background:#07090a;border:1px solid var(--line);touch-action:none}
+canvas.drag{cursor:grab}
+#strip{image-rendering:auto;height:76px}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;overflow:hidden;font-family:var(--f-mono)}
+.readouts div{background:var(--panel);padding:8px 10px}
+.readouts small{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.readouts b{font-size:17px;font-weight:600}
+.warn{color:var(--warn)}.crit{color:var(--crit)}.ok{color:var(--glow)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:3px;padding:8px 12px;cursor:pointer}
+button:hover{border-color:var(--rust)}
+button.stress{border-color:var(--rust);color:var(--rust)}
+.tuning{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 24px}
+.tuning label{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px}
+.tuning label output{font-family:var(--f-mono);font-size:13px;color:var(--glow)}
+.tuning input[type=range]{grid-column:1/3;width:100%;accent-color:var(--rust)}
+.tuning label.tg{grid-template-columns:1fr auto;align-items:center}
+.legend{font-family:var(--f-mono);font-size:12px;color:var(--muted);margin:0}
+.legend b{color:var(--ink);font-weight:600}
+@media(max-width:820px){.stage{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Strata <span>/ D2 Net pipeline</span></h1>
+    <p class="q">What does a client actually see when it gets the world as chunk messages over a limited, lossy connection?</p>
+  </header>
+
+  <section class="stage">
+    <div class="pane"><h2>Host <em>runs the sim, 256&times;192</em></h2><canvas id="host" class="drag" width="256" height="192" tabindex="0" aria-label="Host world"></canvas></div>
+    <div class="pane"><h2>Client <em>replica, messages only</em></h2><canvas id="client" class="drag" width="256" height="192" tabindex="0" aria-label="Client replica"></canvas></div>
+  </section>
+  <canvas id="strip" width="1180" height="76" aria-label="Messages in flight"></canvas>
+
+  <section class="readouts" id="readouts"></section>
+
+  <div class="row">
+    <button class="stress" id="bFlood">Flood</button>
+    <button class="stress" id="bBurn">Burn</button>
+    <button class="stress" id="bCollapse">Collapse</button>
+    <span style="width:14px"></span>
+    <button id="bPause">Pause (P)</button><button id="bRestart">Restart (R)</button><button id="bNew">New seed (N)</button>
+    <span class="note" id="note"></span>
+  </div>
+
+  <section class="tuning" id="tuning" aria-label="Tuning"></section>
+  <div class="row"><button id="bReset">Reset to defaults</button><button id="bSweep">Sweep budgets with a flood</button><span class="note" id="sweepNote"></span></div>
+
+  <p class="legend"><b>Drag</b> on either canvas to move the client view &middot; <b>R</b> restart same seed &middot; <b>N</b> new seed &middot; <b>P</b> pause &middot; red cells on the client differ from the host &middot; amber boxes on the host are dirty rects waiting to be sent &middot; blocks in the strip are messages sized by bytes, red = lost &middot; settings live in the URL hash.</p>
+</main>
+
+<script>
+(function(){
+'use strict';
+const W=256,H=192,N=W*H,CS=64,CW=4,CH=3,NC=CW*CH,HDR=14,STEP_MS=1000/60;
+const E=0,ROCK=1,SAND=2,WATER=3,GAS=4,FIRE=5,STEAM=6,LAVA=7,ACID=8,MYC=9,SPORE=10,MOSS=11,OBS=12,SMOKE=13,CO2=14,NMAT=15;
+const COL=[[30,29,28],[80,76,72],[152,126,88],[38,88,124],[92,70,112],[255,176,70],[168,176,184],[236,96,34],[128,196,64],[204,194,172],[214,204,156],[96,232,192],[40,34,48],[62,62,64],[74,96,78]];
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ---------- tunables, stored in the URL hash ---------- */
+const TUN=[
+ {k:'seed',l:'Seed',min:1,max:9999,step:1,d:1337,u:''},
+ {k:'rate',l:'Send rate',min:5,max:30,step:1,d:15,u:' Hz'},
+ {k:'budget',l:'Byte budget',min:5,max:200,step:1,d:30,u:' kB/s'},
+ {k:'lat',l:'Latency',min:0,max:400,step:5,d:80,u:' ms'},
+ {k:'jit',l:'Jitter',min:0,max:100,step:5,d:20,u:' ms'},
+ {k:'loss',l:'Loss',min:0,max:20,step:.5,d:2,u:' %'},
+ {k:'vw',l:'Client view width',min:32,max:160,step:8,d:96,u:' cells'},
+ {k:'vh',l:'Client view height',min:24,max:120,step:8,d:72,u:' cells'},
+ {k:'refresh',l:'Round-robin refresh',tg:1,d:1},
+ {k:'rle',l:'Run-length encoding',tg:1,d:1},
+ {k:'diff',l:'Show diffs on client',tg:1,d:1}
+];
+const P={vx:20,vy:20},DEF={},EXTRA={vx:20,vy:20};
+TUN.forEach(t=>{P[t.k]=t.d;DEF[t.k]=t.d});
+(function readHash(){
+  const h=location.hash.replace(/^#/,'');if(!h)return;
+  h.split('&').forEach(kv=>{const [k,v]=kv.split('=');const n=Number(v);if(!(k in P)||!isFinite(n))return;
+    const t=TUN.find(x=>x.k===k);P[k]=t?clamp(n,t.min,t.max):clamp(n,0,W)});
+  P.vx=clamp(P.vx,0,W-P.vw);P.vy=clamp(P.vy,0,H-P.vh);
+})();
+function writeHash(){
+  const s=Object.keys(P).map(k=>k+'='+P[k]).join('&');
+  try{history.replaceState(null,'','#'+s)}catch(e){try{location.hash=s}catch(e2){}}
+}
+
+/* ---------- host world + sand sim (ported from the mockup) ---------- */
+const T=new Uint8Array(N),Lf=new Uint8Array(N),Mv=new Uint8Array(N),Bd=new Uint8Array(N),SH=new Int8Array(N);
+const DEN=new Float32Array(16);
+DEN[E]=1;DEN[GAS]=.3;DEN[STEAM]=.4;DEN[SMOKE]=.5;DEN[FIRE]=.6;DEN[SPORE]=.8;DEN[CO2]=1.6;DEN[WATER]=10;DEN[ACID]=11;DEN[LAVA]=14;DEN[SAND]=20;
+const SOLID=new Uint8Array(16);[ROCK,OBS,MYC,MOSS].forEach(k=>SOLID[k]=1);
+const NB=[-1,1,-W,W];
+for(let i=0;i<N;i++){const x=i&255,y=i>>8;SH[i]=((((x*73856093)^(y*19349663))>>>0)&31)-16}   // shade derived from position, never sent
+let rnd=Math.random,stamp=1,tick=0;
+
+// dirty rect per chunk: bounding box of cells changed since the last send, chunk-local coords
+const dx0=new Int16Array(NC),dy0=new Int16Array(NC),dx1=new Int16Array(NC),dy1=new Int16Array(NC);
+function clean(c){dx0[c]=dy0[c]=CS;dx1[c]=dy1[c]=-1}
+function fullDirty(c){dx0[c]=dy0[c]=0;dx1[c]=dy1[c]=CS-1}
+const isDirty=c=>dx1[c]>=dx0[c];
+function mark(i){
+  const x=i&255,y=i>>8,c=(y>>6)*CW+(x>>6),lx=x&63,ly=y&63;
+  if(lx<dx0[c])dx0[c]=lx;if(lx>dx1[c])dx1[c]=lx;if(ly<dy0[c])dy0[c]=ly;if(ly>dy1[c])dy1[c]=ly;
+}
+function set(i,t,l){if(T[i]!==t){T[i]=t;mark(i)}Lf[i]=l||0}
+function swap(i,j){
+  const t=T[i],l=Lf[i];
+  if(t!==T[j]){mark(i);mark(j)}
+  T[i]=T[j];Lf[i]=Lf[j];T[j]=t;Lf[j]=l;Mv[i]=stamp;Mv[j]=stamp;
+}
+const lighter=(j,d)=>j>=0&&j<N&&!SOLID[T[j]]&&DEN[T[j]]<d;
+const heavier=(j,d)=>j>=0&&j<N&&!SOLID[T[j]]&&T[j]!==SAND&&T[j]!==LAVA&&DEN[T[j]]>d;
+function clings(j,from){for(const o of NB){const k=j+o;if(k===from||k<0||k>=N)continue;const u=T[k];if(u===ROCK||u===OBS||u===SAND)return true}return false}
+function wetNear(x,y){for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<W&&yy<H&&T[yy*W+xx]===WATER)return true}return false}
+function fall(x,y,i,d){
+  if(y>=H-1)return;
+  if(lighter(i+W,d))return swap(i,i+W);
+  const dir=rnd()<.5?-1:1;
+  if(lighter(i+W+dir,d)&&lighter(i+dir,d))return swap(i,i+W+dir);
+  if(lighter(i+W-dir,d)&&lighter(i-dir,d))return swap(i,i+W-dir);
+}
+function liquid(x,y,i,d,disp){
+  if(y>=H-1)return;
+  if(lighter(i+W,d))return swap(i,i+W);
+  const dir=rnd()<.5?-1:1;
+  if(lighter(i+W+dir,d))return swap(i,i+W+dir);
+  if(lighter(i+W-dir,d))return swap(i,i+W-dir);
+  for(const s of [dir,-dir]){
+    let best=-1;
+    for(let k=1;k<=disp;k++){const nx=x+s*k;if(nx<0||nx>=W)break;const j=i+s*k;if(!lighter(j,d))break;best=j;if(lighter(j+W,d))break}
+    if(best>=0)return swap(i,best);
+  }
+}
+function rise(x,y,i,prob,side){
+  if(rnd()>prob)return;
+  if(y===0){if(rnd()<.25)set(i,E);return}
+  const d=DEN[T[i]],dir=rnd()<.5?-1:1;
+  if(rnd()<side){if(heavier(i+dir,d))return swap(i,i+dir)}
+  if(heavier(i-W,d))return swap(i,i-W);
+  if(heavier(i-W+dir,d))return swap(i,i-W+dir);
+  if(heavier(i-W-dir,d))return swap(i,i-W-dir);
+  if(heavier(i+dir,d))return swap(i,i+dir);
+}
+function sinkGas(x,y,i){
+  if(rnd()>.6)return;
+  const d=DEN[CO2],dir=rnd()<.5?-1:1;
+  if(lighter(i+W,d))return swap(i,i+W);
+  if(lighter(i+W+dir,d))return swap(i,i+W+dir);
+  if(lighter(i+dir,d))return swap(i,i+dir);
+}
+function drift(x,y,i){
+  if(rnd()>.35)return;
+  const dx=(rnd()*3|0)-1,dy=rnd()<.55?-1:(rnd()<.5?0:1),j=i+dy*W+dx;
+  if(j>=0&&j<N&&T[j]===E)swap(i,j);
+}
+function fire(x,y,i){
+  if(--Lf[i]===0||Lf[i]>250){set(i,rnd()<.35?SMOKE:E,60);return false}
+  for(const o of NB){
+    const j=i+o;if(j<0||j>=N)continue;const u=T[j];
+    if(u===WATER){set(i,STEAM,70);return false}
+    if(u===GAS)set(j,FIRE,22+(rnd()*20|0));
+    else if(u===SPORE&&rnd()<.3)set(j,FIRE,8);
+    else if(u===MYC&&rnd()<.05){set(j,FIRE,40);for(const o2 of NB){const k=j+o2;if(k>=0&&k<N&&T[k]===E&&rnd()<.7)set(k,SPORE,200)}}
+    else if(u===MOSS&&rnd()<.012)set(j,FIRE,30);
+  }
+  return true;
+}
+function lava(x,y,i){
+  for(const o of NB){
+    const j=i+o;if(j<0||j>=N)continue;const u=T[j];
+    if(u===WATER){set(i,OBS);set(j,STEAM,90);return false}
+    if(u===GAS||u===MYC||u===SPORE||u===MOSS)set(j,FIRE,30);
+  }
+  if(i-W>=0&&T[i-W]===E&&rnd()<.002)set(i-W,FIRE,12);
+  return true;
+}
+function acid(x,y,i){
+  for(const o of NB){
+    const j=i+o;if(j<0||j>=N||Bd[j])continue;const u=T[j];
+    if((u===ROCK||u===SAND||u===MYC||u===MOSS||(u===OBS&&rnd()<.3))&&rnd()<.05){set(j,CO2,220);if(rnd()<.3){set(i,CO2,220);return false}}
+    else if(u===WATER&&rnd()<.002){set(i,WATER);return false}
+  }
+  return true;
+}
+function decay(i,p,to){if(rnd()<p&&--Lf[i]<=1){set(i,to,0);return false}return true}
+function myc(x,y,i){
+  if(Lf[i]>30&&rnd()<.0015){const j=i+NB[rnd()*4|0];if(j>=0&&j<N&&T[j]===E){set(j,SPORE,200);Lf[i]-=4}}
+  if(rnd()>.04)return;
+  const j=i+NB[rnd()*4|0];if(j<0||j>=N)return;const u=T[j];
+  if(u===WATER){Lf[i]=44;if(rnd()<.15)set(j,E)}
+  else if(u===E&&Lf[i]>1&&clings(j,i))set(j,MYC,Lf[i]-1);
+  else if(u===MOSS&&rnd()<.04)set(j,MYC,Lf[i]);
+}
+function moss(x,y,i){
+  if(rnd()>.012)return;
+  const j=i+NB[rnd()*4|0];if(j<0||j>=N||T[j]!==E)return;
+  if(clings(j,i)&&wetNear(j%W,(j/W)|0))set(j,MOSS);
+}
+function spore(x,y,i){
+  if(rnd()<.3&&--Lf[i]<=1){set(i,E);return false}
+  if(rnd()<.03&&clings(i,-1)&&wetNear(x,y)){set(i,MYC,30);return false}
+  return true;
+}
+function update(x,y,i,t){
+  switch(t){
+    case SAND:fall(x,y,i,20);break;
+    case WATER:liquid(x,y,i,10,4);break;
+    case ACID:if(acid(x,y,i))liquid(x,y,i,11,3);break;
+    case LAVA:if(lava(x,y,i)&&tick%3===0)liquid(x,y,i,14,1);break;
+    case GAS:rise(x,y,i,.35,.7);break;
+    case FIRE:if(fire(x,y,i))rise(x,y,i,.6,.5);break;
+    case STEAM:if(decay(i,.6,rnd()<.35?WATER:E)){if(i-W>=0&&T[i-W]===ROCK&&rnd()<.01){set(i,WATER);break}rise(x,y,i,.5,.7)}break;
+    case SMOKE:if(decay(i,1,E))rise(x,y,i,.5,.6);break;
+    case CO2:if(decay(i,.12,E))sinkGas(x,y,i);break;
+    case SPORE:if(spore(x,y,i))drift(x,y,i);break;
+    case MYC:myc(x,y,i);break;
+    case MOSS:moss(x,y,i);break;
+  }
+}
+function simStep(){
+  stamp=stamp===255?1:stamp+1;tick++;
+  for(let y=H-1;y>=0;y--){
+    const ltr=rnd()<.5;
+    for(let k=0;k<W;k++){
+      const x=ltr?k:W-1-k,i=y*W+x;
+      if(Mv[i]===stamp)continue;
+      const t=T[i];if(t===E||t===ROCK||t===OBS)continue;
+      update(x,y,i,t);
+    }
+  }
+}
+
+/* ---------- world generation (a plain cave, no gameplay features) ---------- */
+function makeNoise(r){
+  const v=new Float32Array(1024);for(let k=0;k<1024;k++)v[k]=r();
+  const h=(x,y)=>v[(x&31)*32+(y&31)];
+  const n=(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),w=yf*yf*(3-2*yf);
+    const A=h(xi,yi),B=h(xi+1,yi),C=h(xi,yi+1),D=h(xi+1,yi+1);return A+(B-A)*u+(C-A)*w+(A-B-C+D)*u*w};
+  return (x,y)=>n(x,y)*.62+n(x*2.1+17,y*2.1+5)*.38;
+}
+function blob(cx,cy,r,t){
+  for(let y=cy-r;y<=cy+r;y++)for(let x=cx-r;x<=cx+r;x++){
+    if(x<2||y<3||x>=W-2||y>=H-2)continue;
+    if((x-cx)*(x-cx)+(y-cy)*(y-cy)<=r*r&&T[y*W+x]===E)set(y*W+x,t,0);
+  }
+}
+function gen(seed){
+  rnd=mulberry32(seed);
+  const fbm=makeNoise(rnd);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=fbm(x*.045,y*.07)+.1*Math.sin(y/H*Math.PI);T[y*W+x]=v>.6?E:ROCK}
+  const tmp=new Uint8Array(N);
+  for(let it=0;it<3;it++){
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+      let c=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=W||yy>=H||T[yy*W+xx]===ROCK)c++}
+      const i=y*W+x;tmp[i]=c>4?ROCK:c<4?E:T[i];
+    }
+    T.set(tmp);
+  }
+  for(let i=0;i<N;i++){const x=i&255,y=i>>8;Bd[i]=(x<2||x>=W-2||y>=H-2||y<3)?1:0;if(Bd[i])T[i]=ROCK;Lf[i]=0;Mv[i]=0}
+  for(let k=0;k<7;k++)blob(8+(rnd()*(W-16)|0),20+(rnd()*(H-60)|0),4+(rnd()*4|0),WATER);
+  for(let k=0;k<5;k++)blob(8+(rnd()*(W-16)|0),20+(rnd()*(H-60)|0),4+(rnd()*4|0),SAND);
+  for(let k=0;k<3;k++)blob(8+(rnd()*(W-16)|0),30+(rnd()*(H-70)|0),3+(rnd()*3|0),GAS);
+}
+
+/* ---------- wire format, host side: networking.md section 7 (14-byte header) ----------
+   type u8 | chunk x i16 | chunk y i16 | version u32 | rect x,y,w,h u8 x4 | encoding u8 | payload (little endian) */
+const tmpRaw=new Uint8Array(CS*CS),tmpRle=new Uint8Array(CS*CS*2);
+const verHost=new Uint32Array(NC),lastSent=new Int32Array(NC),prevIn=new Uint8Array(NC);
+function encode(c,rx,ry,rw,rh,useRle){
+  const cx=c%CW,cy=(c/CW)|0,ox=cx*CS+rx,oy=cy*CS+ry;
+  let n=0;
+  for(let y=0;y<rh;y++){const row=(oy+y)*W+ox;for(let x=0;x<rw;x++)tmpRaw[n++]=T[row+x]}
+  let enc=0,len=n;
+  if(useRle){
+    let p=0,run=1,cur=tmpRaw[0];
+    for(let k=1;k<=n;k++){
+      if(k<n&&tmpRaw[k]===cur&&run<255){run++;continue}
+      tmpRle[p++]=run;tmpRle[p++]=cur;
+      if(k<n){cur=tmpRaw[k];run=1}
+    }
+    if(p<n){enc=1;len=p}            // RLE only if smaller than raw
+  }
+  const out=new Uint8Array(HDR+len),dv=new DataView(out.buffer);
+  out[0]=1;dv.setInt16(1,cx,true);dv.setInt16(3,cy,true);dv.setUint32(5,++verHost[c],true);
+  out[9]=rx;out[10]=ry;out[11]=rw;out[12]=rh;out[13]=enc;
+  out.set((enc?tmpRle:tmpRaw).subarray(0,len),HDR);
+  out.rawEq=HDR+n;                  // size this message would have had as raw, for the compression readout
+  return out;
+}
+
+/* ---------- client side: decode with bounds checks, write only the replica ---------- */
+const R=new Uint8Array(N),cellVer=new Uint32Array(N),lastApply=new Float64Array(NC);
+const stat={rejected:0,stale:0,applied:0};
+function reject(){stat.rejected++;return false}
+function decodeApply(b,now){
+  if(b.length<HDR||b[0]!==1)return reject();
+  const dv=new DataView(b.buffer,b.byteOffset,b.length);
+  const cx=dv.getInt16(1,true),cy=dv.getInt16(3,true),ver=dv.getUint32(5,true);
+  if(cx<0||cx>=CW||cy<0||cy>=CH)return reject();
+  const rx=b[9],ry=b[10],rw=b[11],rh=b[12],enc=b[13];
+  if(rw<1||rh<1||rx+rw>CS||ry+rh>CS)return reject();
+  const need=rw*rh,pl=b.length-HDR;
+  if(enc===0){
+    if(pl!==need)return reject();
+    for(let k=HDR;k<b.length;k++)if(b[k]>=NMAT)return reject();
+  }else if(enc===1){
+    if(pl<2||(pl&1))return reject();
+    let sum=0;
+    for(let k=HDR;k<b.length;k+=2){if(b[k]<1||b[k+1]>=NMAT)return reject();sum+=b[k];if(sum>need)return reject()}
+    if(sum!==need)return reject();
+  }else return reject();
+  const ox=cx*CS+rx,oy=cy*CS+ry;
+  let k=HDR,run=0,cur=0,applied=0;
+  for(let y=0;y<rh;y++)for(let x=0;x<rw;x++){
+    let m;
+    if(enc===0)m=b[k++];else{if(run===0){run=b[k];cur=b[k+1];k+=2}m=cur;run--}
+    const i=(oy+y)*W+ox+x;
+    if(ver>=cellVer[i]){cellVer[i]=ver;R[i]=m;applied++}   // an older version never overwrites a newer cell
+  }
+  if(applied){lastApply[cy*CW+cx]=now;stat.applied++}else stat.stale++;
+  return true;
+}
+
+/* ---------- fake link + host send pipeline ---------- */
+let fly=[],linkRnd=mulberry32(1),bucket=0,sendAcc=0,healPtr=0;
+const ringB=new Float64Array(60),ringM=new Float64Array(60),ringRaw=new Float64Array(60);
+let totB=0,peakB=0,msgId=0,simMs=0;
+function transmit(msg){
+  const s=tick%60;ringB[s]+=msg.length;ringM[s]++;ringRaw[s]+=msg.rawEq;totB+=msg.length;
+  const lost=linkRnd()<P.loss/100,delay=Math.max(0,P.lat+(linkRnd()*2-1)*P.jit);
+  fly.push({t0:simMs,t1:simMs+delay,msg,lost,len:msg.length,id:msgId++});
+}
+function sendTick(){
+  const vcx=P.vx+P.vw/2,vcy=P.vy+P.vh/2;
+  // interest area: chunks touching the view, plus one chunk of margin
+  const c0=clamp(Math.floor(P.vx/CS)-1,0,CW-1),c1=clamp(Math.floor((P.vx+P.vw-1)/CS)+1,0,CW-1);
+  const r0=clamp(Math.floor(P.vy/CS)-1,0,CH-1),r1=clamp(Math.floor((P.vy+P.vh-1)/CS)+1,0,CH-1);
+  const cands=[];let anyIn=false;
+  for(let c=0;c<NC;c++){
+    const cx=c%CW,cy=(c/CW)|0,inn=cx>=c0&&cx<=c1&&cy>=r0&&cy<=r1;
+    if(inn&&!prevIn[c])fullDirty(c);                       // first time in the interest area: send in full
+    prevIn[c]=inn?1:0;
+    if(inn){anyIn=true;if(isDirty(c)){
+      const dist=Math.hypot(cx*CS+CS/2-vcx,cy*CS+CS/2-vcy);
+      cands.push({c,d:Math.round(dist/32),age:tick-lastSent[c]});}}   // distance in half-chunk steps, then age as tiebreak
+  }
+  cands.sort((a,b)=>a.d-b.d||b.age-a.age||a.c-b.c);
+  const per=P.budget*1000/P.rate;
+  bucket=Math.min(bucket+per,Math.max(2*per,4200));        // token bucket: average = budget, burst = 2 ticks (at least one full chunk)
+  const sentNow=new Set();
+  for(const q of cands){
+    const c=q.c,m=encode(c,dx0[c],dy0[c],dx1[c]-dx0[c]+1,dy1[c]-dy0[c]+1,P.rle);
+    if(m.length>bucket){verHost[c]--;break}                // head of the queue waits; it is not skipped, so it cannot starve
+    bucket-=m.length;transmit(m);clean(c);lastSent[c]=tick;sentNow.add(c);
+  }
+  if(P.refresh&&anyIn){                                    // round-robin heal: one full chunk from the interest area per send tick
+    for(let n=0;n<NC;n++){
+      const c=healPtr%NC;
+      if(!prevIn[c]||sentNow.has(c)){healPtr++;continue}
+      const m=encode(c,0,0,CS,CS,P.rle);
+      if(m.length>bucket){verHost[c]--;break}
+      bucket-=m.length;transmit(m);clean(c);lastSent[c]=tick;healPtr++;break;
+    }
+  }
+}
+function deliver(){
+  if(!fly.length)return;
+  const due=[],keep=[];
+  for(const f of fly)(f.t1<=simMs?due:keep).push(f);
+  fly=keep;due.sort((a,b)=>a.t1-b.t1);                     // jitter can reorder; the version check copes
+  for(const f of due)if(!f.lost)decodeApply(f.msg,simMs);
+}
+
+/* ---------- world control, stress, main step ---------- */
+let paused=false,hiddenPause=false,pending=[];
+function restart(){
+  gen(P.seed);
+  for(let c=0;c<NC;c++)clean(c);
+  R.fill(0);cellVer.fill(0);lastApply.fill(0);verHost.fill(0);lastSent.fill(0);prevIn.fill(0);
+  fly=[];bucket=2e4;sendAcc=0;healPtr=0;ringB.fill(0);ringM.fill(0);ringRaw.fill(0);
+  totB=peakB=0;tick=0;simMs=0;stamp=1;stat.rejected=stat.stale=stat.applied=0;
+  linkRnd=mulberry32(P.seed^0xBEEF);pending=[];
+}
+function carve(x0,y0,w,h,t,only){
+  for(let y=y0;y<y0+h;y++)for(let x=x0;x<x0+w;x++){
+    if(x<0||y<0||x>=W||y>=H)continue;const i=y*W+x;if(Bd[i])continue;
+    if(only&&T[i]!==only)continue;set(i,t,0);
+  }
+}
+const stress={
+  flood(){carve(clamp(Math.round(P.vx+P.vw/2-32),3,W-67),clamp(P.vy+2,4,H-30),64,22,WATER)},
+  burn(){const x=clamp(Math.round(P.vx+P.vw/2-20),3,W-43),y=clamp(Math.round(P.vy+P.vh/2-6),4,H-20);
+    carve(x,y,40,14,GAS);for(let k=0;k<6;k++)set((y+7)*W+x+k,FIRE,30)},
+  collapse(){carve(clamp(Math.round(P.vx+P.vw/2-40),3,W-83),clamp(Math.round(P.vy+P.vh/2-20),4,H-30),80,26,SAND,ROCK)}
+};
+function stepAll(){
+  while(pending.length)stress[pending.shift()]();
+  simStep();simMs=tick*STEP_MS;
+  const s=tick%60;ringB[s]=0;ringM[s]=0;ringRaw[s]=0;
+  sendAcc+=P.rate/60;
+  while(sendAcc>=1){sendAcc-=1;sendTick()}
+  deliver();
+  let cur=0;for(let k=0;k<60;k++)cur+=ringB[k];
+  if(tick>60&&cur>peakB)peakB=cur;
+}
+
+/* ---------- rendering ---------- */
+const hostC=document.getElementById('host'),cliC=document.getElementById('client'),strip=document.getElementById('strip');
+const hctx=hostC.getContext('2d'),cctx=cliC.getContext('2d'),sctx=strip.getContext('2d');
+const himg=hctx.createImageData(W,H),cimg=cctx.createImageData(W,H);
+const diffCells=new Uint8Array(N);
+function paint(arr,img){
+  const d=img.data;
+  for(let i=0,p=0;i<N;i++,p+=4){const c=COL[arr[i]]||COL[0],s=SH[i];d[p]=c[0]+s;d[p+1]=c[1]+s;d[p+2]=c[2]+s;d[p+3]=255}
+}
+function grid(ctx){
+  ctx.strokeStyle='rgba(228,221,207,.18)';ctx.lineWidth=1;ctx.beginPath();
+  for(let x=CS;x<W;x+=CS){ctx.moveTo(x+.5,0);ctx.lineTo(x+.5,H)}
+  for(let y=CS;y<H;y+=CS){ctx.moveTo(0,y+.5);ctx.lineTo(W,y+.5)}
+  ctx.stroke();
+}
+let readTimer=0,stalest=0,dView=0,dAll=0;
+function computeDiff(){
+  const vx0=P.vx,vy0=P.vy,vx1=P.vx+P.vw,vy1=P.vy+P.vh;
+  dView=0;dAll=0;const cd=new Int32Array(NC);
+  for(let i=0;i<N;i++){
+    if(T[i]!==R[i]){diffCells[i]=1;dAll++;const x=i&255,y=i>>8;cd[(y>>6)*CW+(x>>6)]++;if(x>=vx0&&x<vx1&&y>=vy0&&y<vy1)dView++}
+    else diffCells[i]=0;
+  }
+  // stalest visible chunk: for chunks touching the view that currently differ from the host, time since the client last applied a message for them
+  stalest=0;
+  for(let c=0;c<NC;c++){
+    const cx=c%CW,cy=(c/CW)|0;
+    if(cx*CS+CS<=vx0||cx*CS>=vx1||cy*CS+CS<=vy0||cy*CS>=vy1)continue;
+    if(cd[c]>0)stalest=Math.max(stalest,simMs-lastApply[c]);
+  }
+}
+function render(){
+  computeDiff();
+  paint(T,himg);hctx.putImageData(himg,0,0);
+  paint(R,cimg);
+  if(P.diff){const d=cimg.data;for(let i=0,p=0;i<N;i++,p+=4)if(diffCells[i]){d[p]=226;d[p+1]=85;d[p+2]=63}}
+  cctx.putImageData(cimg,0,0);
+  const vx=P.vx,vy=P.vy,vw=P.vw,vh=P.vh;
+  const c0=clamp(Math.floor(vx/CS)-1,0,CW-1),c1=clamp(Math.floor((vx+vw-1)/CS)+1,0,CW-1),r0=clamp(Math.floor(vy/CS)-1,0,CH-1),r1=clamp(Math.floor((vy+vh-1)/CS)+1,0,CH-1);
+  hctx.fillStyle='rgba(111,220,192,.07)';hctx.fillRect(c0*CS,r0*CS,(c1-c0+1)*CS,(r1-r0+1)*CS);   // interest area
+  hctx.strokeStyle='rgba(227,163,63,.8)';
+  for(let c=0;c<NC;c++)if(isDirty(c))hctx.strokeRect((c%CW)*CS+dx0[c]+.5,((c/CW)|0)*CS+dy0[c]+.5,dx1[c]-dx0[c],dy1[c]-dy0[c]);
+  grid(hctx);
+  cctx.fillStyle='rgba(12,15,17,.5)';
+  cctx.fillRect(0,0,W,vy);cctx.fillRect(0,vy+vh,W,H-vy-vh);cctx.fillRect(0,vy,vx,vh);cctx.fillRect(vx+vw,vy,W-vx-vw,vh);
+  grid(cctx);
+  for(const x of [hctx,cctx]){x.strokeStyle='#6fdcc0';x.lineWidth=1;x.strokeRect(vx+.5,vy+.5,vw-1,vh-1)}
+  drawStrip();
+}
+function drawStrip(){
+  const w=strip.width,h=strip.height;
+  sctx.fillStyle='#07090a';sctx.fillRect(0,0,w,h);
+  sctx.strokeStyle='#262d32';sctx.beginPath();sctx.moveTo(14,h/2);sctx.lineTo(w-14,h/2);sctx.stroke();
+  sctx.font='11px JetBrains Mono, monospace';sctx.fillStyle='#8e958f';sctx.fillText('HOST',4,11);sctx.fillText('CLIENT',w-48,11);
+  for(const f of fly){
+    const p=clamp((simMs-f.t0)/Math.max(1,f.t1-f.t0),0,1),bw=Math.max(3,Math.sqrt(f.len)*.9);
+    sctx.globalAlpha=f.lost?Math.max(.15,1-p):.9;
+    sctx.fillStyle=f.lost?'#e2553f':f.len>2000?'#e3a33f':'#6fdcc0';
+    sctx.fillRect(24+p*(w-48-bw),18+(f.id%4)*13,bw,9);
+  }
+  sctx.globalAlpha=1;
+}
+const RO=[['bps','Bytes/s now'],['peak','Bytes/s peak'],['avg','Bytes/s avg'],['mps','Messages/s'],['cr','Compression'],['dv','Cells off (view)'],['da','Cells off (all)'],['st','Stalest visible'],['fl','In flight'],['rj','Rejected / stale']];
+const roEl={};
+document.getElementById('readouts').innerHTML=RO.map(r=>`<div><small>${r[1]}</small><b id="ro_${r[0]}">-</b></div>`).join('');
+RO.forEach(r=>roEl[r[0]]=document.getElementById('ro_'+r[0]));
+const kb=v=>(v/1000).toFixed(v<10000?2:1)+' kB';
+function updateReadouts(){
+  let b=0,m=0,raw=0;for(let k=0;k<60;k++){b+=ringB[k];m+=ringM[k];raw+=ringRaw[k]}
+  roEl.bps.textContent=kb(b);roEl.peak.textContent=kb(peakB);roEl.avg.textContent=kb(tick>0?totB/(tick/60):0);
+  roEl.mps.textContent=m;roEl.cr.textContent=b?(raw/b).toFixed(2)+'x':'-';
+  roEl.dv.textContent=dView;roEl.da.textContent=dAll;roEl.dv.className=dView>400?'crit':dView>40?'warn':'ok';
+  roEl.st.textContent=Math.round(stalest)+' ms';roEl.st.className=stalest>500?'crit':stalest>250?'warn':'ok';
+  roEl.fl.textContent=fly.length;roEl.rj.textContent=stat.rejected+' / '+stat.stale;
+  document.getElementById('note').textContent=paused||hiddenPause?'paused':'';
+}
+
+/* ---------- tuning panel ---------- */
+const tuneEl=document.getElementById('tuning'),outs={},ins={};
+TUN.forEach(t=>{
+  const lab=document.createElement('label');
+  if(t.tg){lab.className='tg';lab.innerHTML=`<span>${t.l}</span><input type="checkbox">`}
+  else lab.innerHTML=`<span>${t.l}</span><output></output><input type="range" min="${t.min}" max="${t.max}" step="${t.step}">`;
+  tuneEl.appendChild(lab);
+  const inp=lab.querySelector('input');ins[t.k]=inp;outs[t.k]=lab.querySelector('output');
+  inp.addEventListener('input',()=>{
+    P[t.k]=t.tg?(inp.checked?1:0):Number(inp.value);
+    if(!t.tg)outs[t.k].textContent=P[t.k]+t.u;
+    if(t.k==='vw'||t.k==='vh')moveView(P.vx,P.vy);
+    writeHash();if(t.k==='seed')restart();
+  });
+});
+function syncUI(){TUN.forEach(t=>{const i=ins[t.k];if(t.tg)i.checked=!!P[t.k];else{i.value=P[t.k];outs[t.k].textContent=P[t.k]+t.u}})}
+
+/* ---------- input ---------- */
+let dragOff=null;
+function cellAt(ev,cv){const r=cv.getBoundingClientRect();return[(ev.clientX-r.left)/r.width*W,(ev.clientY-r.top)/r.height*H]}
+function moveView(x,y){P.vx=Math.round(clamp(x,0,W-P.vw));P.vy=Math.round(clamp(y,0,H-P.vh))}
+[hostC,cliC].forEach(cv=>{
+  cv.addEventListener('pointerdown',ev=>{
+    const[x,y]=cellAt(ev,cv),inside=x>=P.vx&&x<P.vx+P.vw&&y>=P.vy&&y<P.vy+P.vh;
+    dragOff=inside?[x-P.vx,y-P.vy]:[P.vw/2,P.vh/2];moveView(x-dragOff[0],y-dragOff[1]);
+    cv.setPointerCapture(ev.pointerId);cv.style.cursor='grabbing';
+  });
+  cv.addEventListener('pointermove',ev=>{if(!dragOff)return;const[x,y]=cellAt(ev,cv);moveView(x-dragOff[0],y-dragOff[1])});
+  const end=()=>{if(dragOff){dragOff=null;cv.style.cursor='';writeHash()}};
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+});
+const newSeed=()=>{P.seed=1+Math.floor(Math.random()*9999);syncUI();writeHash();restart()};
+const togglePause=()=>{paused=!paused};
+const $=id=>document.getElementById(id);
+$('bFlood').onclick=()=>pending.push('flood');
+$('bBurn').onclick=()=>pending.push('burn');
+$('bCollapse').onclick=()=>pending.push('collapse');
+$('bPause').onclick=togglePause;
+$('bRestart').onclick=restart;
+$('bNew').onclick=newSeed;
+$('bReset').onclick=()=>{Object.assign(P,DEF,EXTRA);syncUI();writeHash();restart()};
+addEventListener('keydown',ev=>{
+  if(ev.ctrlKey||ev.metaKey||ev.altKey)return;
+  const k=ev.key.toLowerCase();
+  if(k==='r')restart();else if(k==='n')newSeed();else if(k==='p')togglePause();
+});
+document.addEventListener('visibilitychange',()=>{hiddenPause=document.hidden;last=performance.now()});
+
+/* ---------- budget sweep: floods the current setup at each budget and reports the worst staleness ---------- */
+let sweeping=false;
+$('bSweep').onclick=()=>{
+  if(sweeping)return;sweeping=true;$('sweepNote').textContent='sweeping...';
+  setTimeout(()=>{
+    const saved=P.budget,res=[];
+    for(const b of [10,15,20,30,40,60,80,120,200]){
+      P.budget=b;restart();
+      for(let k=0;k<90;k++)stepAll();
+      stress.flood();let worst=0;
+      for(let k=0;k<240;k++){stepAll();if(k%6===0){computeDiff();worst=Math.max(worst,Math.round(stalest))}}
+      res.push([b,worst]);
+    }
+    P.budget=saved;syncUI();restart();sweeping=false;
+    $('sweepNote').textContent=res.map(r=>r[0]+'kB/s:'+r[1]+'ms').join('  ')+'  (tears when over 500 ms)';
+  },30);
+};
+
+/* ---------- main loop: fixed 60 Hz step, decoupled from rendering ---------- */
+let last=performance.now(),acc=0;
+function frame(now){
+  const dt=Math.min(100,now-last);last=now;
+  if(!paused&&!hiddenPause){acc+=dt;let n=0;while(acc>=STEP_MS&&n<6){stepAll();acc-=STEP_MS;n++}if(n===6)acc=0}
+  render();
+  if(now-readTimer>100){readTimer=now;updateReadouts()}
+  requestAnimationFrame(frame);
+}
+syncUI();restart();
+window.__d2={P,stepAll,stress,computeDiff,restart,stat,get stalest(){return stalest},get dView(){return dView},get dAll(){return dAll}};
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
