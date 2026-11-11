@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STRATA E5 · Fragile body</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@500;700&display=swap">
+<style>
+:root{color-scheme:dark;--bg:#0c0f11;--panel:#13171a;--line:#262d32;--ink:#e4ddcf;--muted:#8e958f;--rust:#c96a3b;--glow:#6fdcc0;--warn:#e3a33f;--crit:#e2553f;
+--f-title:"Big Shoulders Stencil Display",Impact,sans-serif;--f-body:"Barlow","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body)}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
+h1{font:800 34px/1 var(--f-title);letter-spacing:.04em;margin:0;text-transform:uppercase}
+h1 small{color:var(--rust);font-size:.55em;letter-spacing:.12em;margin-right:.6em}
+.q{color:var(--muted);margin:6px 0 14px;max-width:70ch}
+.play{display:grid;grid-template-columns:minmax(0,960px) 150px;gap:14px;align-items:start}
+.stage{position:relative;border:1px solid var(--line);background:#000;aspect-ratio:2/1;overflow:hidden}
+#view{position:absolute;inset:0}
+#view canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;display:block}
+#fx{pointer-events:none}
+#vig{position:absolute;inset:0;pointer-events:none}
+.msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:rgba(8,10,12,.72);font:800 30px/1.2 var(--f-title);letter-spacing:.06em;text-transform:uppercase;padding:20px}
+.msg small{display:block;font:400 14px var(--f-mono);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:8px}
+.msg.on{display:flex}
+.side{background:var(--panel);border:1px solid var(--line);padding:12px;text-align:center}
+.side .cap{font:400 11px var(--f-mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.side svg{width:100%;height:auto;max-width:110px}
+.side.off svg,.side.off .cap{visibility:hidden}
+.p{fill:#151a1d;stroke:#4a5358;stroke-width:1.5}
+.p.hurt{stroke:var(--warn);fill:rgba(227,163,63,.3)}
+.p.down{stroke:var(--crit);fill:rgba(226,85,63,.3)}
+.side button{margin-top:10px;width:100%;font-size:12px;padding:5px 4px}
+.strip{display:flex;flex-wrap:wrap;gap:6px 22px;background:var(--panel);border:1px solid var(--line);border-top:0;padding:10px 14px;font:400 13px var(--f-mono);max-width:960px}
+.strip div span{color:var(--muted);margin-right:6px;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+.strip b{font-weight:600}
+#log{max-width:960px;min-height:22px;font:400 13px var(--f-mono);color:var(--rust);padding:6px 2px}
+h2{font:600 18px var(--f-title);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+.tune{background:var(--panel);border:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 28px;max-width:1180px}
+.tune label{display:grid;grid-template-columns:150px 1fr 56px;gap:8px;align-items:center;font-size:13px}
+.tune output{font:400 12px var(--f-mono);color:var(--glow);text-align:right}
+input[type=range]{accent-color:var(--rust);width:100%}
+input:focus-visible,button:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+button{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:6px 14px;font:500 13px var(--f-body);cursor:pointer;margin-top:6px}
+button:hover{border-color:var(--rust)}
+.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px 24px;font-size:13px;color:var(--muted)}
+kbd{font:600 12px var(--f-mono);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:1px 6px;margin-right:6px}
+@media(max-width:900px){.play{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1><small>E5</small>Fragile body</h1>
+<p class="q">Can injuries per body part be read at a glance, from how the figure moves, without a health bar?</p>
+
+<div class="play">
+  <div class="stage" id="stage">
+    <div id="view"><canvas id="sim" width="240" height="120"></canvas><canvas id="fx" width="960" height="480"></canvas><div id="vig"></div></div>
+    <div class="msg" id="banner"></div>
+    <div class="msg" id="pausemsg">Paused<small>press P to resume</small></div>
+  </div>
+  <aside class="side" id="side">
+    <div class="cap">body</div>
+    <svg viewBox="0 0 110 220" role="img" aria-label="Body silhouette showing hurt parts">
+      <circle data-p="0" class="p" cx="55" cy="22" r="14"/>
+      <rect data-p="1" class="p" x="34" y="40" width="42" height="64" rx="10"/>
+      <rect data-p="2" class="p" x="18" y="44" width="12" height="54" rx="6"/>
+      <rect data-p="3" class="p" x="80" y="44" width="12" height="54" rx="6"/>
+      <rect data-p="4" class="p" x="36" y="108" width="16" height="50" rx="7"/>
+      <rect data-p="4" class="p" x="36" y="160" width="16" height="50" rx="7"/>
+      <rect data-p="5" class="p" x="58" y="108" width="16" height="50" rx="7"/>
+      <rect data-p="5" class="p" x="58" y="160" width="16" height="50" rx="7"/>
+    </svg>
+    <button id="silbtn">Hide silhouette</button>
+  </aside>
+</div>
+<div class="strip">
+  <div><span>time</span><b id="r-time"></b></div>
+  <div><span>distance</span><b id="r-dist"></b></div>
+  <div><span>kit</span><b id="r-kit"></b></div>
+  <div><span>seed</span><b id="r-seed"></b></div>
+</div>
+<div id="log"></div>
+
+<h2>Tuning</h2>
+<div class="tune" id="tune"></div>
+<button id="reset">Reset to defaults</button>
+
+<h2>Controls</h2>
+<div class="keys">
+  <div><kbd>A</kbd><kbd>D</kbd>walk, limp or crawl</div>
+  <div><kbd>W</kbd>jump; hold against a wall to climb (arms only)</div>
+  <div><kbd>S</kbd>climb down</div>
+  <div><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>splint, dressing, air canister</div>
+  <div><kbd>B</kbd>hold to show silhouette (when set to "hold B")</div>
+  <div><kbd>R</kbd>restart, same seed</div>
+  <div><kbd>N</kbd>new seed</div>
+  <div><kbd>P</kbd>pause (also when tab hidden)</div>
+  <div>Course: drop, acid pool, burning passage, CO2 hollow, falling sand, then climb the wall at the end. Body state has no numbers anywhere: watch the figure.</div>
+</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const W = 240, H = 120, N = W * H, K = 4, STEP = 1 / 60, FY = 96;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ---------- tunables (stored in URL hash) ---------- */
+const TUNE = [
+  ['seed', 'Seed', 1, 9999, 1, 7],
+  ['sil', 'Silhouette', 0, 2, 1, 1],
+  ['gasvis', 'Gas tint', 0, 1, 1, 1],
+  ['vis', 'Head-injury vision loss', 0, 1.5, .1, 1],
+  ['drop', 'Drop height (cells)', 6, 32, 1, 26],
+  ['hurtT', 'Hurt threshold', 10, 60, 1, 30],
+  ['usedT', 'Useless threshold', 40, 100, 1, 75],
+  ['walk', 'Walk speed (c/s)', 8, 28, 1, 16],
+  ['limp', 'Limp factor per hurt leg', .2, .9, .05, .55],
+  ['jump', 'Jump speed (c/s)', 20, 45, 1, 36],
+  ['crawl', 'Crawl speed (c/s)', 2, 12, .5, 6],
+  ['dcrawl', 'Downed crawl (c/s)', 1, 8, .5, 3],
+  ['climb', 'Climb speed (c/s)', 5, 30, 1, 14],
+  ['climbH', 'Hurt-arm climb factor', .15, .9, .05, .45],
+  ['safe', 'Safe landing (c/s)', 30, 80, 1, 45],
+  ['downFall', 'Downing landing (c/s)', 60, 140, 1, 95],
+  ['fallDmg', 'Fall damage per c/s', .5, 5, .1, 2.8],
+  ['acid', 'Acid damage (/s)', 5, 80, 1, 28],
+  ['burn', 'Burn damage (/s)', 10, 150, 1, 60],
+  ['sandD', 'Sand hit damage', .2, 6, .1, 1.4],
+  ['airT', 'Air supply (s)', 40, 400, 10, 150],
+  ['torsoAir', 'Hurt torso air drain x', 1, 4, .1, 1.9],
+  ['gasT', 'CO2 to downed (s)', 2, 40, 1, 9],
+  ['bleedT', 'Bleed to downed (s)', 20, 300, 5, 140],
+  ['flare', 'Flare interval (s)', 2, 20, .5, 7],
+  ['leak', 'Methane leak (cells/s)', 0, 30, 1, 10],
+  ['sandI', 'Sand burst interval (s)', .8, 8, .1, 2.2],
+  ['kS', 'Kit: splints', 0, 4, 1, 1],
+  ['kD', 'Kit: dressings', 0, 4, 1, 1],
+  ['kC', 'Kit: air canisters', 0, 4, 1, 1],
+  ['kitFx', 'Kit strength', 10, 100, 5, 45],
+  ['useT', 'Kit use time (s)', .3, 4, .1, 1.3]
+];
+const FMT = {sil: v => ['hidden', 'always', 'hold B'][v], gasvis: v => v ? 'faint' : 'off'};
+const RESTART = ['seed', 'drop', 'kS', 'kD', 'kC'];
+const V = {};
+function readHash(){
+  TUNE.forEach(t => V[t[0]] = t[5]);
+  location.hash.slice(1).split('&').forEach(p => {
+    const [k, v] = p.split('='), t = TUNE.find(x => x[0] === k), n = parseFloat(v);
+    if (t && isFinite(n)) V[k] = Math.min(t[3], Math.max(t[2], n));
+  });
+}
+function writeHash(){
+  const s = TUNE.filter(t => V[t[0]] !== t[5]).map(t => t[0] + '=' + V[t[0]]).join('&');
+  try { history.replaceState(null, '', s ? '#' + s : location.pathname + location.search); } catch (e) { /* file:// quirks */ }
+}
+
+/* ---------- sand sim (ported from mockup) ---------- */
+const E=0, ROCK=1, SAND=2, WATER=3, GAS=4, FIRE=5, STEAM=6, LAVA=7, ACID=8, MYC=9, SPORE=10, MOSS=11, OBS=12, SMOKE=13, CO2=14;
+const T = new Uint8Array(N), Lf = new Uint8Array(N), Sh = new Uint8Array(N), Mv = new Uint8Array(N), Bd = new Uint8Array(N);
+const DEN = new Float32Array(16);
+DEN[E]=1; DEN[GAS]=.3; DEN[STEAM]=.4; DEN[SMOKE]=.5; DEN[FIRE]=.6; DEN[SPORE]=.8; DEN[CO2]=1.6; DEN[WATER]=10; DEN[ACID]=11; DEN[LAVA]=14; DEN[SAND]=20;
+const SOLID = new Uint8Array(16); [ROCK, OBS, MYC, MOSS].forEach(k => SOLID[k] = 1);
+const COL = [[30,29,28],[80,76,72],[152,126,88],[38,88,124],[92,70,112],[255,176,70],[168,176,184],[236,96,34],[128,196,64],[204,194,172],[214,204,156],[96,232,192],[40,34,48],[62,62,64],[74,96,78]];
+const NB = [-1, 1, -W, W];
+let rnd = mulberry(1), stamp = 1, tick = 0;
+
+function set(i, t, l){ T[i] = t; Lf[i] = l || 0; Sh[i] = (rnd()*255) | 0; }
+function swap(i, j){ const t = T[i], l = Lf[i], s = Sh[i]; T[i] = T[j]; Lf[i] = Lf[j]; Sh[i] = Sh[j]; T[j] = t; Lf[j] = l; Sh[j] = s; Mv[i] = stamp; Mv[j] = stamp; }
+const lighter = (j, d) => j >= 0 && j < N && !SOLID[T[j]] && DEN[T[j]] < d;
+const heavier = (j, d) => j >= 0 && j < N && !SOLID[T[j]] && T[j] !== SAND && T[j] !== LAVA && DEN[T[j]] > d;
+function clings(j, from){ for (const o of NB) { const k = j + o; if (k === from || k < 0 || k >= N) continue; const u = T[k]; if (u === ROCK || u === OBS || u === SAND) return true; } return false; }
+function wetNear(x, y){ for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < W && yy < H && T[yy*W + xx] === WATER) return true; } return false; }
+function fall(x, y, i, d){
+  if (y >= H - 1) return;
+  if (lighter(i + W, d)) return swap(i, i + W);
+  const dir = rnd() < .5 ? -1 : 1;
+  if (lighter(i + W + dir, d) && lighter(i + dir, d)) return swap(i, i + W + dir);
+  if (lighter(i + W - dir, d) && lighter(i - dir, d)) return swap(i, i + W - dir);
+}
+function liquid(x, y, i, d, disp){
+  if (y >= H - 1) return;
+  if (lighter(i + W, d)) return swap(i, i + W);
+  const dir = rnd() < .5 ? -1 : 1;
+  if (lighter(i + W + dir, d)) return swap(i, i + W + dir);
+  if (lighter(i + W - dir, d)) return swap(i, i + W - dir);
+  for (const s of [dir, -dir]) {
+    let best = -1;
+    for (let k = 1; k <= disp; k++) { const nx = x + s*k; if (nx < 0 || nx >= W) break; const j = i + s*k; if (!lighter(j, d)) break; best = j; if (lighter(j + W, d)) break; }
+    if (best >= 0) return swap(i, best);
+  }
+}
+function rise(x, y, i, prob, side){
+  if (rnd() > prob) return;
+  if (y === 0) { if (rnd() < .25) set(i, E); return; }
+  const d = DEN[T[i]], dir = rnd() < .5 ? -1 : 1;
+  if (rnd() < side) { if (heavier(i + dir, d)) return swap(i, i + dir); }
+  if (heavier(i - W, d)) return swap(i, i - W);
+  if (heavier(i - W + dir, d)) return swap(i, i - W + dir);
+  if (heavier(i - W - dir, d)) return swap(i, i - W - dir);
+  if (heavier(i + dir, d)) return swap(i, i + dir);
+}
+function sinkGas(x, y, i){
+  if (rnd() > .6) return;
+  const d = DEN[CO2], dir = rnd() < .5 ? -1 : 1;
+  if (lighter(i + W, d)) return swap(i, i + W);
+  if (lighter(i + W + dir, d)) return swap(i, i + W + dir);
+  if (lighter(i + dir, d)) return swap(i, i + dir);
+}
+function drift(x, y, i){
+  if (rnd() > .35) return;
+  const dx = (rnd()*3 | 0) - 1, dy = rnd() < .55 ? -1 : (rnd() < .5 ? 0 : 1);
+  const j = i + dy*W + dx;
+  if (j >= 0 && j < N && T[j] === E) swap(i, j);
+}
+function fire(x, y, i){
+  if (--Lf[i] === 0 || Lf[i] > 250) { set(i, rnd() < .35 ? SMOKE : E, 60); return false; }
+  for (const o of NB) {
+    const j = i + o; if (j < 0 || j >= N) continue;
+    const u = T[j];
+    if (u === WATER) { set(i, STEAM, 70); return false; }
+    if (u === GAS) set(j, FIRE, 22 + (rnd()*20 | 0));
+    else if (u === SPORE && rnd() < .3) set(j, FIRE, 8);
+    else if (u === MYC && rnd() < .05) { set(j, FIRE, 40); for (const o2 of NB) { const k = j + o2; if (k >= 0 && k < N && T[k] === E && rnd() < .7) set(k, SPORE, 200); } }
+    else if (u === MOSS && rnd() < .012) set(j, FIRE, 30);
+  }
+  return true;
+}
+function lava(x, y, i){
+  for (const o of NB) {
+    const j = i + o; if (j < 0 || j >= N) continue;
+    const u = T[j];
+    if (u === WATER) { set(i, OBS); set(j, STEAM, 90); return false; }
+    if (u === GAS || u === MYC || u === SPORE || u === MOSS) set(j, FIRE, 30);
+  }
+  if (i - W >= 0 && T[i - W] === E && rnd() < .002) set(i - W, FIRE, 12);
+  return true;
+}
+function acid(x, y, i){
+  for (const o of NB) {
+    const j = i + o; if (j < 0 || j >= N || Bd[j]) continue;
+    const u = T[j];
+    if ((u === ROCK || u === SAND || u === MYC || u === MOSS || (u === OBS && rnd() < .3)) && rnd() < .05) {
+      set(j, CO2, 220); if (rnd() < .3) { set(i, CO2, 220); return false; }
+    } else if (u === WATER && rnd() < .002) { set(i, WATER); return false; }
+  }
+  return true;
+}
+function decay(i, p, to){ if (rnd() < p && --Lf[i] <= 1) { set(i, to, 0); return false; } return true; }
+function myc(x, y, i){
+  if (Lf[i] > 30 && rnd() < .0015) { const j = i + NB[rnd()*4 | 0]; if (j >= 0 && j < N && T[j] === E) { set(j, SPORE, 200); Lf[i] -= 4; } }
+  if (rnd() > .04) return;
+  const j = i + NB[rnd()*4 | 0]; if (j < 0 || j >= N) return;
+  const u = T[j];
+  if (u === WATER) { Lf[i] = 44; if (rnd() < .15) set(j, E); }
+  else if (u === E && Lf[i] > 1 && clings(j, i)) { set(j, MYC, Lf[i] - 1); }
+  else if (u === MOSS && rnd() < .04) set(j, MYC, Lf[i]);
+}
+function moss(x, y, i){
+  if (rnd() > .012) return;
+  const j = i + NB[rnd()*4 | 0]; if (j < 0 || j >= N || T[j] !== E) return;
+  if (clings(j, i) && wetNear(j % W, (j / W) | 0)) set(j, MOSS);
+}
+function spore(x, y, i){
+  if (rnd() < .3 && --Lf[i] <= 1) { set(i, E); return false; }
+  if (rnd() < .03 && clings(i, -1) && wetNear(x, y)) { set(i, MYC, 30); return false; }
+  return true;
+}
+function update(x, y, i, t){
+  switch (t) {
+    case SAND: fall(x, y, i, 20); break;
+    case WATER: liquid(x, y, i, 10, 4); break;
+    case ACID: if (acid(x, y, i)) liquid(x, y, i, 11, 3); break;
+    case LAVA: if (lava(x, y, i) && tick % 3 === 0) liquid(x, y, i, 14, 1); break;
+    case GAS: rise(x, y, i, .35, .7); break;
+    case FIRE: if (fire(x, y, i)) rise(x, y, i, .6, .5); break;
+    case STEAM:
+      if (decay(i, .6, rnd() < .35 ? WATER : E)) { if (i - W >= 0 && T[i - W] === ROCK && rnd() < .01) { set(i, WATER); break; } rise(x, y, i, .5, .7); }
+      break;
+    case SMOKE: if (decay(i, 1, E)) rise(x, y, i, .5, .6); break;
+    case CO2: if (Lf[i] === 255 || decay(i, .12, E)) sinkGas(x, y, i); break; /* Lf 255 = permanent pocket (prototype tweak) */
+    case SPORE: if (spore(x, y, i)) drift(x, y, i); break;
+    case MYC: myc(x, y, i); break;
+    case MOSS: moss(x, y, i); break;
+  }
+}
+function simStep(){
+  stamp = stamp === 255 ? 1 : stamp + 1; tick++;
+  for (let y = H - 1; y >= 0; y--) {
+    const ltr = rnd() < .5;
+    for (let k = 0; k < W; k++) {
+      const x = ltr ? k : W - 1 - k, i = y*W + x;
+      if (Mv[i] === stamp) continue;
+      const t = T[i];
+      if (t === E || t === ROCK || t === OBS) continue;
+      update(x, y, i, t);
+    }
+  }
+}
+
+/* ---------- hazard course ---------- */
+let LY = {};
+function gen(seed){
+  const r = rnd = mulberry(seed);
+  stamp = 1; tick = 0; T.fill(ROCK); Lf.fill(0); Mv.fill(0); Bd.fill(0);
+  for (let i = 0; i < N; i++) Sh[i] = (r()*255) | 0;
+  const ledge = FY - V.drop, A0 = 56 + (r()*6 | 0), P0 = A0 + 32, P1 = P0 + 36, C0 = P1 + 12 + (r()*4 | 0), H0 = C0 + 34, XW = H0 + 34;
+  LY = {ledge, A0, P0, P1, C0, H0, XW};
+  const ceil = x => x < 34 ? ledge - 30 : (x >= P0 && x < P1 ? FY - 12 : (x >= H0 - 4 && x < H0 + 30 ? FY - 40 : FY - 44));
+  const basin = x => x >= A0 && x < A0 + 14 ? Math.min(4, x - A0, A0 + 14 - x) : 0;
+  const hollow = x => x >= C0 && x < C0 + 22 ? Math.min(10, x - C0, C0 + 22 - x) : 0;
+  const flr = x => x < 34 ? ledge : (x >= XW ? FY - 12 : FY + basin(x) + hollow(x));
+  for (let x = 2; x < W - 2; x++) for (let y = ceil(x); y < flr(x); y++) T[y*W + x] = E;
+  for (let i = 0; i < N; i++) { const x = i % W, y = (i / W) | 0; if (x < 2 || x >= W - 2 || y < 3 || y >= H - 2 || (x >= A0 - 1 && x <= A0 + 14 && y >= FY && y <= FY + 7)) Bd[i] = 1; }
+  for (let x = A0; x < A0 + 14; x++) for (let y = FY; y < FY + basin(x); y++) if (T[y*W + x] === E) set(y*W + x, ACID);
+  for (let x = C0 - 2; x < C0 + 24; x++) for (let y = FY - 4; y < flr(x); y++) if (T[y*W + x] === E) set(y*W + x, CO2, 255);
+  for (let x = P0 + 2; x < P1 - 2; x++) for (let y = FY - 12; y < FY - 9; y++) set(y*W + x, GAS);
+  for (let k = 0; k < 150; k++) simStep();
+}
+function emit(){                                    /* flare, methane leak, sand hoppers, sand drain */
+  const fi = Math.round(V.flare*60), si = Math.round(V.sandI*60);
+  if (tick % fi === fi - 1) { const i = (FY - 1)*W + LY.P0 + 1; if (!SOLID[T[i]]) set(i, FIRE, 40); }
+  if (rnd() < V.leak/60) { const i = (FY - 12)*W + LY.P0 + 3 + (rnd()*(LY.P1 - LY.P0 - 6) | 0); if (T[i] === E) set(i, GAS); }
+  if (F.x > LY.H0 - 36) for (let h = 0; h < 3; h++) if ((tick + Math.round(h*si/3)) % si === 0) {
+    for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 4; dx++) { const i = (FY - 39 + dy)*W + LY.H0 + 4 + h*10 + dx; if (T[i] === E) set(i, SAND); }
+  }
+  for (let k = 0; k < 20; k++) { const i = (FY - 12 + (rnd()*12 | 0))*W + LY.XW - 8 + (rnd()*8 | 0); if (T[i] === SAND) set(i, E); }
+}
+
+/* ---------- figure: collision, injuries, kit ---------- */
+const BSOL = new Uint8Array(16); BSOL.set(SOLID); BSOL[SAND] = 1;
+const solidAt = (x, y) => x < 0 || y < 0 || x >= W || y >= H || BSOL[T[y*W + x]] === 1;
+const F = {}, keys = {}, Q = [];
+let log = [], paused = false, acc = 0, lastT = performance.now(), BHn = 9, BWn = 3;
+const $ = id => document.getElementById(id);
+const say = s => { log.unshift(s); log = log.slice(0, 3); $('log').innerHTML = log.map((l, i) => '<div style="opacity:' + (1 - i*.3) + '">' + l + '</div>').join(''); };
+function blocked(px, cy, h, w){
+  const x0 = Math.floor(px) - ((w - 1) >> 1), y0 = Math.floor(cy - h + .001), y1 = Math.floor(cy - .001);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x < x0 + w; x++) if (solidAt(x, y)) return true;
+  return false;
+}
+function moveX(dx, step){
+  const n = Math.ceil(Math.abs(dx) - 1e-9); if (n < 1) return;
+  const s = dx / n;
+  for (let k = 0; k < n; k++) {
+    const nx = F.x + s;
+    if (!blocked(nx, F.y, BHn, BWn)) { F.x = nx; continue; }
+    if (step && F.ground && !blocked(nx, F.y - 1, BHn, BWn) && !blocked(F.x, F.y - 1, BHn, BWn)) { F.x = nx; F.y -= 1; continue; }
+    F.vx = 0; return;
+  }
+}
+function moveY(dy){
+  const n = Math.ceil(Math.abs(dy) - 1e-9); if (n < 1) return 0;
+  const s = dy / n;
+  for (let k = 0; k < n; k++) {
+    const ny = F.y + s;
+    if (!blocked(F.x, ny, BHn, BWn)) { F.y = ny; continue; }
+    const v = s > 0 ? F.vy : 0;
+    F.y = s > 0 ? Math.floor(ny - .001) : Math.floor(ny - BHn + .001) + 1 + BHn;
+    F.vy = 0; return v;
+  }
+  return 0;
+}
+/* body-part zones in cells: 0 head, 1 torso, 2/3 arms, 4/5 legs. Returns [x0,x1,y0,y1] inclusive */
+function zone(p){
+  const x = Math.floor(F.x), y = Math.floor(F.y);
+  if (!F.pr) { const z = [[-1,1,-9,-8],[-1,1,-7,-5],[-2,-1,-7,-4],[1,2,-7,-4],[-1,0,-4,-1],[0,1,-4,-1]][p]; return [x + z[0], x + z[1], y + z[2], y + z[3]]; }
+  const z = [[2,3,-4,-1],[-1,1,-4,-1],[0,2,-4,-3],[0,2,-2,-1],[-3,-1,-4,-3],[-3,-1,-2,-1]][p];
+  return F.face > 0 ? [x + z[0], x + z[1], y + z[2], y + z[3]] : [x - z[1], x - z[0], y + z[2], y + z[3]];
+}
+function count(z, f){ let c = 0; for (let y = z[2]; y <= z[3]; y++) for (let x = z[0]; x <= z[1]; x++) if (x >= 0 && y >= 0 && x < W && y < H && f(T[y*W + x])) c++; return c; }
+const area = z => (z[1] - z[0] + 1)*(z[3] - z[2] + 1);
+const stOf = p => { const d = F.brk[p] + F.chem[p]; return d >= V.usedT ? 2 : d >= V.hurtT ? 1 : 0; };
+function hurtBrk(p, a){ F.brk[p] = Math.min(100, F.brk[p] + a); if (F.brk[p] >= V.hurtT) F.bl[p] = 1; }
+function injure(v){
+  A.cr = Math.min(2, v/35);
+  if (v >= V.downFall) { F.downed = true; [4, 5, 1].forEach(p => hurtBrk(p, 60)); return say('Down. R restarts.'); }
+  const over = v - V.safe; if (over <= 0) return;
+  const d = over*V.fallDmg, j = () => .7 + .6*rnd();
+  hurtBrk(4, d*j()); hurtBrk(5, d*j()); hurtBrk(1, d*.3*j()); hurtBrk(2, d*.12*j()); hurtBrk(3, d*.12*j()); hurtBrk(0, d*.08*j());
+}
+function useKit(k){
+  const key = ['kS', 'kD', 'kC'][k - 1];
+  if (F.end || F.downed || F.busy > 0) return;
+  if (F.st[2] === 2 && F.st[3] === 2) return say('No usable hands.');
+  if (F.kit[key] <= 0) return say('None left.');
+  F.kit[key]--; F.busy = V.useT; F.use = k;
+}
+function applyKit(){
+  const worst = (a, ps) => ps.reduce((b, p) => a[p] > a[b] ? p : b, ps[0]);
+  if (F.use === 1) { const p = worst(F.brk, [1, 2, 3, 4, 5, 0]); F.brk[p] = Math.max(0, F.brk[p] - V.kitFx); say('Splint used.'); }
+  else if (F.use === 2) { const p = worst(F.chem, [1, 2, 3, 4, 5, 0]); F.chem[p] = Math.max(0, F.chem[p] - V.kitFx); F.bl.fill(0); F.bleed *= 1 - V.kitFx/100; say('Dressing used.'); }
+  else { F.air = Math.min(F.airMax, F.air + F.airMax*V.kitFx/75); F.dose = Math.max(0, F.dose - V.kitFx/80); say('Canister used.'); }
+}
+function resetFigure(){
+  Object.assign(F, {x: 8, y: LY.ledge, vx: 0, vy: 0, ground: true, face: 1, pr: false, cl: false, downed: false, brk: [0,0,0,0,0,0], chem: [0,0,0,0,0,0], bl: [0,0,0,0,0,0], st: [0,0,0,0,0,0],
+    bleed: 0, dose: 0, air: V.airT, airMax: V.airT, busy: 0, use: 0, kit: {kS: V.kS, kD: V.kD, kC: V.kC}, land: 0, t: 0, far: 0, end: null});
+}
+const held = k => keys[k] ? 1 : 0;
+function wallAhead(full){ const x = Math.floor(F.x) + F.face*2, y = Math.ceil(F.y - .001); for (let k = 1; k <= 7; k++) { const s = solidAt(x, y - k); if (full ? (k >= 2 && k <= 6 && !s) : s) return !full; } return full; }
+function stepFigure(){
+  const dt = STEP; F.t += dt;
+  while (Q.length) useKit(Q.shift());
+  const st = F.st = [0,1,2,3,4,5].map(stOf);
+  const prone = F.downed || st[4] === 2 || st[5] === 2;
+  if (F.cl) F.pr = false; else if (prone) F.pr = true; else if (F.pr && !blocked(F.x, F.y, 9, 3)) F.pr = false;
+  BHn = F.pr ? 4 : 9; BWn = 3;
+  /* falling sand hits head and torso */
+  if (!F.pr) { const c = count(zone(0), t => t === SAND), c2 = count(zone(1), t => t === SAND); if (c + c2) { hurtBrk(0, c*V.sandD); hurtBrk(1, c2*V.sandD*.6); A.fl = .25; } }
+  let g = 0; while (blocked(F.x, F.y, BHn, BWn) && g++ < 8) F.y -= 1;
+  const left = held('KeyA') || held('ArrowLeft'), right = held('KeyD') || held('ArrowRight'), up = held('KeyW') || held('ArrowUp'), down = held('KeyS') || held('ArrowDown');
+  let dir = right - left;
+  if (F.busy > 0) { dir = 0; F.busy -= dt; if (F.busy <= 0) applyKit(); }
+  if (dir) F.face = dir;
+  const wet = count(zone(4), t => t === WATER || t === ACID) + count(zone(5), t => t === WATER || t === ACID) > 3;
+  let sp = F.pr ? (F.downed ? V.dcrawl : V.crawl) : V.walk*Math.pow(V.limp, (st[4] > 0) + (st[5] > 0));
+  if (wet) sp *= .6;
+  /* climbing needs both arms; any hurt arm slows it */
+  const canClimb = !F.downed && st[2] < 2 && st[3] < 2 && F.busy <= 0;
+  if (F.cl && (!canClimb || dir === -F.face)) F.cl = false;
+  else if (F.cl && !wallAhead(false)) { if (!blocked(F.x + F.face*2.2, F.y, 9, 3)) F.x += F.face*2; F.cl = false; F.vy = 0; F.vx = 0; }   /* mantle over the ledge */
+  else if (!F.cl && canClimb && (up || down) && wallAhead(true) && !blocked(F.x, F.y, 9, 3)) { F.cl = true; F.pr = false; BHn = 9; }   /* hauling up on the arms even with useless legs */
+  if (F.cl) {
+    const cm = Math.pow(V.climbH, (st[2] === 1) + (st[3] === 1));
+    F.vx = 0; F.vy = (down - up)*V.climb*cm;
+  } else {
+    if (F.ground) F.vx += (dir*sp - F.vx)*.4; else F.vx += (dir*sp - F.vx)*.08;
+    if (F.ground && up && !F.pr && !F.downed && F.busy <= 0 && !st[4] && !st[5]) { F.vy = -V.jump; F.ground = false; }
+    F.vy = Math.min(130, F.vy + 70*dt);
+  }
+  if (wet) { F.vy *= .93; }
+  moveX(F.vx*dt, F.ground);
+  const v = moveY(F.vy*dt);
+  if (v >= 10) { F.land = v; injure(v); }
+  F.ground = F.vy >= 0 && blocked(F.x, F.y + .06, BHn, BWn);
+  if (F.ground) F.cl = F.cl && up;
+  F.far = Math.max(F.far, F.x - 8);
+  /* contact hazards act on the part that touched them */
+  for (let p = 0; p < 6; p++) {
+    const z = zone(p), a = area(z), fc = count(z, t => t === FIRE || t === LAVA), ac = count(z, t => t === ACID);
+    if (fc) F.chem[p] = Math.min(100, F.chem[p] + V.burn*Math.min(1, fc/a*3)*dt);
+    if (ac) F.chem[p] = Math.min(100, F.chem[p] + V.acid*ac/a*dt);
+  }
+  /* gas, air, bleeding: slow clocks that end in "downed" */
+  const hz = zone(0), gf = count(hz, t => t === CO2)/area(hz);
+  if (gf) F.dose += gf*dt/V.gasT; else F.dose = Math.max(0, F.dose - .03*dt);
+  F.air -= (st[1] === 2 ? V.torsoAir*V.torsoAir : st[1] === 1 ? V.torsoAir : 1)*(1 + 3*gf)*dt;
+  if (F.air <= 0) { F.air = 0; F.dose += dt/(V.gasT*2); }
+  F.bleed += F.bl.reduce((a, b) => a + b, 0)*dt/V.bleedT;
+  if (!F.downed && (F.bleed >= 1 || F.dose >= 1)) { F.downed = true; say('Down. R restarts.'); }
+  if (F.x > LY.XW + 3 && F.ground && !F.cl && !F.downed) endRun();
+}
+function endRun(){
+  F.end = 'win';
+  $('banner').innerHTML = 'Course complete<small>' + F.t.toFixed(0) + ' s. R to go again, N for a new seed.</small>';
+  $('banner').classList.add('on');
+}
+
+/* ---------- animation: a jointed figure, three poses blended ---------- */
+const A = {ph: 0, cph: 0, cc: 0, sp: 0, pr: 0, cl: 0, cr: 0, br: 0, bph: 0, cough: 0, fl: 0, t: 0, vb: 0, vr: 2400};
+function ik(h, t, l1, l2, b){
+  const dx = t[0] - h[0], dy = t[1] - h[1], d = Math.min(Math.max(Math.hypot(dx, dy), .4), l1 + l2 - .01), a = Math.atan2(dy, dx);
+  const th = Math.acos(Math.max(-1, Math.min(1, (l1*l1 + d*d - l2*l2)/(2*l1*d)))), g = a + b*th;
+  return [[h[0] + l1*Math.cos(g), h[1] + l1*Math.sin(g)], [h[0] + d*Math.cos(a), h[1] + d*Math.sin(a)]];
+}
+function poseUp(){
+  const st = F.st, lg = [st[4], st[5]], ar = [st[2], st[3]], tr = st[1], hh = st[0], sp = A.sp, ph = A.ph, g = F.ground;
+  const sg = i => Math.sin(ph + i*Math.PI), cg = i => Math.cos(ph + i*Math.PI);
+  const hunch = tr === 2 ? .75 : tr === 1 ? .4 : 0, bad = ar[0] === 2 || ar[1] === 2;
+  let dip = A.cr;
+  for (let i = 0; i < 2; i++) if (lg[i] === 1) dip += Math.max(0, -cg(i))*.9*Math.min(1, sp*1.5);       /* weight sags onto the bad leg */
+  const bob = (lg[0] + lg[1] ? 0 : .22)*Math.abs(sg(0))*sp;
+  const sway = hh ? Math.sin(A.t*(hh === 2 ? 1.5 : 2.2))*(hh === 2 ? .55 : .3) : 0;
+  const hip = [-.2 - hunch*.5 + sway*.6, Math.max(2.4, 3.75 - dip - bob)];
+  const lean = .07 + sp*.09 + hunch*.6 + (bad ? .12 : 0) + (lg[0] === 1 || lg[1] === 1 ? .05 : 0);
+  const sh = [hip[0] + 3*Math.sin(lean), hip[1] + 3*Math.cos(lean) + A.br - A.cough*.35 - (bad ? .25 : 0)];
+  const ha = lean + .1 + hunch*.35 + (hh === 2 ? .3 : 0) + sway*.5;
+  const hd = [sh[0] + 1.5*Math.sin(ha), sh[1] + 1.5*Math.cos(ha)];
+  const idle = 1 - Math.min(1, sp*3);
+  const legs = [0, 1].map(i => {
+    const h = lg[i] === 1, stride = 1.6*sp*(h ? .45 : 1);
+    let fx = sg(i)*stride + (h ? -.4 : 0) + (i ? -.45 : .45)*idle, fy = Math.max(0, cg(i))*(1.1*sp + .1)*(h ? .5 : 1) + (h ? .6 : 0);
+    if (!g) { fx = .7 + i*.5; fy = 1.5 + i*.5; }
+    return ik(hip, [fx, fy], 2, 2, 1);
+  });
+  const use = [(hip[0] + sh[0])/2 + .6, (hip[1] + sh[1])/2];
+  const arms = [0, 1].map(i => {
+    let hx, hy;
+    if (!g) { hx = sh[0] + (i ? -1.2 : 1.4); hy = sh[1] + .3; }
+    else if (ar[i] === 0) { hx = sh[0] - sg(i)*1.5*sp + .15; hy = sh[1] - 2.55; }
+    else if (ar[i] === 1) { hx = sh[0] + .95 + Math.sin(A.t*9)*.04; hy = sh[1] - 1.2; }               /* cradled across the chest */
+    else { hx = sh[0] - .2 - sp*.8 + Math.sin(A.t*2 + ph*.5 + i)*.25*(.3 + sp); hy = sh[1] - 2.85; } /* dangling, swinging */
+    if (F.busy > 0 && i === 0 && ar[0] < 2) { hx = use[0] + Math.sin(A.t*14)*.25; hy = use[1] + Math.sin(A.t*11)*.2; }
+    else if (A.cough > .3 && i === 0 && ar[0] < 2) { hx = hd[0] + .7; hy = hd[1] - .6; }
+    return ik(sh, [hx, hy], 1.5, 1.5, -1);
+  });
+  return [hip, sh, hd, legs[0][0], legs[0][1], legs[1][0], legs[1][1], arms[0][0], arms[0][1], arms[1][0], arms[1][1]];
+}
+function poseProne(){
+  const st = F.st, d = F.downed, cp = A.cph, sp = A.sp, hh = st[0], P = Math.PI;
+  const hip = [-1.5, (d ? .65 : 1) + A.br*.5], sh = [hip[0] + 2.7, hip[1] + (d ? .25 : .9) + A.br];
+  const hd = [sh[0] + 1.4, sh[1] + (d ? -.1 : .45) - (hh === 2 ? .35 : 0) + Math.sin(A.t*2)*.15*hh];
+  const legs = [0, 1].map(i => {
+    const s = st[4 + i]; let fx, fy;
+    if (s === 2 || d) { fx = hip[0] - 3.3 - Math.sin(cp + i)*.3*sp; fy = .2 + i*.1; }                    /* dragged leg */
+    else { const k = s === 1 ? .5 : 1; fx = hip[0] - 2.1 + Math.sin(cp + i*P + 1)*.9*k; fy = .25 + Math.max(0, Math.cos(cp + i*P + 1))*.9*k; }
+    return ik(hip, [fx, fy], 2, 2, -1);
+  });
+  const arms = [0, 1].map(i => {
+    const s = st[2 + i], rc = d ? .4 : 1; let hx, hy;
+    if (s === 0) { hx = sh[0] + 1.3 + Math.sin(cp + i*P)*1.2*rc; hy = .25 + Math.max(0, Math.cos(cp + i*P))*.9*rc; }
+    else if (s === 1) { hx = sh[0] + .5; hy = .3; }                                                      /* tucked, not pulling */
+    else { hx = sh[0] - 2; hy = .2; }                                                                    /* trailing */
+    return ik(sh, [hx, hy], 1.5, 1.5, 1);
+  });
+  return [hip, sh, hd, legs[0][0], legs[0][1], legs[1][0], legs[1][1], arms[0][0], arms[0][1], arms[1][0], arms[1][1]];
+}
+function poseClimb(){
+  const st = F.st, cc = A.cc, hip = [.1, 3.6], sh = [.5, 6.5 + A.br*.3], hd = [.95, 8], P = Math.PI;
+  const arms = [0, 1].map(i => { const s = st[2 + i]; return ik(sh, [1.9, sh[1] + (s === 1 ? .1 : .5) + Math.sin(cc + i*P)*(s === 1 ? .5 : 1) + (s === 1 ? Math.sin(A.t*13)*.2 : 0)], 1.5, 1.5, -1); });
+  const legs = [0, 1].map(i => st[4 + i] === 2 ? ik(hip, [.2 + i*.3, .3], 2, 2, 1) : ik(hip, [1.1, .6 + (Math.sin(cc + i*P + 1.6) + 1)*(st[4 + i] ? .4 : .9)], 2, 2, 1));
+  return [hip, sh, hd, legs[0][0], legs[0][1], legs[1][0], legs[1][1], arms[0][0], arms[0][1], arms[1][0], arms[1][1]];
+}
+function posture(){
+  const u = poseUp(), p = poseProne(), c = poseClimb(), wc = A.cl, wp = A.pr*(1 - wc), wu = 1 - wc - wp;
+  return u.map((q, i) => [q[0]*wu + p[i][0]*wp + c[i][0]*wc, q[1]*wu + p[i][1]*wp + c[i][1]*wc]);
+}
+function animate(dt){
+  A.t += dt;
+  const nom = F.cl ? V.climb : F.pr ? (F.downed ? V.dcrawl : V.crawl) : V.walk, v = F.cl ? Math.abs(F.vy) : Math.abs(F.vx);
+  A.sp += (Math.min(1.2, v/nom) - A.sp)*Math.min(1, dt*12);
+  if (F.cl) A.cc += v*dt*.7; else if (F.pr) A.cph += v*dt*1.6; else A.ph += v*dt*.8;
+  A.pr += ((F.pr ? 1 : 0) - A.pr)*Math.min(1, dt*10); A.cl += ((F.cl ? 1 : 0) - A.cl)*Math.min(1, dt*14);
+  A.cr += ((F.busy > 0 ? 1.3 : 0) - A.cr)*Math.min(1, dt*(F.busy > 0 ? 6 : 9));
+  const stress = Math.min(1, F.st[1]*.25 + (1 - F.air/F.airMax)*.5 + F.dose*.8 + A.sp*.25);
+  A.bph += dt*(3 + 9*stress); A.br = Math.sin(A.bph)*(.06 + .16*stress);
+  A.cough = Math.pow(Math.max(0, Math.sin(A.t*4.5)), 3)*Math.min(1, F.dose*8)*(F.downed ? .4 : 1);
+  A.fl = Math.max(0, A.fl - dt);
+}
+
+/* ---------- render ---------- */
+const sctx = $('sim').getContext('2d'), img = sctx.createImageData(W, H), px = img.data, fctx = $('fx').getContext('2d');
+const drips = [];
+function render(){
+  const gv = V.gasvis;
+  for (let i = 0, p = 0; i < N; i++, p += 4) {
+    let t = T[i];
+    const s = 1 + (Sh[i] - 128)/128*.12;
+    let r, g, b;
+    if ((t === GAS || t === CO2) && !gv) t = E;
+    if (t === FIRE) { const k = Lf[i]/40; r = 255; g = 120 + 90*Math.min(1, k); b = 40 + 30*Math.random(); }
+    else if (t === GAS || t === CO2) { const c = COL[t]; r = 30 + (c[0] - 30)*.45; g = 29 + (c[1] - 29)*.45; b = 28 + (c[2] - 28)*.45; }
+    else { const c = COL[t]; r = c[0]*s; g = c[1]*s; b = c[2]*s; if (t === E) { const y = (i/W) | 0; r += y*.05; g += y*.05; b += y*.06; } }
+    px[p] = r; px[p + 1] = g; px[p + 2] = b; px[p + 3] = 255;
+  }
+  sctx.putImageData(img, 0, 0);
+}
+const FAR = '#8d867a', NEAR = '#d2c9b6', PACK = '#6e5a43';
+function drawFig(){
+  const [hip, sh, hd, k0, f0, k1, f1, e0, h0, e1, h1] = posture();
+  fctx.save(); fctx.setTransform(K*F.face, 0, 0, -K, F.x*K, F.y*K); fctx.lineCap = fctx.lineJoin = 'round';
+  const L = (pts, col, w) => { fctx.strokeStyle = col; fctx.lineWidth = w; fctx.beginPath(); pts.forEach((q, i) => i ? fctx.lineTo(q[0], q[1]) : fctx.moveTo(q[0], q[1])); fctx.stroke(); };
+  const boot = f => [f, [f[0] + .8*(1 - A.pr), f[1]]];
+  L([sh, e1, h1], FAR, 1.15); L([hip, k1, f1], FAR, 1.4); L(boot(f1), FAR, 1.2);
+  const tx = sh[0] - hip[0], ty = sh[1] - hip[1], tl = Math.hypot(tx, ty), nx = -ty/tl, ny = tx/tl;   /* pack sits on the back */
+  L([[hip[0] + nx*1 + tx*.15, hip[1] + ny*1 + ty*.15], [sh[0] + nx*1 - tx*.1, sh[1] + ny*1 - ty*.1]], PACK, 1.5);
+  L([hip, sh], NEAR, 2.1);
+  fctx.fillStyle = NEAR; fctx.beginPath(); fctx.arc(hd[0], hd[1], 1.15, 0, 7); fctx.fill();
+  fctx.fillStyle = F.downed ? '#3a5a52' : '#6fdcc0'; fctx.beginPath(); fctx.arc(hd[0] + .6, hd[1] + .1, .45, 0, 7); fctx.fill();
+  L([hip, k0, f0], NEAR, 1.5); L(boot(f0), NEAR, 1.3); L([sh, e0, h0], NEAR, 1.25);
+  fctx.restore();
+}
+function overlay(dt){
+  fctx.clearRect(0, 0, 960, 480);
+  if (!F.end) { const ex = (LY.XW + 6)*K, ey = (FY - 15 + Math.sin(A.t*3))*K; fctx.fillStyle = '#6fdcc0'; fctx.beginPath(); fctx.moveTo(ex, ey + 8); fctx.lineTo(ex - 6, ey); fctx.lineTo(ex + 6, ey); fctx.fill(); }
+  drawFig();
+  const nb = F.bl.reduce((a, b) => a + b, 0);
+  if (nb && Math.random() < nb*dt*2.5) drips.push({x: F.x + (Math.random() - .5)*2, y: F.y - (F.pr ? 1.5 : 4), vy: 0});
+  fctx.fillStyle = '#9c2a22';
+  for (let i = drips.length - 1; i >= 0; i--) {
+    const d = drips[i]; d.vy += 70*dt; d.y += d.vy*dt;
+    if (solidAt(Math.floor(d.x), Math.floor(d.y)) || d.y >= H) { drips.splice(i, 1); continue; }
+    fctx.fillRect(d.x*K, d.y*K, 3, 4);
+  }
+}
+function vision(){
+  const hh = F.st[0], sc = $('stage').clientWidth/960;
+  A.vb += ([0, 1.6, 3.6][hh]*V.vis - A.vb)*.08;
+  A.vr += ((hh ? [0, 320, 150][hh]/Math.max(.3, V.vis) : 2400) - A.vr)*.08;
+  $('view').style.filter = A.vb > .05 ? 'blur(' + A.vb.toFixed(2) + 'px)' : 'none';
+  $('vig').style.background = A.vr < 1500 ? 'radial-gradient(circle at ' + (F.x*K*sc).toFixed(0) + 'px ' + ((F.y - 8)*K*sc).toFixed(0) + 'px, transparent ' + (A.vr*.5*sc).toFixed(0) + 'px, rgba(0,0,0,.96) ' + (A.vr*sc).toFixed(0) + 'px)' : 'none';
+}
+
+/* ---------- hud: time, distance, kit, silhouette. No body numbers. ---------- */
+const sil = document.querySelectorAll('[data-p]'), CLS = ['p', 'p hurt', 'p down'];
+function hud(){
+  sil.forEach(e => e.setAttribute('class', CLS[F.st[+e.dataset.p]]));
+  $('side').classList.toggle('off', !(V.sil === 1 || (V.sil === 2 && keys.KeyB)));
+  $('r-time').textContent = F.t.toFixed(1) + ' s';
+  $('r-dist').textContent = F.far.toFixed(0) + ' c';
+  $('r-kit').textContent = 'splint ' + F.kit.kS + ' · dressing ' + F.kit.kD + ' · canister ' + F.kit.kC;
+  $('r-seed').textContent = V.seed;
+}
+
+/* ---------- control flow ---------- */
+function restart(){
+  gen(V.seed); resetFigure(); F.st = [0,0,0,0,0,0]; Q.length = 0; log = []; $('log').innerHTML = ''; drips.length = 0;
+  Object.assign(A, {pr: 0, cl: 0, cr: 0, sp: 0, cough: 0, vb: 0, vr: 2400});
+  $('banner').classList.remove('on'); acc = 0; say('Reach the marker at the far wall.');
+}
+function setPause(p){ paused = p; $('pausemsg').classList.toggle('on', p); lastT = performance.now(); }
+function frame(now){
+  const dt = Math.min(.1, (now - lastT)/1000); lastT = now;
+  if (!paused) { acc += dt; let n = 0; while (acc >= STEP && n < 5) { if (!F.end) stepFigure(); emit(); simStep(); acc -= STEP; n++; } if (n === 5) acc = 0; animate(dt); }
+  render(); overlay(paused ? 0 : dt); vision(); hud();
+  requestAnimationFrame(frame);
+}
+function buildTune(){
+  const box = $('tune'); box.innerHTML = '';
+  TUNE.forEach(([k, label, mn, mx, st]) => {
+    const l = document.createElement('label'), o = document.createElement('output'), inp = document.createElement('input'), f = FMT[k] || (v => v);
+    inp.type = 'range'; inp.min = mn; inp.max = mx; inp.step = st; inp.value = V[k]; o.textContent = f(V[k]);
+    inp.addEventListener('input', () => { V[k] = +inp.value; o.textContent = f(V[k]); writeHash(); if (RESTART.includes(k)) restart(); });
+    inp.addEventListener('change', () => inp.blur());
+    l.append(label, inp, o); box.append(l);
+  });
+}
+addEventListener('keydown', e => {
+  const c = e.code;
+  if (e.target.tagName === 'INPUT' && (c === 'Space' || c.startsWith('Arrow'))) return;
+  if (c === 'Space' || c.startsWith('Arrow')) e.preventDefault();
+  if (e.repeat) return;
+  keys[c] = 1;
+  if (c === 'Digit1' || c === 'Digit2' || c === 'Digit3') Q.push(+c[5]);
+  else if (c === 'KeyR') restart();
+  else if (c === 'KeyN') { V.seed = 1 + (Math.random()*9999 | 0); writeHash(); buildTune(); restart(); }
+  else if (c === 'KeyP') setPause(!paused);
+});
+addEventListener('keyup', e => { delete keys[e.code]; });
+addEventListener('blur', () => { for (const k in keys) delete keys[k]; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+addEventListener('hashchange', () => { readHash(); buildTune(); restart(); });
+$('reset').addEventListener('click', e => { TUNE.forEach(t => V[t[0]] = t[5]); writeHash(); buildTune(); restart(); e.target.blur(); });
+$('silbtn').addEventListener('click', e => { V.sil = V.sil ? 0 : 1; writeHash(); buildTune(); $('silbtn').textContent = V.sil ? 'Hide silhouette' : 'Show silhouette'; e.target.blur(); });
+
+readHash(); buildTune(); $('silbtn').textContent = V.sil ? 'Hide silhouette' : 'Show silhouette'; restart();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

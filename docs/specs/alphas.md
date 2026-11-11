@@ -91,33 +91,55 @@ This differs from the [prototypes](prototypes.md): those are single-player HTML 
 
 **Fed by:** D3, E5.
 
-### A3 — Home
+### A3 — Base camp
 
-**Question:** Does the Crawler feel like a home that needs many hands, and is leaving it a real decision?
+**Question:** Does a base you set up yourself feel like home, and is the Crawler as its legs (slow, loud, consequential to drive) worth the trouble?
 
 **Build**
-- A walkable Crawler with three working stations: helm, engine, winch. Stations work only while attended.
-- A short flat surface with two dig sites. Driving between them takes a few minutes and burns fuel.
-- Anchoring connects the winch to the site's cave (reusing A2's caves).
+- A walkable Crawler with helm, engine, lookout and winch. Stations work only while attended. Piloting and not-watching consequences as in E3; one creature drawn by noise and light.
+- A short surface with two dig sites a few minutes apart.
+- At a site, the base is unpacked by hand from the Crawler: generator, workshop, bunks, winch frame over the shaft. Placement consequences as in E10. The winch connects to the site's cave (reusing A2's caves).
+- A minimal workshop (E12): rope, pitons and flares from resources brought up from the cave.
 - Power budget shared by winch, lights and heating.
-- The hatch rule: a plain door unless something hazardous is outside or on you; skipping the airlock then brings it in.
+- One night at the base.
+- The hatch rule: a plain door unless something hazardous is outside or on you; skipping decontamination then brings it in.
+- Mid-session: pack up and move to the second site.
 
-**Cut:** modules and upgrades, lab, grow room, surface generation, weather beyond one event.
+**Cut:** runner and hauler, found tech, lab, grow room, surface generation, weather beyond one event.
 
-**Session:** 45 minutes, enough to visit both sites.
+**Session:** 45–60 minutes, enough to set up, delve, survive a night and move once.
 
-**Pass line:** crews of 2 and of 4 both get through a session without anyone idle for more than a couple of minutes, and at least one argument happens about who stays up top.
+**Pass line:** crews of 2 and of 4 both get through a session without anyone idle for more than a couple of minutes; at least one argument happens about who stays at the base; players can name something about their base they would set up differently next time.
 
-**Fed by:** E3, E6, E7.
+**Fed by:** E3, E7, E10, E12.
 
-### A4 — Grey lace
+### A4 — Far trip
+
+**Question:** Is going far from the base for tech, and bringing it home, worth splitting the crew for, and does found tech feel like real progress?
+
+**Build (on top of A3)**
+- A runner and a hauler parked at the base.
+- A larger surface with one dead outpost (E9) a few minutes' drive away by runner and a long drive by hauler. Radio range ends partway.
+- At the outpost: a few small finds and one heavy piece of tech (for example a pump that lets the shaft go deeper by clearing water, or a battery cell that powers the base silently at night).
+- Getting the heavy tech home by hauler (E11), and installing it at the base by hand.
+- Crash injuries in the runner, cargo damage in the hauler.
+
+**Cut:** fungi traits, lab, more than one outpost, more than one piece of heavy tech.
+
+**Session:** 60 minutes.
+
+**Pass line:** the crew splits between base and expedition without being told to, the trip home with the tech is mentioned as a highlight, and after installing it they use it straight away to do something they could not do before.
+
+**Fed by:** E6, E9, E11, E12.
+
+### A5 — Grey lace
 
 **Question:** Does learning fungal traits by experiment, with a journal the players write themselves, pay off across more than one session?
 
 **Build**
 - Four species with hidden traits rolled per world. The same world is used for two sessions on different days.
-- Field experiments (burn, soak, feed) and a minimal lab bench on the Crawler.
-- The journal: player-made pages, typed notes, a photo from a camera item, or a hand drawing. Shared between players and kept between the two sessions.
+- Field experiments (burn, soak, feed) and the lab room at the base (E4): hands-on, with accidents.
+- The journal: player-made pages, typed notes, a photo from a camera (found tech), or a hand drawing. Shared between players and kept between the two sessions. Recipes from the workshop go in it too.
 - At least two traits matter underground: one that can kill you, one that can save you.
 
 **Cut:** grow room, more than four species, drones.
@@ -128,11 +150,11 @@ This differs from the [prototypes](prototypes.md): those are single-player HTML 
 
 **Fed by:** E4.
 
-### A5 — The trip
+### A6 — The trip
 
 **Question:** Does the whole loop hold together for an evening? This is the go/no-go build.
 
-**Build:** A3 and A4 joined: survey, drive, anchor, split, delve, extract, process, one upgrade choice, go to a deeper second site. One generated element (cave layout from a seed) so it can be replayed.
+**Build:** A3, A4 and A5 joined: scout with the runner, move the base with the Crawler, set it up, split between delve, base and expedition, haul tech home, craft and install, study fungi, then pack up and move to a deeper second site. One generated element (cave layout from a seed) so it can be replayed.
 
 **Session:** 60–90 minutes.
 
@@ -140,7 +162,7 @@ This differs from the [prototypes](prototypes.md): those are single-player HTML 
 
 ## Order and gates
 
-A0 is a gate: nothing else starts until it passes. A1 is the first fun test and the most important one; if the split crew is not fun in A1, pillars 2 and 3 need rethinking before any Crawler work. A2 to A4 can be reordered depending on what A1 teaches. A5 comes last.
+A0 is a gate: nothing else starts until it passes. A1 is the first fun test and the most important one; if the split crew is not fun in A1, pillars 2 and 3 need rethinking before any base or vehicle work. A2 to A5 can be reordered depending on what A1 teaches, except that A4 needs A3's base. A6 comes last.
 
 ## Decision log
 

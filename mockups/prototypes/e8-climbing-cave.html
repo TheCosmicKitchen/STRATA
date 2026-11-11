@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STRATA E8 · Climbing and the unknown cave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@500;700&display=swap">
+<style>
+:root{color-scheme:dark;--bg:#0c0f11;--panel:#13171a;--line:#262d32;--ink:#e4ddcf;--muted:#8e958f;--rust:#c96a3b;--glow:#6fdcc0;--warn:#e3a33f;--crit:#e2553f;
+--f-title:"Big Shoulders Stencil Display",Impact,sans-serif;--f-body:"Barlow","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body)}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
+h1{font:800 34px/1 var(--f-title);letter-spacing:.04em;margin:0;text-transform:uppercase}
+h1 small{color:var(--rust);font-size:.55em;letter-spacing:.12em;margin-right:.6em}
+.q{color:var(--muted);margin:6px 0 14px;max-width:70ch}
+.play{display:grid;grid-template-columns:minmax(0,880px) 150px;gap:14px;align-items:start}
+.stage{position:relative;border:1px solid var(--line);background:#000;aspect-ratio:4/3;cursor:crosshair}
+.stage canvas.px{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;display:block}
+#fx{pointer-events:none}
+.msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:rgba(8,10,12,.72);font:800 30px/1.2 var(--f-title);letter-spacing:.06em;text-transform:uppercase;padding:20px;pointer-events:none}
+.msg small{display:block;font:400 14px var(--f-mono);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:8px}
+.msg.on{display:flex}
+.mapw{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(8,10,12,.9);cursor:default}
+.mapw.on{display:flex}
+#paper{width:78%;aspect-ratio:4/3;box-shadow:0 0 0 1px #000,0 8px 30px rgba(0,0,0,.7);cursor:crosshair;touch-action:none}
+.mapw .bar2{display:flex;gap:8px;align-items:center;font:500 13px var(--f-body);color:var(--muted)}
+.mapw .bar2 button{margin:0}
+.mapw .bar2 button.sel{border-color:var(--glow);color:var(--glow)}
+.hand{font:700 20px var(--f-body);font-family:Caveat,cursive;color:var(--muted)}
+.side{background:var(--panel);border:1px solid var(--line);padding:12px;text-align:center}
+.side .cap{font:400 11px var(--f-mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.side svg{width:100%;height:auto;max-width:110px}
+.p{fill:#151a1d;stroke:#4a5358;stroke-width:1.5}
+.p.hurt{stroke:var(--warn);fill:rgba(227,163,63,.3)}
+.p.down{stroke:var(--crit);fill:rgba(226,85,63,.3)}
+.strip{display:flex;flex-wrap:wrap;gap:6px 22px;background:var(--panel);border:1px solid var(--line);border-top:0;padding:10px 14px;font:400 13px var(--f-mono);max-width:880px}
+.strip div span{color:var(--muted);margin-right:6px;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+.strip b{font-weight:600}
+.strip .w{color:var(--warn)}.strip .c{color:var(--crit)}
+.bar{display:inline-block;width:54px;height:5px;background:var(--line);vertical-align:middle;margin-left:6px}
+.bar i{display:block;height:100%;background:var(--muted)}
+#log{max-width:880px;min-height:22px;font:400 13px var(--f-mono);color:var(--rust);padding:6px 2px}
+h2{font:600 18px var(--f-title);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+.tune{background:var(--panel);border:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 28px;max-width:1180px}
+.tune label{display:grid;grid-template-columns:150px 1fr 48px;gap:8px;align-items:center;font-size:13px}
+.tune output{font:400 12px var(--f-mono);color:var(--glow);text-align:right}
+input[type=range]{accent-color:var(--rust);width:100%}
+input[type=checkbox]{accent-color:var(--rust);justify-self:start}
+input:focus-visible,button:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+button{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:6px 14px;font:500 13px var(--f-body);cursor:pointer;margin-top:6px}
+button:hover{border-color:var(--rust)}
+.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px 24px;font-size:13px;color:var(--muted)}
+kbd{font:600 12px var(--f-mono);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:1px 6px;margin-right:6px}
+@media(max-width:900px){.play{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1><small>E8</small>Climbing and the unknown cave</h1>
+<p class="q">Is moving through a cave you cannot see, with tools for climbing, a puzzle worth solving, and does mapping it yourself feel good?</p>
+
+<div class="play">
+  <div class="stage" id="stage">
+    <canvas class="px" id="sim" width="160" height="120"></canvas>
+    <canvas class="px" id="fx" width="960" height="720"></canvas>
+    <div class="msg" id="banner"></div>
+    <div class="msg" id="pausemsg">Paused<small>press P to resume</small></div>
+    <div class="mapw" id="mapw">
+      <canvas id="paper" width="640" height="480"></canvas>
+      <div class="bar2">
+        <button id="m-pen" class="sel">Pencil (B)</button><button id="m-er">Eraser (E)</button><button id="m-clr">Clear sheet</button><button id="m-x">Close (M)</button>
+        <span class="hand" id="m-note">The sheet is blank. Draw what you remember.</span>
+      </div>
+    </div>
+  </div>
+  <aside class="side">
+    <div class="cap">body</div>
+    <svg viewBox="0 0 110 220" role="img" aria-label="Body silhouette showing hurt parts">
+      <circle id="b-head" class="p" cx="55" cy="22" r="14"/>
+      <rect id="b-torso" class="p" x="34" y="40" width="42" height="64" rx="10"/>
+      <rect id="b-armL" class="p" x="18" y="44" width="12" height="54" rx="6"/>
+      <rect id="b-armR" class="p" x="80" y="44" width="12" height="54" rx="6"/>
+      <rect class="p b-legL" x="36" y="108" width="16" height="50" rx="7"/>
+      <rect class="p b-legL" x="36" y="160" width="16" height="50" rx="7"/>
+      <rect class="p b-legR" x="58" y="108" width="16" height="50" rx="7"/>
+      <rect class="p b-legR" x="58" y="160" width="16" height="50" rx="7"/>
+    </svg>
+  </aside>
+</div>
+<div class="strip">
+  <div><span>stamina</span><b id="r-stam"></b><span class="bar"><i id="a-stam"></i></span></div>
+  <div><span>battery</span><b id="r-bat"></b><span class="bar"><i id="a-bat"></i></span></div>
+  <div><span>pitons</span><b id="r-pit"></b></div>
+  <div><span>rope</span><b id="r-rope"></b></div>
+  <div><span>flares</span><b id="r-fl"></b></div>
+  <div><span>chalk</span><b id="r-ch"></b></div>
+  <div><span>features</span><b id="r-feat"></b></div>
+  <div><span>time</span><b id="r-time"></b></div>
+  <div><span>depth</span><b id="r-depth"></b></div>
+  <div><span>last landing</span><b id="r-land">-</b></div>
+  <div><span>state</span><b id="r-state"></b></div>
+  <div><span>seed</span><b id="r-seed"></b></div>
+</div>
+<div id="log"></div>
+
+<h2>Tuning</h2>
+<div class="tune" id="tune"></div>
+<button id="reset">Reset to defaults</button>
+
+<h2>Controls</h2>
+<div class="keys">
+  <div><kbd>A</kbd><kbd>D</kbd>walk. <kbd>W</kbd> jumps (toward a ledge: grabs it)</div>
+  <div><kbd>Shift</kbd>hold to grip rock: hang, then <kbd>W</kbd><kbd>S</kbd> climb a wall, <kbd>A</kbd><kbd>D</kbd> shimmy under a ceiling</div>
+  <div><kbd>1</kbd>piton into the rock under the mouse</div>
+  <div><kbd>2</kbd>rope: tie to nearest piton / coil it back (stand at the piton)</div>
+  <div><kbd>Space</kbd>grab / let go of the rope. <kbd>W</kbd><kbd>S</kbd> climb / rappel</div>
+  <div><kbd>3</kbd>throw a flare at the mouse (ignites methane)</div>
+  <div><kbd>4</kbd>chalk mark on the rock under the mouse</div>
+  <div><kbd>F</kbd>helmet lamp</div>
+  <div><kbd>M</kbd>paper map (pauses). Mouse draws, <kbd>B</kbd> pencil, <kbd>E</kbd> eraser</div>
+  <div><kbd>R</kbd>restart, same seed <kbd>N</kbd>new seed <kbd>P</kbd>pause (also when tab hidden)</div>
+  <div>Goal: find the grotto, the lake and the drop, then walk back out of the entry mouth on the left. Nothing marks them for you.</div>
+</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const W = 320, H = 240, N = W * H, VW = 160, VH = 120, K = 6, STEP = 1 / 60;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ---------- tunables (stored in URL hash) ---------- */
+const TUNE = [
+  ['stam', 'Stamina', 20, 300, 5, 100],
+  ['stRec', 'Stamina recovery (/s)', 5, 80, 1, 22],
+  ['climb', 'Climb speed (c/s)', 2, 16, .5, 5],
+  ['hangD', 'Hang drain (/s)', 0, 20, .5, 4],
+  ['climbD', 'Climb drain (/s)', 2, 40, .5, 10],
+  ['wetM', 'Wet rock drain x', 1, 4, .5, 2],
+  ['ropeD', 'Rope-climb drain (/s)', 0, 20, .5, 4],
+  ['rappel', 'Rappel speed (c/s)', 4, 30, 1, 14],
+  ['mantle', 'Ledge grab cost', 0, 30, 1, 8],
+  ['jump', 'Jump speed (c/s)', 20, 55, 1, 36],
+  ['gravity', 'Gravity (c/s²)', 20, 160, 1, 70],
+  ['safe', 'Safe fall speed (c/s)', 15, 120, 1, 45],
+  ['downed', 'Downed fall speed (c/s)', 30, 200, 1, 85],
+  ['shake', 'Collapse landing speed', 15, 120, 1, 36],
+  ['pitons', 'Pitons', 0, 12, 1, 5],
+  ['rope', 'Rope length (cells)', 20, 160, 5, 60],
+  ['flares', 'Flares', 0, 8, 1, 3],
+  ['flareT', 'Flare duration (s)', 5, 60, 1, 20],
+  ['chalk', 'Chalk marks', 0, 30, 1, 12],
+  ['reach', 'Arm reach (cells)', 3, 16, 1, 9],
+  ['range', 'Lamp range (cells)', 10, 70, 1, 34],
+  ['cone', 'Lamp cone angle (deg)', 15, 160, 5, 80],
+  ['battery', 'Battery life (s)', 60, 1200, 10, 480],
+  ['rem', 'Remembered brightness %', 0, 100, 1, 50],
+  ['auto', 'Auto map (comparison)', 0, 1, 1, 0],
+  ['open', 'Cave openness %', 50, 70, 1, 60],
+  ['branch', 'Branching %', 60, 160, 5, 100],
+  ['seed', 'Seed', 1, 9999, 1, 7]
+];
+const V = {};
+function readHash(){
+  TUNE.forEach(t => { V[t[0]] = t[5]; });
+  location.hash.slice(1).split('&').forEach(p => {
+    const [k, v] = p.split('='), t = TUNE.find(x => x[0] === k), n = parseFloat(v);
+    if (t && isFinite(n)) V[k] = Math.min(t[3], Math.max(t[2], n));
+  });
+}
+function writeHash(){
+  const s = TUNE.filter(t => V[t[0]] !== t[5]).map(t => t[0] + '=' + V[t[0]]).join('&');
+  try { history.replaceState(null, '', s ? '#' + s : location.pathname + location.search); } catch (e) { /* file:// quirks */ }
+}
+
+/* ---------- sand sim (ported from mockup, region-limited) ---------- */
+const E=0, ROCK=1, SAND=2, WATER=3, GAS=4, FIRE=5, STEAM=6, LAVA=7, ACID=8, MYC=9, SPORE=10, MOSS=11, OBS=12, SMOKE=13, CO2=14;
+const T = new Uint8Array(N), Lf = new Uint8Array(N), Sh = new Uint8Array(N), Mv = new Uint8Array(N), Bd = new Uint8Array(N);
+const REM = new Uint8Array(N), VIS = new Uint32Array(N);
+const DEN = new Float32Array(16);
+DEN[E]=1; DEN[GAS]=.3; DEN[STEAM]=.4; DEN[SMOKE]=.5; DEN[FIRE]=.6; DEN[SPORE]=.8; DEN[CO2]=1.6; DEN[WATER]=10; DEN[ACID]=11; DEN[LAVA]=14; DEN[SAND]=20;
+const SOLID = new Uint8Array(16); [ROCK, OBS, MYC, MOSS].forEach(k => SOLID[k] = 1);
+const DEC = new Float32Array(16).fill(.4);
+DEC[E]=.93; [GAS, STEAM, SMOKE, FIRE, SPORE, CO2].forEach(k => DEC[k] = .92); [WATER, ACID].forEach(k => DEC[k] = .82); DEC[LAVA]=.6; DEC[SAND]=.45;
+const COL = [[30,29,28],[80,76,72],[152,126,88],[38,88,124],[92,70,112],[255,176,70],[168,176,184],[236,96,34],[128,196,64],[204,194,172],[214,204,156],[96,232,192],[40,34,48],[62,62,64],[74,96,78]];
+const NB = [-1, 1, -W, W];
+let rnd = mulberry(1), stamp = 1, tick = 0, vf = 1;
+
+function set(i, t, l){ T[i] = t; Lf[i] = l || 0; Sh[i] = (rnd()*255) | 0; }
+function swap(i, j){ const t = T[i], l = Lf[i], s = Sh[i]; T[i] = T[j]; Lf[i] = Lf[j]; Sh[i] = Sh[j]; T[j] = t; Lf[j] = l; Sh[j] = s; Mv[i] = stamp; Mv[j] = stamp; }
+const lighter = (j, d) => j >= 0 && j < N && !SOLID[T[j]] && DEN[T[j]] < d;
+const heavier = (j, d) => j >= 0 && j < N && !SOLID[T[j]] && T[j] !== SAND && T[j] !== LAVA && DEN[T[j]] > d;
+function clings(j, from){ for (const o of NB) { const k = j + o; if (k === from || k < 0 || k >= N) continue; const u = T[k]; if (u === ROCK || u === OBS || u === SAND) return true; } return false; }
+function wetNear(x, y){ for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < W && yy < H && T[yy*W + xx] === WATER) return true; } return false; }
+function fall(x, y, i, d){
+  if (y >= H - 1) return;
+  if (lighter(i + W, d)) return swap(i, i + W);
+  const dir = rnd() < .5 ? -1 : 1;
+  if (lighter(i + W + dir, d) && lighter(i + dir, d)) return swap(i, i + W + dir);
+  if (lighter(i + W - dir, d) && lighter(i - dir, d)) return swap(i, i + W - dir);
+}
+function liquid(x, y, i, d, disp){
+  if (y >= H - 1) return;
+  if (lighter(i + W, d)) return swap(i, i + W);
+  const dir = rnd() < .5 ? -1 : 1;
+  if (lighter(i + W + dir, d)) return swap(i, i + W + dir);
+  if (lighter(i + W - dir, d)) return swap(i, i + W - dir);
+  for (const s of [dir, -dir]) {
+    let best = -1;
+    for (let k = 1; k <= disp; k++) { const nx = x + s*k; if (nx < 0 || nx >= W) break; const j = i + s*k; if (!lighter(j, d)) break; best = j; if (lighter(j + W, d)) break; }
+    if (best >= 0) return swap(i, best);
+  }
+}
+function rise(x, y, i, prob, side){
+  if (rnd() > prob) return;
+  if (y === 0) { if (rnd() < .25) set(i, E); return; }
+  const d = DEN[T[i]], dir = rnd() < .5 ? -1 : 1;
+  if (rnd() < side) { if (heavier(i + dir, d)) return swap(i, i + dir); }
+  if (heavier(i - W, d)) return swap(i, i - W);
+  if (heavier(i - W + dir, d)) return swap(i, i - W + dir);
+  if (heavier(i - W - dir, d)) return swap(i, i - W - dir);
+  if (heavier(i + dir, d)) return swap(i, i + dir);
+}
+function sinkGas(x, y, i){
+  if (rnd() > .6) return;
+  const d = DEN[CO2], dir = rnd() < .5 ? -1 : 1;
+  if (lighter(i + W, d)) return swap(i, i + W);
+  if (lighter(i + W + dir, d)) return swap(i, i + W + dir);
+  if (lighter(i + dir, d)) return swap(i, i + dir);
+}
+function drift(x, y, i){
+  if (rnd() > .35) return;
+  const dx = (rnd()*3 | 0) - 1, dy = rnd() < .55 ? -1 : (rnd() < .5 ? 0 : 1);
+  const j = i + dy*W + dx;
+  if (j >= 0 && j < N && T[j] === E) swap(i, j);
+}
+function fire(x, y, i){
+  if (--Lf[i] === 0 || Lf[i] > 250) { set(i, rnd() < .35 ? SMOKE : E, 60); return false; }
+  for (const o of NB) {
+    const j = i + o; if (j < 0 || j >= N) continue;
+    const u = T[j];
+    if (u === WATER) { set(i, STEAM, 70); return false; }
+    if (u === GAS) set(j, FIRE, 22 + (rnd()*20 | 0));
+    else if (u === SPORE && rnd() < .3) set(j, FIRE, 8);
+    else if (u === MYC && rnd() < .05) { set(j, FIRE, 40); for (const o2 of NB) { const k = j + o2; if (k >= 0 && k < N && T[k] === E && rnd() < .7) set(k, SPORE, 200); } }
+    else if (u === MOSS && rnd() < .012) set(j, FIRE, 30);
+  }
+  return true;
+}
+function lava(x, y, i){
+  for (const o of NB) {
+    const j = i + o; if (j < 0 || j >= N) continue;
+    const u = T[j];
+    if (u === WATER) { set(i, OBS); set(j, STEAM, 90); return false; }
+    if (u === GAS || u === MYC || u === SPORE || u === MOSS) set(j, FIRE, 30);
+  }
+  if (i - W >= 0 && T[i - W] === E && rnd() < .002) set(i - W, FIRE, 12);
+  return true;
+}
+function acid(x, y, i){
+  for (const o of NB) {
+    const j = i + o; if (j < 0 || j >= N || Bd[j]) continue;
+    const u = T[j];
+    if ((u === ROCK || u === SAND || u === MYC || u === MOSS || (u === OBS && rnd() < .3)) && rnd() < .05) {
+      set(j, CO2, 220); if (rnd() < .3) { set(i, CO2, 220); return false; }
+    } else if (u === WATER && rnd() < .002) { set(i, WATER); return false; }
+  }
+  return true;
+}
+function decay(i, p, to){ if (rnd() < p && --Lf[i] <= 1) { set(i, to, 0); return false; } return true; }
+function myc(x, y, i){
+  if (Lf[i] > 30 && rnd() < .0015) { const j = i + NB[rnd()*4 | 0]; if (j >= 0 && j < N && T[j] === E) { set(j, SPORE, 200); Lf[i] -= 4; } }
+  if (rnd() > .04) return;
+  const j = i + NB[rnd()*4 | 0]; if (j < 0 || j >= N) return;
+  const u = T[j];
+  if (u === WATER) { Lf[i] = 44; if (rnd() < .15) set(j, E); }
+  else if (u === E && Lf[i] > 1 && clings(j, i)) { set(j, MYC, Lf[i] - 1); }
+  else if (u === MOSS && rnd() < .04) set(j, MYC, Lf[i]);
+}
+function moss(x, y, i){
+  if (rnd() > .012) return;
+  const j = i + NB[rnd()*4 | 0]; if (j < 0 || j >= N || T[j] !== E) return;
+  if (clings(j, i) && wetNear(j % W, (j / W) | 0)) set(j, MOSS);
+}
+function spore(x, y, i){
+  if (rnd() < .3 && --Lf[i] <= 1) { set(i, E); return false; }
+  if (rnd() < .03 && clings(i, -1) && wetNear(x, y)) { set(i, MYC, 30); return false; }
+  return true;
+}
+function update(x, y, i, t){
+  switch (t) {
+    case SAND: fall(x, y, i, 20); break;
+    case WATER: liquid(x, y, i, 10, 4); break;
+    case ACID: if (acid(x, y, i)) liquid(x, y, i, 11, 3); break;
+    case LAVA: if (lava(x, y, i) && tick % 3 === 0) liquid(x, y, i, 14, 1); break;
+    case GAS: rise(x, y, i, .35, .7); break;
+    case FIRE: if (fire(x, y, i)) rise(x, y, i, .6, .5); break;
+    case STEAM:
+      if (decay(i, .6, rnd() < .35 ? WATER : E)) { if (i - W >= 0 && T[i - W] === ROCK && rnd() < .01) { set(i, WATER); break; } rise(x, y, i, .5, .7); }
+      break;
+    case SMOKE: if (decay(i, 1, E)) rise(x, y, i, .5, .6); break;
+    case CO2: if (Lf[i] === 255 || decay(i, .12, E)) sinkGas(x, y, i); break;
+    case SPORE: if (spore(x, y, i)) drift(x, y, i); break;
+    case MYC: myc(x, y, i); break;
+    case MOSS: moss(x, y, i); break;
+  }
+}
+/* region of cells that are stepped and lit: camera view plus a margin (the rest of the cave is frozen) */
+let rx0 = 0, ry0 = 0, rx1 = W - 1, ry1 = H - 1, camX = 0, camY = 0, cfx = 0, cfy = 0;
+function simStep(x0, y0, x1, y1){
+  stamp = stamp === 255 ? 1 : stamp + 1; tick++;
+  for (let y = y1; y >= y0; y--) {
+    const ltr = rnd() < .5;
+    for (let k = 0, n = x1 - x0 + 1; k < n; k++) {
+      const x = ltr ? x0 + k : x1 - k, i = y*W + x;
+      if (Mv[i] === stamp) continue;
+      const t = T[i];
+      if (t === E || t === ROCK || t === OBS) continue;
+      update(x, y, i, t);
+    }
+  }
+}
+const simAll = () => simStep(0, 0, W - 1, H - 1);
+
+/* ---------- cave generation ---------- */
+let FEAT = [], CR = [];
+function makeNoise(r){
+  const p = new Uint16Array(512), a = Array.from({length: 256}, (_, k) => k);
+  for (let k = 255; k > 0; k--) { const j = (r()*(k + 1)) | 0; [a[k], a[j]] = [a[j], a[k]]; }
+  for (let k = 0; k < 512; k++) p[k] = a[k & 255];
+  const v = new Float32Array(256); for (let k = 0; k < 256; k++) v[k] = r();
+  const h = (x, y) => v[p[(p[x & 255] + (y & 255)) & 511]];
+  const n = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf*xf*(3 - 2*xf), w = yf*yf*(3 - 2*yf); const A = h(xi, yi), B = h(xi + 1, yi), C = h(xi, yi + 1), D = h(xi + 1, yi + 1); return A + (B - A)*u + (C - A)*w + (A - B - C + D)*u*w; };
+  return (x, y) => n(x, y)*.6 + n(x*2.1 + 17, y*2.1 + 5)*.28 + n(x*4.3 + 3, y*4.3 + 29)*.12;
+}
+function gen(seed){
+  const r = rnd = mulberry(seed), fbm = makeNoise(r), thr = V.open/100, bf = V.branch/100;
+  stamp = 1; tick = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) T[y*W + x] = fbm(x*.05*bf, y*.075*bf) + .1*Math.sin(y/H*Math.PI) > thr ? E : ROCK;
+  const tmp = new Uint8Array(N);
+  for (let it = 0; it < 3; it++) {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let c = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H || T[yy*W + xx] === ROCK) c++; }
+      const i = y*W + x; tmp[i] = c > 4 ? ROCK : c < 4 ? E : T[i];
+    }
+    T.set(tmp);
+  }
+  const inb = (x, y) => x >= 3 && y >= 3 && x < W - 3 && y < H - 3;
+  const ell = (cx, cy, rx, ry, t) => { for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) if (inb(x, y) && ((x - cx)/rx)**2 + ((y - cy)/ry)**2 <= 1) T[y*W + x] = t; };
+  /* entry: a chamber in the left wall, floor at row 24 */
+  for (let y = 8; y <= 32; y++) for (let x = 2; x <= 40; x++) T[y*W + x] = ROCK;
+  for (let y = 14; y <= 23; y++) for (let x = 3; x <= 38; x++) T[y*W + x] = E;
+  const jit = () => (r()*16 - 8) | 0;
+  const D = {x: 92 + jit(), y: 94}, G = {x: 262 + jit(), y: 60 + jit()}, L = {x: 150 + jit(), y: 182};
+  ell(D.x, D.y, 13, 6, E);                                    /* drop: top chamber, then a wandering shaft */
+  const dc = y => D.x + Math.round(5*Math.sin(y*.045));
+  for (let y = D.y; y < D.y + 92; y++) for (let x = dc(y) - 4; x <= dc(y) + 4; x++) if (inb(x, y)) T[y*W + x] = E;
+  ell(dc(D.y + 92), D.y + 96, 10, 5, E);
+  ell(G.x, G.y, 20, 11, E); ell(L.x, L.y, 36, 14, E);         /* grotto, lake basin */
+  const worm = (x0, y0, x1, y1) => {
+    let x = x0, y = y0, a = Math.atan2(y1 - y0, x1 - x0), rad = 3.6; const pts = [];
+    for (let n = 0; n < 3000 && Math.hypot(x1 - x, y1 - y) > 3; n++) {
+      let da = Math.atan2(y1 - y, x1 - x) - a; while (da > Math.PI) da -= 2*Math.PI; while (da < -Math.PI) da += 2*Math.PI;
+      a += da*.12 + (r() - .5)*.5; x += Math.cos(a)*1.2; y += Math.sin(a)*1.2;
+      rad = Math.max(3.2, Math.min(4.6, rad + (r() - .5)*.3)); ell(x, y, rad, rad, E); pts.push([x | 0, y | 0]);
+    }
+    return pts;
+  };
+  worm(36, 19, D.x - 6, D.y);
+  const w2 = worm(36, 21, 62, 108); worm(62, 108, L.x - 30, L.y);
+  worm(D.x + 8, D.y, G.x - 14, G.y);
+  worm(G.x + 4, G.y + 8, L.x + 32, L.y - 4);
+  for (let i = 0; i < N; i++) { const x = i % W, y = (i / W) | 0; Bd[i] = (x < 2 || x >= W - 2 || y >= H - 2 || y < 2) ? 1 : 0; if (Bd[i]) T[i] = ROCK; Lf[i] = 0; Sh[i] = (r()*255) | 0; Mv[i] = 0; REM[i] = 0; VIS[i] = 0; }
+  /* lake, methane pocket, pools, loose sand ceilings */
+  for (let y = L.y - 3; y <= L.y + 14; y++) for (let x = L.x - 36; x <= L.x + 36; x++) if (inb(x, y) && ((x - L.x)/36)**2 + ((y - L.y)/14)**2 <= 1) set(y*W + x, WATER);
+  const mp = w2[w2.length >> 1]; ell(mp[0], mp[1], 7, 6, E);
+  for (let dy = -6; dy <= 4; dy++) for (let dx = -6; dx <= 6; dx++) if (dx*dx + dy*dy <= 30 && T[(mp[1] + dy)*W + mp[0] + dx] === E) set((mp[1] + dy)*W + mp[0] + dx, GAS);
+  const blob = (cx, cy, rad, n, t) => { for (let k = 0; k < n; k++) { const x = Math.round(cx + (r() + r() - 1)*rad), yy = Math.round(cy + (r() + r() - 1)*rad*.6); if (x < 0 || yy < 0 || x >= W || yy >= H) continue; const i = yy*W + x; if (T[i] === E && !Bd[i]) set(i, t, 0); } };
+  const openAt = () => { for (let tries = 0; tries < 3000; tries++) { const x = 50 + (r()*(W - 54) | 0), yy = 10 + (r()*(H - 20) | 0); if (T[yy*W + x] === E) return [x, yy]; } return [W/2, H/2]; };
+  for (let k = 0; k < 4; k++) { const [x, yy] = openAt(); blob(x, yy, 7, 300, WATER); }
+  CR = [];
+  for (let tries = 0, made = 0; tries < 400 && made < 5; tries++) {
+    const [x, y0] = openAt(); let y = y0; while (y > 4 && T[y*W + x] === E) y--;
+    let ok = true, rock = 0, cells = [];
+    for (let k = 0; k < 3; k++) for (let xx = x - 7; xx <= x + 7; xx++) { if (T[(y + k)*W + xx] !== ROCK) ok = false; else cells.push((y + k)*W + xx); }
+    if (!ok || y < 8) continue;
+    for (let yy = y + 3; yy <= y + 8; yy++) for (let xx = x - 8; xx <= x + 8; xx++) if (T[yy*W + xx] === ROCK) rock++;
+    if (rock < 6*17*.85) continue;
+    for (let yy = y + 3; yy <= y + 8; yy++) for (let xx = x - 8; xx <= x + 8; xx++) if (T[yy*W + xx] === ROCK && !Bd[yy*W + xx]) set(yy*W + xx, SAND);
+    CR.push(...cells); made++;
+  }
+  for (let k = 0; k < 120; k++) simAll();
+  /* grotto moss, a little mycelium (not climbable), then let it settle */
+  for (let y = G.y - 17; y <= G.y + 17; y++) for (let x = G.x - 26; x <= G.x + 26; x++) {
+    const i = y*W + x; if (!inb(x, y) || T[i] !== ROCK || ((x - G.x)/26)**2 + ((y - G.y)/16)**2 > 1) continue;
+    if (NB.some(o => T[i + o] === E) && r() < .6) set(i, MOSS);
+  }
+  for (let tries = 0, s = 0; tries < 20000 && s < 40; tries++) { const i = (r()*N) | 0; if (T[i] === E && !Bd[i] && clings(i, -1) && i % W > 45) { set(i, MYC, 40); s++; } }
+  for (let k = 0; k < 200; k++) simAll();
+  FEAT = [{n: 'a grotto lit by moss', x: G.x, y: G.y, r: 15, f: 0}, {n: 'a lake, black and still', x: L.x, y: L.y - 2, r: 15, f: 0}, {n: 'the drop, no bottom in sight', x: D.x, y: D.y + 4, r: 11, f: 0}];
+}
+
+/* ---------- figure ---------- */
+const BH = 6;
+const BSOL = new Uint8Array(16); BSOL.set(SOLID); BSOL[SAND] = 1;
+const solidAt = (x, y) => x < 0 || y < 0 || x >= W || y >= H || BSOL[T[y*W + x]] === 1;
+const rockAt = (x, y) => x >= 0 && y >= 0 && x < W && y < H && (T[y*W + x] === ROCK || T[y*W + x] === OBS);
+const F = {}, keys = {}, Q = [], mouse = {x: 0, y: 0, in: false};
+let PIT = [], RP = null, FL = [], CH = [];
+let log = [], paused = false, mapOpen = false, acc = 0, lastT = performance.now();
+const $ = id => document.getElementById(id);
+const say = s => { log.unshift(s); log = log.slice(0, 3); $('log').innerHTML = log.map((l, i) => '<div style="opacity:' + (1 - i*.3) + '">' + l + '</div>').join(''); };
+function blocked(px, cy){
+  const x0 = Math.floor(px) - 1, y0 = Math.floor(cy - BH + .001), y1 = Math.floor(cy - .001);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x < x0 + 3; x++) if (solidAt(x, y)) return true;
+  return false;
+}
+function moveX(dx, step){
+  const n = Math.ceil(Math.abs(dx) - 1e-9); if (n < 1) return false;
+  const s = dx / n;
+  for (let k = 0; k < n; k++) {
+    const nx = F.x + s;
+    if (!blocked(nx, F.y)) { F.x = nx; continue; }
+    if (step && F.ground && !blocked(nx, F.y - 1) && !blocked(F.x, F.y - 1)) { F.x = nx; F.y -= 1; continue; }
+    F.vx = 0; return true;
+  }
+  return false;
+}
+function moveY(dy){
+  const n = Math.ceil(Math.abs(dy) - 1e-9); if (n < 1) return 0;
+  const s = dy / n;
+  for (let k = 0; k < n; k++) {
+    const ny = F.y + s;
+    if (!blocked(F.x, ny)) { F.y = ny; continue; }
+    const v = s > 0 ? F.vy : 0;
+    F.y = s > 0 ? Math.floor(ny - .001) : Math.floor(ny - BH + .001) + 1 + BH;
+    F.vy = 0; return v;
+  }
+  return 0;
+}
+function cellsAt(cx, cy, rad, f){ let c = 0, n = 0; for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) { const x = Math.floor(cx) + dx, y = Math.floor(cy) + dy; n++; if (x >= 0 && y >= 0 && x < W && y < H && f(T[y*W + x])) c++; } return c / n; }
+function injure(v){
+  if (v >= V.downed) { F.downed = true; return say('Landed at ' + v.toFixed(0) + ' c/s. Down.'); }
+  if (v < V.safe) return;
+  const free = [0, 1].filter(k => !F.legs[k]);
+  if (!free.length) { F.downed = true; return say('Landed hard on bad legs. Down.'); }
+  F.legs[free[rnd() < .5 ? 0 : free.length - 1]] = 1;
+  say('Landed at ' + v.toFixed(0) + ' c/s. A leg gave way.');
+}
+function collapse(){
+  let n = 0;
+  for (const i of CR) if (T[i] === ROCK && Math.hypot(i % W - F.x, ((i / W) | 0) - F.y) < 22) { T[i] = E; n++; }
+  if (n) say('The impact shook something loose overhead.');
+}
+function resetFigure(){
+  Object.assign(F, {x: 22.5, y: 24, vx: 0, vy: 0, ground: true, face: 1, mode: 'free', legs: [0, 0], downed: false, stam: V.stam, bat: V.battery, batMax: V.battery, lamp: true,
+    n: {piton: V.pitons, rope: 1, flare: V.flares, chalk: V.chalk}, land: 0, t: 0, walk: 0, noGrip: 0, rs: 0, grip: null, mantle: null, end: null, wetSaid: 0, eye: 0});
+  PIT = []; RP = null; FL = []; CH = [];
+}
+const held = k => keys[k] ? 1 : 0;
+const aimNow = () => mouse.in ? {x: cfx + mouse.x, y: cfy + mouse.y} : {x: F.x + F.face*8, y: F.y - 5};
+const dist = (x, y) => Math.hypot(x - F.x, y - (F.y - 4));
+function nearRock(ax, ay, rad){
+  let best = null, bd = 1e9;
+  for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+    const x = Math.floor(ax) + dx, y = Math.floor(ay) + dy, d = Math.hypot(x + .5 - ax, y + .5 - ay);
+    if (d < bd && rockAt(x, y) && [[0,-1],[-1,0],[1,0],[0,1]].some(o => !solidAt(x + o[0], y + o[1]))) { bd = d; best = {x, y}; }
+  }
+  return best;
+}
+function ropePath(ax, ay, len){
+  const p = [[ax, ay]]; let x = ax, y = ay, dr = 0;
+  const findDrop = () => { for (const d of [F.face, -F.face]) for (let k = 1; k <= 8; k++) { if (solidAt(x + d*k, y)) break; if (!solidAt(x + d*k, y + 1)) return d; } return 0; };
+  while (p.length < len) {
+    if (!solidAt(x, y + 1)) { y++; dr = 0; } else { if (!dr) dr = findDrop(); if (!dr || solidAt(x + dr, y)) break; x += dr; }
+    p.push([x, y]);
+  }
+  return p;
+}
+function useTool(k, a){
+  if (k === 't1') {
+    if (F.n.piton <= 0) return say('No pitons left.');
+    const c = nearRock(a.x, a.y, 2); if (!c) return say('Aim at bare rock to drive a piton.');
+    if (dist(c.x + .5, c.y + .5) > V.reach) return say('Out of reach.');
+    const o = [[0,-1],[-1,0],[1,0],[0,1]].find(o => !solidAt(c.x + o[0], c.y + o[1]));
+    PIT.push({x: c.x, y: c.y, ax: c.x + o[0], ay: c.y + o[1]}); F.n.piton--; say('Piton driven in. ' + F.n.piton + ' left.');
+  } else if (k === 't2') {
+    if (F.mode === 'rope') return say('Cannot coil the rope while hanging on it.');
+    if (RP) { const p = PIT[RP.pit]; if (dist(p.ax + .5, p.ay + .5) <= V.reach) { RP = null; F.n.rope = 1; return say('Rope coiled and recovered.'); } return say('The rope is still tied off at its piton. Go back to it.'); }
+    let bi = -1, bd = 1e9; PIT.forEach((p, i) => { const d = dist(p.ax + .5, p.ay + .5); if (d <= V.reach && d < bd) { bd = d; bi = i; } });
+    if (bi < 0) return say('The rope needs a piton within reach to tie off to.');
+    RP = {pit: bi, path: ropePath(PIT[bi].ax, PIT[bi].ay, V.rope)}; F.n.rope = 0; say('Rope tied off, ' + RP.path.length + ' cells. Space to grab it.');
+  } else if (k === 't3') {
+    if (F.n.flare <= 0) return say('No flares left.');
+    const dx = a.x - F.x, dy = a.y - (F.y - 5), d = Math.hypot(dx, dy) || 1, sp = Math.max(18, Math.min(70, d*3));
+    FL.push({x: F.x, y: F.y - 5, vx: dx/d*sp + F.vx*.5, vy: dy/d*sp - 6, life: V.flareT, rest: false}); F.n.flare--; say('Flare away.');
+  } else if (k === 't4') {
+    if (F.n.chalk <= 0) return say('Chalk is used up.');
+    const c = nearRock(a.x, a.y, 2); if (!c || dist(c.x + .5, c.y + .5) > V.reach) return say('Chalk needs rock within reach.');
+    CH.push({x: c.x, y: c.y}); F.n.chalk--;
+  }
+}
+function gripAt(){
+  const bx = Math.floor(F.x), top = Math.floor(F.y - BH + .001), fy = Math.floor(F.y);
+  for (const d of [F.face, -F.face]) for (let y = fy - 5; y <= fy - 2; y++) if (rockAt(bx + d*2, y)) return {k: 'wall', d, x: bx + d*2, y};
+  for (let x = bx - 1; x <= bx + 1; x++) if (rockAt(x, top - 1)) return {k: 'ceil', x, y: top - 1};
+  return null;
+}
+const wetCell = g => [[0,0],[1,0],[-1,0],[0,1],[0,-1]].some(o => { const x = g.x + o[0], y = g.y + o[1]; return x >= 0 && y >= 0 && x < W && y < H && T[y*W + x] === WATER; }) || T[Math.floor(F.y - 3)*W + Math.floor(F.x)] === WATER;
+function ledge(d){
+  const ex = Math.floor(F.x) + d*2, fy = Math.floor(F.y);
+  for (let r = fy - 8; r <= fy - 3; r++) if (rockAt(ex, r) && !solidAt(ex, r - 1) && !blocked(ex + .5, r)) return {tx: ex + .5, ty: r};
+  return null;
+}
+function stepFigure(){
+  const dt = STEP; F.t += dt; F.noGrip = Math.max(0, F.noGrip - dt);
+  while (Q.length) { const e = Q.shift();
+    if (e.k === 'f' && F.bat > 0) F.lamp = !F.lamp;
+    else if (e.k === 'space') {
+      if (F.mode === 'rope') { F.mode = 'free'; say('Let go.'); }
+      else if (RP && !F.downed) { let bi = -1, bd = 3.2; RP.path.forEach((p, i) => { const d = dist(p[0] + .5, p[1] + .5); if (d < bd) { bd = d; bi = i; } });
+        if (bi >= 0) { F.mode = 'rope'; F.rs = bi; F.vx = F.vy = 0; say('On the rope.'); } else say('No rope within arm\'s reach.'); }
+    } else if (e.k[0] === 't' && !F.downed) useTool(e.k, e.a);
+  }
+  if (F.mode !== 'mantle' && F.mode !== 'rope') { let g = 0; while (blocked(F.x, F.y) && g++ < 8) F.y -= 1; }
+  const left = held('KeyA') || held('ArrowLeft'), right = held('KeyD') || held('ArrowRight'), up = held('KeyW') || held('ArrowUp'), down = held('KeyS') || held('ArrowDown');
+  const dir = F.downed ? 0 : right - left, legHurt = F.legs[0] || F.legs[1], shift = held('ShiftLeft') || held('ShiftRight');
+  if (dir) F.face = dir;
+  if (F.downed && F.mode !== 'free') F.mode = 'free';
+  if (F.mode === 'mantle') {
+    const m = F.mantle; m.t += dt/.4;
+    F.y = m.y0 + (m.ty - m.y0)*Math.min(1, m.t*2); F.x = m.x0 + (m.tx - m.x0)*Math.max(0, m.t*2 - 1);
+    if (m.t >= 1) { F.x = m.tx; F.y = m.ty; F.mode = 'free'; F.vx = F.vy = 0; F.ground = true; }
+  } else if (F.mode === 'rope') {
+    let ds = 0;
+    if (up && !down && F.stam > 0) { ds = -V.climb*1.2*dt; F.stam -= V.ropeD*dt; } else if (down && !up) ds = V.rappel*dt;
+    const ns = Math.max(0, Math.min(RP.path.length - 1, F.rs + ds)), a = RP.path[Math.floor(ns)];
+    if (ds && !blocked(a[0] + .5, a[1] + 5.5)) { F.rs = ns; F.x = a[0] + .5; F.y = a[1] + 5.5; }
+    F.vx = F.vy = 0; F.ground = false;
+  } else {
+    const wet = T[Math.floor(F.y - 3)*W + Math.floor(F.x)] === WATER;
+    let grip = null;
+    if (shift && !F.downed && F.stam > 0 && F.noGrip <= 0 && (!F.ground || up)) grip = gripAt();
+    if (grip) {
+      if (F.mode !== 'grip') F.wetSaid = 0;
+      F.mode = 'grip'; F.grip = grip; F.vx = F.vy = 0;
+      const wm = wetCell(grip) ? V.wetM : 1; let moving = false;
+      if (wm > 1 && !F.wetSaid) { F.wetSaid = 1; say('Wet rock. Your fingers slide.'); }
+      if (grip.k === 'wall') {
+        F.face = grip.d;
+        if (up && !down) { const l = ledge(grip.d); if (l && F.stam >= V.mantle) { F.stam -= V.mantle; F.mantle = {x0: F.x, y0: F.y, tx: l.tx, ty: l.ty, t: 0}; F.mode = 'mantle'; } else { moveY(-V.climb*dt); moving = true; } }
+        else if (down && !up) { moveY(V.climb*dt); moving = true; }
+        if (dir && dir !== grip.d) { F.mode = 'free'; F.vx = dir*16; F.noGrip = .3; }
+      } else {
+        if (dir) { moveX(dir*V.climb*.8*dt, false); moving = true; }
+        if (down && !up) { F.mode = 'free'; F.noGrip = .3; }
+      }
+      F.stam -= (moving ? V.climbD : V.hangD)*wm*dt;
+      if (F.stam <= 0) { F.stam = 0; F.mode = 'free'; F.noGrip = .6; say('Grip gone. Falling.'); }
+      F.ground = F.vy >= 0 && blocked(F.x, F.y + .06);
+    } else {
+      F.mode = 'free';
+      const walk = 16 * (legHurt ? .5 : 1) * (wet ? .6 : 1);
+      if (F.ground) {
+        F.vx += (dir*walk - F.vx) * .4;
+        if (up && !legHurt && !F.downed) { F.vy = -V.jump; F.ground = false; }
+      } else F.vx = Math.max(-walk*1.3, Math.min(walk*1.3, F.vx + dir*60*dt));
+      F.vy = Math.min(130, F.vy + V.gravity*dt);
+      if (wet) { F.vx *= .92; F.vy *= .9; }
+      if (!F.ground && dir === F.face && !F.downed && F.stam >= V.mantle && F.noGrip <= 0) {
+        const l = ledge(F.face);
+        if (l) { F.stam -= V.mantle; F.mantle = {x0: F.x, y0: F.y, tx: l.tx, ty: l.ty, t: 0}; F.mode = 'mantle'; say('Caught the ledge.'); }
+      }
+      if (F.mode === 'free') {
+        moveX(F.vx*dt, true);
+        const v = moveY(F.vy*dt);
+        if (v >= 10) { F.land = v; injure(v); if (v >= V.shake) collapse(); }
+        F.ground = F.vy >= 0 && blocked(F.x, F.y + .06);
+        if (F.ground) { F.walk += Math.abs(F.vx)*dt; F.stam = Math.min(V.stam, F.stam + V.stRec*dt); }
+      }
+    }
+  }
+  /* flares: thrown, bounce a little, burn for a while, ignite methane */
+  for (const f of FL) {
+    f.life -= dt;
+    if (!f.rest) {
+      f.vy += V.gravity*dt; const nx = f.x + f.vx*dt, ny = f.y + f.vy*dt;
+      if (solidAt(Math.floor(nx), Math.floor(f.y))) { f.vx *= -.3; } else f.x = nx;
+      if (solidAt(Math.floor(f.x), Math.floor(ny))) { if (f.vy > 0 && Math.abs(f.vy) < 25) f.rest = true; f.vy *= -.3; f.vx *= .7; } else f.y = ny;
+    }
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = Math.floor(f.x) + dx, y = Math.floor(f.y) + dy; if (x >= 0 && y >= 0 && x < W && y < H && T[y*W + x] === GAS) { set(y*W + x, FIRE, 24); say('Methane. The flare lit it.'); } }
+  }
+  FL = FL.filter(f => f.life > 0);
+  /* hazards, battery, features */
+  if (!F.downed && cellsAt(F.x, F.y - 3, 2, t => t === LAVA || t === FIRE) > 0) { F.downed = true; say('Burned. Down.'); }
+  if (F.lamp && F.bat > 0) { F.bat -= dt; if (F.bat <= 0) { F.bat = 0; F.lamp = false; say('Lamp cell dead. Only flares and your memory now.'); } }
+  for (const f of FEAT) if (!f.f && Math.hypot(F.x - f.x, F.y - 4 - f.y) < f.r) { f.f = 1; say('You found ' + f.n + '. (' + FEAT.filter(q => q.f).length + '/3)'); }
+  if (F.downed) endRun('down'); else if (F.x < 6 && F.t > 3) endRun('out');
+}
+function endRun(k){
+  F.end = k; const n = FEAT.filter(q => q.f).length;
+  $('banner').innerHTML = k === 'out' ? 'Back in daylight<small>' + n + ' of 3 features found in ' + F.t.toFixed(0) + ' s. R to go again, N for a new cave.</small>' : 'You are down in the dark<small>' + n + ' of 3 features found. R to try again.</small>';
+  $('banner').classList.add('on');
+}
+
+/* ---------- light and sight ---------- */
+const LW = new Float32Array(N), LC = new Float32Array(N);
+function fov(){      /* what the eye can see in straight lines; light alone never reveals a cell behind rock */
+  vf++; const ox = F.x, oy = F.y - 5;
+  for (let k = 0; k < 720; k++) {
+    const a = k/720*6.2832, cx = Math.cos(a), cy = Math.sin(a);
+    for (let t = 0; t <= 96; t += .7) {
+      const x = Math.floor(ox + cx*t), y = Math.floor(oy + cy*t);
+      if (x < 0 || y < 0 || x >= W || y >= H) break;
+      const i = y*W + x; VIS[i] = vf; const ty = T[i]; if (SOLID[ty] || ty === SAND) break;
+    }
+  }
+}
+function cone(){
+  if (!F.lamp || F.bat <= 0) return;
+  const ox = F.x, oy = F.y - 5.2, a0 = F.mode === 'grip' && F.grip.k === 'ceil' ? Math.PI/2 : (F.face > 0 ? .2 : Math.PI - .2), half = V.cone*Math.PI/360;
+  const lo = F.bat / F.batMax, R = V.range * (lo < .1 ? .5 + .5*Math.random() : 1), nr = Math.ceil(2*half*R/.5) + 1;
+  for (let k = 0; k < nr; k++) {
+    const da = nr > 1 ? k/(nr - 1)*2 - 1 : 0, a = a0 + da*half, cx = Math.cos(a), cy = Math.sin(a), edge = .55 + .45*(1 - Math.abs(da));
+    let tr = 1;
+    for (let t = .5; t <= R; t += .5) {
+      const x = Math.floor(ox + cx*t), y = Math.floor(oy + cy*t);
+      if (x < 0 || y < 0 || x >= W || y >= H) break;
+      const i = y*W + x, ty = T[i], I = Math.pow(1 - t/R, 1.3)*edge*tr;
+      if (I > LW[i]) LW[i] = I;
+      if (SOLID[ty] || ty === SAND) break;
+      if (ty === WATER || ty === ACID) tr *= .96;
+    }
+  }
+  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = Math.floor(ox) + dx, y = Math.floor(oy) + dy; if (x < 0 || y < 0 || x >= W || y >= H || dx*dx + dy*dy > 5) continue; const i = y*W + x; if (!SOLID[T[i]] && LW[i] < .4) LW[i] = .4; }
+}
+function light(){
+  for (let y = ry0; y <= ry1; y++) for (let x = rx0; x <= rx1; x++) {
+    const i = y*W + x, t = T[i];
+    LW[i] = t === FIRE ? .8 + .2*Math.random() : t === LAVA ? .8 : 0;
+    LC[i] = t === MOSS ? .62 : t === SPORE ? .14 : t === MYC ? .05 : 0;
+  }
+  const src = (x, y, v) => { x = Math.floor(x); y = Math.floor(y); if (x >= rx0 && x <= rx1 && y >= ry0 && y <= ry1 && LW[y*W + x] < v) LW[y*W + x] = v; };
+  for (let y = 14; y <= 23; y++) src(3, y, .9);                                     /* daylight through the entry mouth */
+  for (const f of FL) { const v = f.life < 3 ? f.life/3*.9 : .85 + .15*Math.random(); src(f.x, f.y, v); src(f.x, f.y - 1, v); }
+  for (const c of CH) src(c.x, c.y, .5);
+  for (let y = ry0; y <= ry1; y++) for (let x = rx0; x <= rx1; x++) {
+    const i = y*W + x, d = DEC[T[i]], dd = d*.96; let w = LW[i], c = LC[i];
+    if (x > rx0) { w = Math.max(w, LW[i - 1]*d); c = Math.max(c, LC[i - 1]*d); }
+    if (y > ry0) { const u = i - W; w = Math.max(w, LW[u]*d); c = Math.max(c, LC[u]*d);
+      if (x > rx0) { w = Math.max(w, LW[u - 1]*dd); c = Math.max(c, LC[u - 1]*dd); }
+      if (x < rx1) { w = Math.max(w, LW[u + 1]*dd); c = Math.max(c, LC[u + 1]*dd); } }
+    LW[i] = w < .004 ? 0 : w; LC[i] = c < .004 ? 0 : c;   /* snap to zero: denormal floats are very slow */
+  }
+  for (let y = ry1; y >= ry0; y--) for (let x = rx1; x >= rx0; x--) {
+    const i = y*W + x, d = DEC[T[i]], dd = d*.96; let w = LW[i], c = LC[i];
+    if (x < rx1) { w = Math.max(w, LW[i + 1]*d); c = Math.max(c, LC[i + 1]*d); }
+    if (y < ry1) { const u = i + W; w = Math.max(w, LW[u]*d); c = Math.max(c, LC[u]*d);
+      if (x > rx0) { w = Math.max(w, LW[u - 1]*dd); c = Math.max(c, LC[u - 1]*dd); }
+      if (x < rx1) { w = Math.max(w, LW[u + 1]*dd); c = Math.max(c, LC[u + 1]*dd); } }
+    LW[i] = w < .004 ? 0 : w; LC[i] = c < .004 ? 0 : c;   /* snap to zero: denormal floats are very slow */
+  }
+  cone();
+}
+
+/* ---------- render ---------- */
+const sctx = $('sim').getContext('2d'), img = sctx.createImageData(VW, VH), px = img.data, fctx = $('fx').getContext('2d');
+function render(){
+  const rem = V.rem/100;
+  for (let yy = 0, p = 0; yy < VH; yy++) for (let xx = 0; xx < VW; xx++, p += 4) {
+    const i = (cfy + yy)*W + cfx + xx; let t = T[i], r = 0, g = 0, b = 0;
+    const w = LW[i], c = LC[i], seen = VIS[i] === vf && w + c*.6 > .05;
+    if (seen) {
+      if (t === GAS || t === CO2) t = E;                  /* gas is invisible */
+      REM[i] = t + 1;
+      const col = COL[t], s = 1 + (Sh[i] - 128)/128*.12;
+      if (t === FIRE) { const k = Lf[i] / 40; r = 255; g = 120 + 90*Math.min(1, k); b = 40 + 30*Math.random(); }
+      else if (t === LAVA || t === MOSS) { r = col[0]*s; g = col[1]*s; b = col[2]*s; }
+      else { const fr = Math.min(1.2, w + c*.45), fg = Math.min(1.2, w*.84 + c), fb = Math.min(1.2, w*.62 + c*.9); r = col[0]*s*fr; g = col[1]*s*fg; b = col[2]*s*fb; }
+    } else if (REM[i]) {                                  /* remembered: grey, frozen, whatever it looked like when last seen */
+      const col = COL[REM[i] - 1]; r = g = b = (col[0]*.3 + col[1]*.59 + col[2]*.11)*rem;
+    }
+    px[p] = r; px[p + 1] = g; px[p + 2] = b; px[p + 3] = 255;
+  }
+  sctx.putImageData(img, 0, 0);
+}
+const lit = (x, y) => { x = Math.floor(x); y = Math.floor(y); if (x < 0 || y < 0 || x >= W || y >= H) return 0; const i = y*W + x; return VIS[i] === vf ? Math.min(1, LW[i] + LC[i]*.6) : 0; };
+function drawRope(pts, alpha){
+  fctx.lineWidth = 1.2;
+  for (let k = 1; k < pts.length; k++) {
+    const a = pts[k - 1], b = pts[k], mx = (a[0] + b[0])/2 + .5, my = (a[1] + b[1])/2 + .5;
+    if (mx < cfx - 2 || mx > cfx + VW + 2 || my < cfy - 2 || my > cfy + VH + 2) continue;
+    const l = Math.max(lit(mx, my), 0) * .85 + .1; fctx.strokeStyle = 'rgba(214,200,168,' + (l*alpha).toFixed(2) + ')';
+    fctx.beginPath(); fctx.moveTo(a[0] + .5, a[1] + .5); fctx.lineTo(b[0] + .5, b[1] + .5); fctx.stroke();
+  }
+}
+function overlay(){
+  fctx.setTransform(1, 0, 0, 1, 0, 0); fctx.clearRect(0, 0, 960, 720);
+  fctx.setTransform(K, 0, 0, K, -cfx*K, -cfy*K);
+  const mem = (x, y) => REM[y*W + x] > 0;
+  if (RP) drawRope(RP.path, 1);
+  for (const p of PIT) if (mem(p.x, p.y)) { fctx.fillStyle = VIS[p.y*W + p.x] === vf ? '#b9c2c6' : '#555c5f'; fctx.fillRect(p.x + .15, p.y + .15, .7, .7); }
+  for (const c of CH) {
+    const i = c.y*W + c.x, v = VIS[i] === vf; if (!v && !REM[i]) continue;
+    const g = fctx.createRadialGradient(c.x + .5, c.y + .5, 0, c.x + .5, c.y + .5, 4); g.addColorStop(0, 'rgba(255,250,235,' + (v ? .55 : .15) + ')'); g.addColorStop(1, 'rgba(255,250,235,0)');
+    fctx.fillStyle = g; fctx.fillRect(c.x - 4, c.y - 4, 9, 9);
+    fctx.fillStyle = v ? '#fffaf0' : 'rgba(200,196,184,.4)'; fctx.fillRect(c.x - 1, c.y + .3, 3, .8); fctx.fillRect(c.x + .1, c.y - 1, .8, 3);
+  }
+  for (const f of FL) {
+    const fl = f.life < 3 ? f.life/3 : 1, g = fctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, 7*fl + 1); g.addColorStop(0, 'rgba(255,150,100,.55)'); g.addColorStop(1, 'rgba(255,90,60,0)');
+    fctx.fillStyle = g; fctx.fillRect(f.x - 8, f.y - 8, 16, 16); fctx.fillStyle = '#ffd9b0'; fctx.fillRect(f.x - .5, f.y - .5, 1.2, 1.2);
+  }
+  const m = Math.max(.3, Math.min(1, lit(F.x, F.y - 3)*1.1 + .3)), sh = (r, g, b) => 'rgb(' + (r*m | 0) + ',' + (g*m | 0) + ',' + (b*m | 0) + ')';
+  fctx.save(); fctx.translate(F.x, F.y);
+  if (F.downed) { fctx.rotate(F.face*1.35); fctx.translate(0, -.5); }
+  const sw = F.ground && F.mode === 'free' ? Math.sin(F.walk*.9)*.9 : 0, hang = F.mode !== 'free' && F.mode !== 'mantle';
+  [0, 1].forEach(l => {
+    fctx.fillStyle = F.legs[l] ? sh(227, 163, 63) : sh(190, 182, 164);
+    const off = (l ? .6 : -.6) + (l ? sw : -sw)*(F.legs[l] ? .4 : 1) + (hang ? (l ? .5 : -.5) : 0);
+    fctx.fillRect(off - .5, -2.1, 1.1, 2.1);
+  });
+  fctx.fillStyle = sh(207, 198, 180); fctx.fillRect(-1.3, -4.5, 2.6, 2.6);
+  fctx.beginPath(); fctx.arc(0, -5.3, 1, 0, 7); fctx.fill();
+  fctx.fillStyle = F.lamp && F.bat > 0 ? '#ffe2a8' : '#4a4338'; fctx.fillRect(F.face > 0 ? .2 : -1.1, -5.8, .9, .8);
+  if (hang) {
+    fctx.strokeStyle = sh(207, 198, 180); fctx.lineWidth = .7; fctx.beginPath();
+    if (F.mode === 'grip' && F.grip.k === 'wall') { fctx.moveTo(0, -4); fctx.lineTo(F.grip.d*2.2, -6.2); }
+    else { fctx.moveTo(-.8, -4); fctx.lineTo(-.9, -7); fctx.moveTo(.8, -4); fctx.lineTo(.9, -7); }
+    fctx.stroke();
+  }
+  fctx.restore();
+  fctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (mouse.in && !mapOpen) { const x = mouse.x*K, y = mouse.y*K; fctx.strokeStyle = 'rgba(228,221,207,.55)'; fctx.lineWidth = 1; fctx.beginPath(); fctx.moveTo(x - 6, y); fctx.lineTo(x + 6, y); fctx.moveTo(x, y - 6); fctx.lineTo(x, y + 6); fctx.stroke(); }
+}
+
+/* ---------- paper map ---------- */
+const paper = $('paper'), pctx = paper.getContext('2d'), ink = document.createElement('canvas'), ictx = ink.getContext('2d'), amc = document.createElement('canvas'), actx = amc.getContext('2d');
+ink.width = 640; ink.height = 480; amc.width = W; amc.height = H;
+let mtool = 'pen', stroke = null;
+function paintMap(){
+  pctx.fillStyle = '#d8ceb4'; pctx.fillRect(0, 0, 640, 480);
+  if (V.auto) {
+    const id = actx.createImageData(W, H), d = id.data;
+    for (let i = 0; i < N; i++) { const t = REM[i]; if (!t) continue; const s = SOLID[t - 1] || t - 1 === SAND, p = i*4; d[p] = s ? 90 : 238; d[p + 1] = s ? 80 : 230; d[p + 2] = s ? 66 : 208; d[p + 3] = 255; }
+    actx.putImageData(id, 0, 0); pctx.imageSmoothingEnabled = false; pctx.drawImage(amc, 0, 0, 640, 480);
+    pctx.fillStyle = '#c0392b'; pctx.fillRect(F.x*2 - 2, (F.y - 3)*2 - 2, 5, 5);
+  }
+  pctx.drawImage(ink, 0, 0);
+}
+function setMap(on){
+  mapOpen = on; $('mapw').classList.toggle('on', on); lastT = performance.now();
+  if (on) { paintMap(); $('m-note').textContent = V.auto ? 'Auto map is on: remembered cells are shown.' : 'The sheet is blank. Draw what you remember.'; }
+}
+function setTool(t){ mtool = t; $('m-pen').classList.toggle('sel', t === 'pen'); $('m-er').classList.toggle('sel', t === 'er'); }
+function paperPos(e){ const r = paper.getBoundingClientRect(); return [(e.clientX - r.left)/r.width*640, (e.clientY - r.top)/r.height*480]; }
+function inkTo(p){
+  ictx.lineCap = ictx.lineJoin = 'round'; ictx.globalCompositeOperation = mtool === 'er' ? 'destination-out' : 'source-over';
+  ictx.strokeStyle = '#2a2520'; ictx.lineWidth = mtool === 'er' ? 16 : 2.2;
+  ictx.beginPath(); ictx.moveTo(stroke[0], stroke[1]); ictx.lineTo(p[0] + .01, p[1]); ictx.stroke(); stroke = p; paintMap();
+}
+paper.addEventListener('pointerdown', e => { stroke = paperPos(e); try { paper.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ } inkTo(stroke.slice()); });
+paper.addEventListener('pointermove', e => { if (stroke) inkTo(paperPos(e)); });
+paper.addEventListener('pointerup', () => { stroke = null; });
+$('m-pen').addEventListener('click', () => setTool('pen')); $('m-er').addEventListener('click', () => setTool('er'));
+$('m-clr').addEventListener('click', () => { ictx.globalCompositeOperation = 'source-over'; ictx.clearRect(0, 0, 640, 480); paintMap(); });
+$('m-x').addEventListener('click', () => setMap(false));
+
+/* ---------- hud ---------- */
+function hud(){
+  const dn = F.downed ? ' down' : '';
+  ['b-head', 'b-torso', 'b-armL', 'b-armR'].forEach(id => $(id).setAttribute('class', 'p' + dn));
+  [0, 1].forEach(l => document.querySelectorAll('.b-leg' + 'LR'[l]).forEach(e => e.setAttribute('class', 'p b-leg' + 'LR'[l] + (F.downed ? ' down' : F.legs[l] ? ' hurt' : ''))));
+  const st = $('r-stam'); st.textContent = F.stam.toFixed(0); st.className = F.stam < V.stam*.2 ? 'c' : F.stam < V.stam*.45 ? 'w' : '';
+  $('a-stam').style.width = (100*F.stam/V.stam).toFixed(0) + '%';
+  const bat = $('r-bat'); bat.textContent = (100*F.bat/F.batMax).toFixed(0) + '%' + (F.lamp ? '' : ' off'); bat.className = F.bat/F.batMax < .15 ? 'c' : '';
+  $('a-bat').style.width = (100*F.bat/F.batMax).toFixed(0) + '%';
+  $('r-pit').textContent = F.n.piton; $('r-fl').textContent = F.n.flare; $('r-ch').textContent = F.n.chalk;
+  $('r-rope').textContent = RP ? 'set, ' + RP.path.length + ' c' + (F.mode === 'rope' ? ' (on it)' : '') : F.n.rope ? 'coiled, ' + V.rope + ' c' : 'none';
+  $('r-feat').textContent = FEAT.filter(q => q.f).length + '/3';
+  $('r-time').textContent = Math.floor(F.t/60) + ':' + ('0' + Math.floor(F.t%60)).slice(-2);
+  $('r-depth').textContent = Math.max(0, F.y - 24).toFixed(0) + ' c';
+  const l = $('r-land'); l.textContent = F.land ? F.land.toFixed(0) + ' c/s' : '-'; l.className = F.land >= V.downed ? 'c' : F.land >= V.safe ? 'w' : '';
+  $('r-state').textContent = (F.downed ? 'down, ' : '') + (F.mode === 'grip' ? (F.grip.k === 'wall' ? 'on the wall' : 'hanging') : F.mode === 'rope' ? 'on the rope' : F.mode === 'mantle' ? 'mantling' : F.ground ? 'standing' : 'airborne');
+  $('r-seed').textContent = V.seed;
+}
+
+/* ---------- control flow ---------- */
+function setRegion(){
+  rx0 = Math.max(2, cfx - 24); rx1 = Math.min(W - 3, cfx + VW + 24); ry0 = Math.max(2, cfy - 24); ry1 = Math.min(H - 3, cfy + VH + 24);
+}
+function camUpdate(snap){
+  const tx = F.x - VW/2, ty = F.y - 4 - VH/2, k = snap ? 1 : .1;
+  camX += (tx - camX)*k; camY += (ty - camY)*k;
+  camX = Math.max(0, Math.min(W - VW, camX)); camY = Math.max(0, Math.min(H - VH, camY));
+  cfx = Math.round(camX); cfy = Math.round(camY); setRegion();
+}
+function restart(){
+  gen(V.seed); resetFigure(); Q.length = 0; log = []; $('log').innerHTML = '';
+  $('banner').classList.remove('on'); ictx.clearRect(0, 0, 640, 480); setMap(false); acc = 0; camUpdate(true);
+  say('The mouth is behind you. Everything else is dark.');
+}
+function setPause(p){ paused = p; $('pausemsg').classList.toggle('on', p); lastT = performance.now(); }
+function frame(now){
+  const dt = Math.min(.1, (now - lastT)/1000); lastT = now;
+  if (!paused && !mapOpen) {
+    acc += dt; let n = 0;
+    while (acc >= STEP && n < 5) { if (!F.end) { stepFigure(); camUpdate(false); } simStep(rx0, ry0, rx1, ry1); acc -= STEP; n++; }
+    if (n === 5) acc = 0;
+  }
+  fov(); light(); render(); overlay(); hud();
+  requestAnimationFrame(frame);
+}
+const COUNT = {pitons: 'piton', flares: 'flare', chalk: 'chalk'};
+function buildTune(){
+  const box = $('tune'); box.innerHTML = '';
+  TUNE.forEach(([k, label, mn, mx, st]) => {
+    const l = document.createElement('label'), o = document.createElement('output'), inp = document.createElement('input'), tog = mn === 0 && mx === 1 && st === 1;
+    inp.type = tog ? 'checkbox' : 'range'; if (!tog) { inp.min = mn; inp.max = mx; inp.step = st; inp.value = V[k]; } else inp.checked = !!V[k];
+    o.textContent = tog ? (V[k] ? 'on' : 'off') : V[k];
+    inp.addEventListener('input', () => {
+      const old = V[k]; V[k] = tog ? (inp.checked ? 1 : 0) : +inp.value; o.textContent = tog ? (V[k] ? 'on' : 'off') : V[k]; writeHash();
+      if (k === 'seed' || k === 'open' || k === 'branch') restart();
+      else if (k === 'stam') F.stam = Math.min(V.stam, F.stam*V.stam/old);
+      else if (k === 'battery') { F.batMax = V.battery; F.bat = Math.min(V.battery, F.bat*V.battery/old); }
+      else if (COUNT[k]) F.n[COUNT[k]] = Math.max(0, F.n[COUNT[k]] + V[k] - old);
+      else if (k === 'rope' && RP) RP.path = ropePath(PIT[RP.pit].ax, PIT[RP.pit].ay, V.rope);
+    });
+    inp.addEventListener('change', () => inp.blur());
+    l.append(label, inp, o); box.append(l);
+  });
+}
+addEventListener('keydown', e => {
+  const c = e.code;
+  if (e.target.tagName === 'INPUT' && (c === 'Space' || c.startsWith('Arrow'))) return;
+  if (c === 'Space' || c.startsWith('Arrow')) e.preventDefault();
+  if (e.repeat) return;
+  keys[c] = 1;
+  if (c === 'KeyM') return setMap(!mapOpen);
+  if (c === 'KeyR') return restart();
+  if (c === 'KeyN') { V.seed = 1 + (Math.random()*9999 | 0); writeHash(); buildTune(); return restart(); }
+  if (c === 'KeyP') return setPause(!paused);
+  if (mapOpen) { if (c === 'KeyB') setTool('pen'); else if (c === 'KeyE') setTool('er'); else if (c === 'Escape') setMap(false); return; }
+  if (c === 'Space') Q.push({k: 'space'}); else if (c === 'KeyF') Q.push({k: 'f'});
+  else if (/^Digit[1-4]$/.test(c)) Q.push({k: 't' + c[5], a: aimNow()});
+});
+addEventListener('keyup', e => { delete keys[e.code]; });
+addEventListener('blur', () => { for (const k in keys) delete keys[k]; });
+$('stage').addEventListener('mousemove', e => { const r = $('stage').getBoundingClientRect(); mouse.x = (e.clientX - r.left)/r.width*VW; mouse.y = (e.clientY - r.top)/r.height*VH; mouse.in = true; });
+$('stage').addEventListener('mouseleave', () => { mouse.in = false; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+addEventListener('hashchange', () => { readHash(); buildTune(); restart(); });
+$('reset').addEventListener('click', e => { TUNE.forEach(t => V[t[0]] = t[5]); writeHash(); buildTune(); restart(); e.target.blur(); });
+
+readHash(); buildTune(); restart();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

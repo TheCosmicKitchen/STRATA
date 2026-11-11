@@ -149,42 +149,77 @@ Give the builder: this file's "Shared rules" section, the one spec, and `mockups
 
 **Done when:** two people can play it sitting back to back, and afterwards the operator can say what they were worried about.
 
-### E3 — Crawler stations
+### E3 — Driving blind
 
-**Question:** Does "a station only works while someone stands at it" create interesting juggling, or just walking?
+**Question:** When nothing breaks on a timer, do the crew's own choices (how the pilot drives, whether anyone is watching) create enough trouble and tension?
 
-**Player does:** Walks one figure through a side cross-section of the Crawler (three decks, ladders, six rooms as in the mockup). `E` uses the station you are standing at; leaving it stops it.
+**Not Barotrauma.** No random faults, no hull breaches, no leaks to patch, no repair-minigame-at-a-station loop. A first build used timer-driven faults including a hull breach and was rejected as a copy. Every problem in this prototype must trace back to something the crew did or failed to notice.
+
+**Player does:** Walks one figure through a side cross-section of the Crawler (three decks, ladders, rooms as in the mockup) while it crosses a scrolling side-view landscape outside. Stations work only while someone is at them (`E`): helm, engine, winch, and two places to *look* from: a lookout hatch on the roof and a rear window. Everything outside is dark except what the Crawler's lights reach.
+
+**Consequences of piloting** (the helm sets speed and can steer around obstacles by choosing the low or high track at forks)
+- Driving fast over rough ground rattles the machine: anything not strapped down inside slides and falls (crates in the workshop, jars in the lab), and a crew member on a ladder can be thrown off (fall injury as in E5).
+- Hitting a boulder hard bends a track: the Crawler pulls to one side and loses top speed until someone goes outside through the hatch with a tool and works on it by hand (exposed while doing it).
+- Soft ground taken at speed bogs the machine; rocking it out needs engine and helm together.
+- A slope taken at an angle tips the hull: the winch load swings and can strike the mast.
+- Engine noise and the floodlight carry. Running loud and bright is faster and safer to drive, but attracts things (below).
+
+**Consequences of not watching**
+- The helm window only shows ahead and close. What is beside, behind or above can only be seen from the lookout hatch and the rear window, and only within light.
+- Terrain warnings (a ravine edge, a rockfall, a soft patch) are visible from the lookout a few seconds before the helm can see them. If nobody is looking, the pilot finds out by hitting them.
+
+**Creatures** (one kind is enough for the prototype)
+- Something that lives in the dark follows vibration and light. It approaches from the sides or behind, slowly, and is visible only as eye-glints or movement at the edge of the light, and only from a lookout point.
+- If it reaches the Crawler unseen it latches on and does something physical and specific: chews a track (as a bent track), tears at the winch line, or climbs to the roof and waits by the hatch.
+- If it is seen in time, the crew can respond: kill the engine and lights and wait (it loses interest), turn the floodlight on it (it flinches back, for a while), or speed away over rough ground (with the rattling consequences above).
+- Anyone who goes outside while it is latched on is in danger. No damage numbers; injuries per body part.
+
+**Bots:** up to three bot crewmates can be sent to a station with number keys, to compare solo and crewed play. Bots only stand where told; a bot at a lookout *does not* warn you: the player must glance at what that lookout sees. A small inset per manned lookout shows its view, and an inset is shown only if someone is there.
+
+**Goal:** reach the marker with the winch load and crew intact.
+
+**Tunables:** walk and ladder speed, Crawler top speed, rattle threshold (speed × roughness), boulder and soft-ground frequency, how far ahead the lookout sees, creature attraction to noise and to light, creature speed, how long lights-off makes it lose interest, track-repair time, number of bots (0–3), Crawler length, seed.
+
+**Readouts:** distance to go, speed, noise level, light on/off, time spent watching vs walking vs at the helm.
+
+**Done when:** every bad thing that happens in a run can be traced by the player to a choice ("I was going too fast", "no one was at the lookout"), and players start posting someone at the lookout without being told to.
+
+### E4 — The lab room
+
+**Question:** Is discovering hidden traits by doing experiments with your own hands satisfying, and dangerous enough that a careless experiment can go badly wrong?
+
+**Not a machine.** There is no bench menu, no drag-onto-jar, no gauges panel. The player is a figure standing in a room, and every experiment is something the figure physically does with a tool in hand. A first build of this spec as a menu-driven bench was rejected as too clunky.
+
+**Setting:** the Crawler's lab module in side view (uses the sand sim for the room's air, liquids and fire, about 200×110 cells): a work table, shelves, a sink with a tap, a cold locker, a small vent fan with a switch, a door to the corridor, and a sample rack holding four unnamed specimens in glass jars.
+
+**Player does:** Walks around the room (`A`/`D`, `W` to climb onto a step), picks things up and puts them down (`E`, one item per hand: left mouse uses the right-hand item, right mouse the left-hand one), aims with the mouse, and does things:
+- Take a jar off the rack, set it on the table, open or close its lid.
+- Pick a specimen out with tongs or with bare hands (bare hands touch it).
+- Tools on shelves: lighter, water flask, acid vial with dropper, scalpel, tongs, a steel bolt, a dead insect in a tin, a hand lamp, a magnifier (hold it near something to see a zoomed inset of what is under it), a gas sniffer (a handheld sensor that clicks faster near bad air; the only instrument, and it is a thing you hold), a fire blanket, a bucket.
+- Put a jar in the cold locker and close it; take it out later.
+- Turn the vent fan on or off; open or close the door.
+
+**What can go wrong** (the point of the prototype)
+- Fire spreads to the table, paper, the journal if it is left out, and the figure's sleeves (burn on that arm).
+- Spores released in a closed room fill it; without the vent on they drift through an open door into the corridor (shown as a strip on the right) and settle there.
+- Fumes from a heated specimen poison whoever breathes them, per body part as in E5 (at least: coughing, blurred vision, then downed).
+- An exploding specimen breaks its jar and anything near it, injuring the hand holding it.
+- Acid spilled on the floor eats into it and through boots.
+- Bare-handed contact with some species causes a delayed reaction on that hand.
+- Mistakes are not undone. `R` restarts the whole room.
 
 **Rules**
-- Stations: helm (moves the Crawler toward a destination marker; progress bar), engine (must be stoked every so often or power falls), winch (holds a load; unattended it slips slowly), bunk (nothing yet).
-- Things go wrong on timers: an engine fault, a slipping winch, a hull breach letting in dust. Each needs presence at a specific station.
-- Up to three simple bot crewmates can be assigned to a station with number keys, to compare solo against crewed play. Bots only stand where told.
-- Goal: get the Crawler to the marker with the winch load intact.
+- Each specimen gets 3 hidden traits rolled from the seed, from a pool such as: flammable, explodes when burnt, glows when wet, releases spores when disturbed, eats metal, dormant in cold, toxic fumes when heated, grows toward light, parasitises another species, irritates skin.
+- Reactions are shown only in the world: in the jar, in the room's air, on the figure. No text ever names a trait.
+- Spares are limited: the rack has 2 extra jars of each species.
+- The journal is a physical book on a shelf. Pick it up and press `J` to open it full screen (the game pauses while reading or writing): free text in the Caveat font on pages the player creates and names, plus an optional sketch area. The game never writes in it. If it burns, it is gone for that run.
+- At the end, a "field test" (button, outside the room fiction) poses three situations and the player picks an action; outcomes follow the real traits.
 
-**Tunables:** walk speed, ladder speed, fault frequency, stoke interval, winch slip rate, number of bots (0–3), Crawler length.
+**Tunables:** traits per species, spares, trait pool size, fire spread rate, spore drift rate, fume toxicity, vent strength, delay of skin reactions, room size, seed.
 
-**Readouts:** distance to go, power, load slip, seconds spent walking vs seconds spent at stations.
+**Readouts:** experiments run, specimens left, time. Body state only through the silhouette and how the figure moves.
 
-**Done when:** with 0 bots it is barely survivable, with 3 it is comfortable, and the walking-to-working ratio is under one half with defaults.
-
-### E4 — Fungus bench
-
-**Question:** Is discovering hidden traits by experiment satisfying when the game writes nothing down for you?
-
-**Player does:** Has four unnamed specimens in jars on a bench. Drags a tool onto a jar: flame, water, cold, acid, a light, a dead insect, or another specimen. Watches what happens. Writes notes in a paper journal on the right (free text, Caveat font), on pages the player creates and names.
-
-**Rules**
-- Each specimen gets 3 hidden traits rolled from the seed, from a pool such as: flammable, explodes when burnt, glows when wet, releases spores when disturbed, eats metal, dormant in cold, toxic fumes when heated, grows toward light, parasitises another species.
-- Reactions are shown only visually in the jar (small sand-sim chamber or simple sprite states); no text ever names a trait.
-- Some tests destroy the specimen. Spares are limited.
-- The journal is entirely the player's: no auto pages, no auto names, no checkmarks.
-- At the end, a "field test" poses three situations ("the passage is full of specimen B and you have a flare") and the player picks an action; the outcome follows the real traits. This is the only feedback on whether the notes were right.
-
-**Tunables:** traits per species, spares per species, trait pool size, seed, whether a sketch area is included on journal pages.
-
-**Readouts:** experiments run, specimens left.
-
-**Done when:** two different seeds produce species that need different experiments to tell apart, and a player's own notes are enough to pass the field test.
+**Done when:** a player learns at least two traits per species, and at least one test run ends in a self-inflicted accident that the player can explain afterwards.
 
 ### E5 — Fragile body
 
@@ -205,29 +240,33 @@ Give the builder: this file's "Shared rules" section, the one spec, and `mockups
 
 **Done when:** a watcher who cannot see the silhouette can tell from the figure's movement which part is hurt.
 
-### E6 — Surface traverse
+### E6 — Runner scouting
 
-**Question:** Is driving a slow machine across empty ground atmospheric, and how long before it is boring?
+**Question:** Is driving a fast, fragile scout far from the base thrilling, and does the distance home weigh on you?
 
-**Player does:** Drives the Crawler in side view across generated terrain (height-map hills, soft ground, a ravine). Throttle up/down, a survey ping that reveals what is underground ahead as a rough blob, and "anchor" which only works on firm level ground.
+**Player does:** Drives the runner (a light buggy for one or two) in side view across a long generated landscape (height-map hills, rocks, soft ground, ravines, a few ruins on the horizon), starting from the base at the left. Throttle, brake, lean forward/back in the air (`W`/`S`) to land on the wheels, headlight on/off, and a survey ping. The driver can get out (`E`) to walk, and back in.
 
 **Rules**
-- Fuel burns with throttle and slope. Soft ground slows and can bog the machine; getting out costs fuel.
-- Weather rolls through: dust that cuts visibility, cold that raises fuel burn.
-- The survey ping is noisy and costs power; three candidate sites are hidden along the route with different depth and "promise".
-- Goal: choose a site and anchor with enough fuel left to leave again.
+- **Speed is the point and the danger.** Air off a crest is easy. Landing nose- or tail-first or hitting a rock fast flips or crashes the runner: injuries per body part to the driver as in E5, and damage to a wheel or the engine that slows or stops it. No damage numbers; the runner's state shows in how it drives (pulls to one side, engine coughs).
+- **Distance home:** fuel is small. A dial shows fuel and a rough "can I get back" mark that the player must judge, not a number. Running out means walking.
+- **Radio range** from the base fades with distance; beyond it, the runner is alone (signal meter only).
+- **Survey ping:** noisy, shows a rough blob of what lies below; marks a site on the player's own map only if the player places a marker by hand.
+- **Ruins** on the way are just visible shapes; driving to one ends the run with "found" (E9 is what happens there).
+- **Night and weather:** a short day cycle; at night only the headlight; dust storms cut visibility.
+- **Creatures:** quiet driving with lights off at night passes unnoticed; headlight and high revs draw the E3 creature, which can chase a slow or stuck runner.
+- Goal: find a ruin or a promising site and get back to base.
 
-**Tunables:** Crawler top speed, fuel capacity, burn rates, ping noise, terrain roughness, weather frequency, route length, seed.
+**Tunables:** top speed, acceleration, air control strength, crash thresholds (landing angle, impact speed), fuel capacity and burn, radio range, ping noise, terrain roughness, ruin distance, day length, weather frequency, creature attraction, seed.
 
-**Readouts:** fuel, speed, distance, ground firmness under the tracks.
+**Readouts:** speed, fuel dial, signal meter, time of day. Body and runner state only through the silhouette and the way it drives.
 
-**Done when:** we know roughly how many minutes of driving feel good before a decision is needed, as a number.
+**Done when:** players push their luck on the way out and get nervous on the way back, and we know roughly how far a ruin should be (in minutes of driving) for that to happen.
 
 ### E7 — Bringing it inside
 
 **Question:** Does "the airlock only matters when there is a real hazard" produce good decisions, without becoming a chore?
 
-**Reuses:** E3's Crawler interior.
+**Reuses:** E10's base layout if it exists, otherwise E3's Crawler interior. The hatch is the base's door.
 
 **Player does:** Returns from outside to the hatch several times in a row. Each return rolls a condition: clean, spores on suit, acid on boots, gas outside, an injured crewmate being carried, or low air.
 
@@ -243,6 +282,118 @@ Give the builder: this file's "Shared rules" section, the one spec, and `mockups
 
 **Done when:** players sometimes skip the airlock on purpose and can say afterwards that it was a decision, not an oversight.
 
+### E8 — Climbing and the unknown cave
+
+**Question:** Is moving through a cave you cannot see, with tools for climbing, a puzzle worth solving, and does mapping it yourself feel good?
+
+**Player does:** Explores a larger generated cave (uses the sand sim, 320×240) from a fixed entry point with a lamp, aiming to find three marked features (a glowing moss grotto, an underground lake, a deep drop) and get back out.
+
+**Rules**
+- Climbing: the figure grabs ledges automatically when jumping toward one; hangs from any rock edge (`Shift` held); climbs rough rock slowly with stamina that recovers when standing. Sand and mycelium are not climbable; wet rock is slippery (stamina drains twice as fast).
+- Tools, each with limited count:
+  - **Pitons** (`1`): hammered into rock to anchor the rope; the player can rappel down from a piton and climb back up the rope.
+  - **Rope coil** (`2`): one rope, fixed length, can be left behind at an anchor and retrieved later.
+  - **Flares** (`3`): thrown, light a large area for 20 seconds, ignite methane.
+  - **Chalk marks** (`4`): leave a small glowing mark on the wall, visible from afar in the dark.
+- The cave is black except where light reaches. Cells the player has seen become **remembered**: drawn faintly grey and colourless, and they do not update (sand that collapsed later still looks like it used to until seen again).
+- A **map** (`M`) is a blank paper sheet. It shows nothing automatically. The player draws on it with the mouse (pencil, eraser) while the game is paused. A tunable switches to an "auto map" for comparison, which records remembered cells.
+- Hazards: loose sand ceilings that collapse when you dig or land heavily nearby, falls (as in E1), a methane pocket.
+- No air limit in this prototype; a soft timer (lamp battery) ends the run.
+
+**Tunables:** stamina amount and recovery, climb speed, piton count, rope length, flare count and duration, lamp range, remembered-cell brightness, auto map on/off, cave size and branching, seed.
+
+**Readouts:** stamina, items left, battery, features found (0/3), time.
+
+**Done when:** players use pitons and chalk without being told to, and with auto map off at least some players draw a map that gets them back out.
+
+### E9 — Places above ground
+
+**Question:** Are surface sites outside the Crawler worth leaving the machine for, and do they feel different from caves?
+
+**Player does:** Picks one of three site types from a menu and explores it on foot in side view, starting from the Crawler's hatch on the left. A radio range ring and a tether marker show how far from the Crawler you are.
+
+**Site types** (each generated from the seed, each about three screens wide):
+- **Dead outpost.** The remains of an earlier expedition, long empty: collapsed prefab rooms, a toppled radio mast, a buried vehicle. Doors that are jammed (need a pry bar, takes time), floors that sag and can give way into a cellar, and three things to find: a written log page (short, in-world text in the Caveat font, saying what they found and nothing about what happened to them), a salvageable part, a sealed sample case.
+- **Salt flat with a sinkhole.** Wide open, almost no cover, bright and empty. Wind gusts push the figure. A white-out can roll in: visibility falls to a few metres and the Crawler's lights are the only landmark. The sinkhole at the far end opens into a short cave section (uses the sand sim, 160×100) as a teaser of what is below.
+- **Surface bloom.** A field of tall fungal growth around a vent. Spore clouds drift with the wind and are only visible in certain light; standing in them fouls the suit filter. Some growths burst when touched. One rare specimen to bring back.
+
+**Rules (all sites)**
+- **Warmth** replaces air: it drains outdoors faster in wind and at night, and recovers only inside the Crawler. Low warmth slows movement and then fumbles item use.
+- **Radio range:** beyond a distance, messages to the Crawler degrade (shown as a range ring and a signal meter; no real messages in this prototype).
+- **Day/night:** a short cycle (a few minutes); at night only the lamp and the Crawler's floodlight give light, as in the caves.
+- Returning to the hatch with anything found ends the run with a list of what was brought back and what happened to the body.
+- The game never labels or explains finds; the log page is the only text.
+
+**Tunables:** warmth drain (calm, wind, night), wind strength and gust frequency, white-out frequency, day length, radio range, floor collapse chance, spore density, site width, seed.
+
+**Readouts:** warmth, distance from the Crawler, signal strength, time of day, finds carried.
+
+**Done when:** each site type produces a different kind of decision about when to turn back, and players can say which site they would want to visit next time.
+
+E9 is also where **tech** is found: in the dead outpost, at least one find is a physical piece of tech (for example a pump or a battery cell) that is heavy, so carrying it slows the figure and uses both hands.
+
+### E10 — Base camp
+
+**Question:** Is choosing a spot and setting up a base by hand satisfying, and does a base you built feel like home worth defending?
+
+**Player does:** Arrives in the Crawler at a dig area (side view, a few screens wide, generated: firm ground, soft ground, a gas vent, a rock overhang, a creature trail marked only by scratches and droppings). Walks out and unpacks the base by hand: carries or drags each module out of the Crawler's hold, places it, and connects it (power cable from the generator, a walkway, the winch frame over a chosen spot for the shaft).
+
+**Rules**
+- Modules: generator, workshop, bunks, lab, storage, and the winch frame. Each is a physical crate that unfolds where it is placed; heavier ones need two people or the Crawler's crane (one bot helper is available to compare solo and duo).
+- **Placement matters, and nothing tells you:** soft ground sinks a module slowly, tilting it; next to the vent, gas seeps into whatever is downwind; under the overhang, rocks fall in the night if the ground is disturbed by the drill; on the creature trail, the night visit comes straight through.
+- Cables and walkways have fixed lengths, so spreading out costs cable; packing tight concentrates fire and gas risk.
+- **One night:** after setup, a night passes in a few minutes. The generator is loud and lights attract the creature from E3. The player can keep watch from the winch frame, turn lights off, or sleep in the bunk (which skips time but leaves no one watching). Morning shows what happened.
+- **Packing up** is the same work in reverse and is timed; a "leave now" event (a dust storm on the horizon) tests how fast it can be done.
+
+**Tunables:** module weight, carry speed, cable length, sink rate on soft ground, vent spread, overhang collapse chance, creature attraction to noise and light, night length, packing time, bot helper on/off, seed.
+
+**Readouts:** time spent setting up, time to pack, modules connected, power draw. What went wrong in the night is shown in the world, not listed.
+
+**Done when:** two players argue about where to put the generator, and a bad placement causes a problem that night that they can trace back to it.
+
+### E11 — Haul it home
+
+**Question:** Is bringing a heavy, fragile piece of found tech back to base a tense trip in its own right?
+
+**Reuses:** E9's dead outpost (or a simplified version) and E6's vehicle handling, with the hauler instead of the runner.
+
+**Player does:** Starts at the outpost with the hauler parked nearby. Gets one heavy piece of tech (an engine block or a pump) out of a collapsed building and onto the hauler, straps it down by hand, and drives it back to base across E6-style terrain.
+
+**Rules**
+- **Getting it out:** the tech is too heavy to carry; it must be dragged (slow, noisy), levered with a pry bar, or lifted with the hauler's small crane (positioning the truck matters). Dragging it over rough floor can damage it.
+- **Loading:** the bed has strap points. Unstrapped or badly strapped cargo shifts on slopes and bumps, and can fall off. Straps are placed by hand (click a strap point, then the cargo).
+- **Driving loaded:** the hauler is slower, tips more easily on slopes, bogs in soft ground, and is loud. Rough driving rattles the tech, and enough knocks damage it.
+- **Damage** shows on the object itself (dents, a hissing pipe, a loose part), never as a percentage. At the base, an end screen shows the object as it arrived.
+- Optional second piece of cargo (a spare wheel) to test whether players overload the bed.
+- Creature as in E3, attracted by noise.
+
+**Tunables:** tech weight, drag speed and damage, crane reach, strap strength, hauler speed loaded/unloaded, tip angle, bog threshold, rattle damage, route length, creature attraction, seed.
+
+**Readouts:** speed, fuel, distance to base. Cargo state only on the object.
+
+**Done when:** players slow down on rough ground on their own because they are worried about the cargo, and at least one run loses or breaks the tech in a way they can explain.
+
+### E12 — Workshop
+
+**Question:** Is hands-on crafting from carried resources satisfying, and can it go wrong in interesting ways?
+
+**Setting:** the base workshop in side view (uses the sand sim for air, fire and smoke, about 180×100 cells): a workbench, a forge with bellows, a vice, a water barrel, a vent flap, shelves, a door, and piles of raw resources carried in: rock, metal ore, sand, salt, fungal fibre, a methane canister, obsidian.
+
+**Player does:** Walks the room and works by hand, one item per hand as in E4: puts ore in the forge, pumps the bellows, pulls glowing metal out with tongs, hammers it on the bench, quenches it in water; twists fungal fibre into rope; melts sand into glass in the forge; packs a flare from salt and methane; shapes obsidian into a blade.
+
+**Rules**
+- **No recipe list, no crafting menu.** The game does not tell you what makes what. A handful of results exist (rope, piton, flare, glass jar, filter, splint, blade, ladder rung); each is made by doing roughly the right physical steps with the right materials. Wrong steps produce junk, not an error message.
+- **Recipes go in the journal.** A journal book is on a shelf (as in E4). The player writes down what worked.
+- **Quality varies** with how well the steps were done (metal pulled at the right glow, quenched in time). Quality shows on the object (a well-made piton looks clean; a bad one is bent) and matters when used.
+- **Danger:** the forge heats the room; methane near the forge ignites; hot metal burns the hand that grabs it without tongs; the vent flap closed with the forge running fills the room with smoke (E5-style breathing injuries); a dropped glowing piece starts a fire on the floor.
+- **Found tech helps:** one optional piece of tech (a working blower, toggle "tech: blower") replaces the bellows and makes the forge hotter and faster, and also louder and more dangerous. This tests whether tech feels like a real upgrade.
+
+**Tunables:** forge heat rate, glow window for good metal, quench window, rope twist time, glass melt time, methane ignition distance, smoke rate, burn threshold, tech on/off, seed.
+
+**Readouts:** items made, time. Body state only through the silhouette and the figure.
+
+**Done when:** a new player works out at least three recipes without help, writes them down, and burns themselves or fills the room with smoke at least once.
+
 ---
 
 ## Which prototype feeds which alpha
@@ -255,9 +406,14 @@ Give the builder: this file's "Shared rules" section, the one spec, and `mockups
 | E1 Winch descent | A1 |
 | E2 Two ends of the line | A1 |
 | E5 Fragile body | A1, A2 |
-| E3 Crawler stations | A3 |
+| E3 Driving blind | A3 |
 | E7 Bringing it inside | A3 |
-| E6 Surface traverse | A3 |
-| E4 Fungus bench | A4 |
+| E6 Runner scouting | A4 |
+| E4 The lab room | A5 |
+| E8 Climbing and the unknown cave | A1, A2 |
+| E9 Places above ground | A4 |
+| E10 Base camp | A3 |
+| E11 Haul it home | A4 |
+| E12 Workshop | A3, A4 |
 
-Suggested order: D2 and E1 first (biggest technical risk, biggest fun question), then E2, E5, D1, D3, E3, E4, E7, E6.
+Suggested order: D2 and E1 first (biggest technical risk, biggest fun question), then E2, E5, D1, D3, E3, E10, E4, E12, E6, E11, E7.

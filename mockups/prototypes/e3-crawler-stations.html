@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STRATA E3 · Crawler stations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@500;700&display=swap">
+<style>
+:root{color-scheme:dark;--bg:#0c0f11;--panel:#13171a;--line:#262d32;--ink:#e4ddcf;--muted:#8e958f;--rust:#c96a3b;--glow:#6fdcc0;--warn:#e3a33f;--crit:#e2553f;
+--f-title:"Big Shoulders Stencil Display",Impact,sans-serif;--f-body:"Barlow","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body)}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
+h1{font:800 34px/1 var(--f-title);letter-spacing:.04em;margin:0;text-transform:uppercase}
+h1 small{color:var(--rust);font-size:.55em;letter-spacing:.12em;margin-right:.6em}
+.q{color:var(--muted);margin:6px 0 14px;max-width:70ch}
+.play{display:grid;grid-template-columns:minmax(0,960px) 190px;gap:14px;align-items:start}
+.stage{position:relative;border:1px solid var(--line);background:#000;aspect-ratio:16/9}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:rgba(8,10,12,.72);font:800 30px/1.2 var(--f-title);letter-spacing:.06em;text-transform:uppercase;padding:20px}
+.msg small{display:block;font:400 14px var(--f-mono);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:8px}
+.msg.on{display:flex}
+.side{background:var(--panel);border:1px solid var(--line);padding:12px}
+.side .cap{font:400 11px var(--f-mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.side .row{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font:400 12px var(--f-mono);padding:5px 0;border-top:1px solid var(--line)}
+.side .row b{font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.side .row i{font-style:normal;color:var(--muted);grid-column:1/3}
+.side .row.on i{color:var(--glow)}.side .row.bad b{color:var(--crit)}
+.strip{display:flex;flex-wrap:wrap;gap:6px 22px;background:var(--panel);border:1px solid var(--line);border-top:0;padding:10px 14px;font:400 13px var(--f-mono);max-width:960px}
+.strip div span{color:var(--muted);margin-right:6px;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+.strip b{font-weight:600}
+.strip .w{color:var(--warn)}.strip .c{color:var(--crit)}.strip .g{color:var(--glow)}
+.bar{display:inline-block;width:54px;height:5px;background:var(--line);vertical-align:middle;margin-left:6px}
+.bar i{display:block;height:100%;background:var(--muted)}
+#log{max-width:960px;min-height:22px;font:400 13px var(--f-mono);color:var(--rust);padding:6px 2px}
+h2{font:600 18px var(--f-title);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+.tune{background:var(--panel);border:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 28px;max-width:1180px}
+.tune label{display:grid;grid-template-columns:150px 1fr 48px;gap:8px;align-items:center;font-size:13px}
+.tune output{font:400 12px var(--f-mono);color:var(--glow);text-align:right}
+input[type=range]{accent-color:var(--rust);width:100%}
+input:focus-visible,button:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+button{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:6px 14px;font:500 13px var(--f-body);cursor:pointer;margin-top:6px}
+button:hover{border-color:var(--rust)}
+.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px 24px;font-size:13px;color:var(--muted)}
+kbd{font:600 12px var(--f-mono);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:1px 6px;margin-right:6px}
+@media(max-width:900px){.play{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1><small>E3</small>Crawler stations</h1>
+<p class="q">Does "a station only works while someone stands at it" create interesting juggling, or just walking?</p>
+
+<div class="play">
+  <div class="stage">
+    <canvas id="cv" width="960" height="540"></canvas>
+    <div class="msg" id="banner"></div>
+    <div class="msg" id="pausemsg">Paused<small>press P to resume</small></div>
+  </div>
+  <aside class="side">
+    <div class="cap">stations</div>
+    <div id="roster"></div>
+  </aside>
+</div>
+<div class="strip">
+  <div><span>to go</span><b id="r-dist"></b></div>
+  <div><span>power</span><b id="r-pow"></b><span class="bar"><i id="a-pow"></i></span></div>
+  <div><span>load slip</span><b id="r-slip"></b><span class="bar"><i id="a-slip"></i></span></div>
+  <div><span>dust</span><b id="r-dust"></b></div>
+  <div><span>walking</span><b id="r-walk"></b></div>
+  <div><span>at stations</span><b id="r-work"></b></div>
+  <div><span>walk/work</span><b id="r-ratio"></b></div>
+  <div><span>time</span><b id="r-time"></b></div>
+  <div><span>bots</span><b id="r-bots"></b></div>
+  <div><span>seed</span><b id="r-seed"></b></div>
+</div>
+<div id="log"></div>
+
+<h2>Tuning</h2>
+<div class="tune" id="tune"></div>
+<button id="reset">Reset to defaults</button>
+
+<h2>Controls</h2>
+<div class="keys">
+  <div><kbd>A</kbd><kbd>D</kbd>walk (arrow keys also work)</div>
+  <div><kbd>W</kbd><kbd>S</kbd>climb a ladder up / down (stand at it)</div>
+  <div><kbd>E</kbd>start / stop using the station you stand at; walking off stops it</div>
+  <div><kbd>1</kbd>-<kbd>4</kbd>send a bot to helm / engine / winch / bench; again to release it</div>
+  <div><kbd>5</kbd>send all bots to the bunks</div>
+  <div><kbd>R</kbd>restart, same seed &nbsp; <kbd>N</kbd>new seed &nbsp; <kbd>P</kbd>pause</div>
+  <div>Goal: get the Crawler to the flag with the winch load intact, and keep the hull clear of dust.</div>
+</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const STEP = 1 / 60, CW = 960, CH = 540;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ---------- tunables (stored in URL hash) ---------- */
+const TUNE = [
+  ['walk', 'Walk speed (tiles/s)', 3, 14, .5, 7],
+  ['ladder', 'Ladder speed (tiles/s)', 2, 10, .5, 5],
+  ['length', 'Crawler length (tiles)', 40, 90, 2, 60],
+  ['bots', 'Bot crewmates', 0, 3, 1, 2],
+  ['route', 'Route length (m)', 100, 1500, 50, 500],
+  ['speed', 'Helm top speed (m/s)', 1, 15, .5, 5],
+  ['faultEvery', 'Fault every (s, mean)', 10, 150, 5, 45],
+  ['stoke', 'Stoke interval (s, full to cold)', 10, 90, 1, 30],
+  ['stokeRate', 'Stoking speed (%/s)', 5, 100, 1, 30],
+  ['floor', 'Heat for full power (%)', 5, 80, 1, 30],
+  ['repair', 'Fault repair time (s)', 2, 20, .5, 5],
+  ['slip', 'Winch slip (%/s)', 0, 5, .1, 1.5],
+  ['hold', 'Winch hold recovery (%/s)', 0, 10, .5, 3],
+  ['surge', 'Slip surge multiplier', 1, 10, .5, 4],
+  ['dustRate', 'Breach dust (%/s)', .5, 8, .1, 2],
+  ['dustClear', 'Dust clearing (%/s)', 0, 3, .1, .5],
+  ['dustSlow', 'Dust slows helm (%)', 0, 100, 5, 60],
+  ['seed', 'Seed', 1, 9999, 1, 5]
+];
+const RESTART = ['length', 'bots', 'route', 'seed'];
+const V = {};
+function readHash(){
+  TUNE.forEach(t => V[t[0]] = t[5]);
+  location.hash.slice(1).split('&').forEach(p => {
+    const [k, v] = p.split('='), t = TUNE.find(x => x[0] === k), n = parseFloat(v);
+    if (t && isFinite(n)) V[k] = Math.min(t[3], Math.max(t[2], n));
+  });
+}
+function writeHash(){
+  const s = TUNE.filter(t => V[t[0]] !== t[5]).map(t => t[0] + '=' + V[t[0]]).join('&');
+  try { history.replaceState(null, '', s ? '#' + s : location.pathname + location.search); } catch (e) { /* file:// quirks */ }
+}
+
+/* =====================================================================
+   CRAWLER INTERIOR: pure data, reused later by E7. Coordinates are tiles.
+   Three decks of DECK_H tiles; deck d has its floor (feet line) at FY(d).
+   Fractions are of the Crawler length L. Rooms, doors, ladders, stations
+   and decor are all rows here; nothing below this block assumes a layout.
+   ===================================================================== */
+const DECK_H = 7;
+const FY = d => DECK_H * (d + 1);
+const LAYOUT_DATA = {
+  /* id, label, deck, x0, x1 (fractions), tint */
+  rooms: [
+    ['bridge', 'BRIDGE · HELM + COMMS', 0, 0, .5, '#141c21'],
+    ['bunks', 'BUNKS + GALLEY', 0, .5, 1, '#1a1a1d'],
+    ['workshop', 'WORKSHOP + AIRLOCK', 1, 0, .5, '#1b1a17'],
+    ['lab', 'LAB + GROW ROOM', 1, .5, 1, '#131d1b'],
+    ['engine', 'ENGINE + REACTOR', 2, 0, .5, '#1d1714'],
+    ['winch', 'WINCH + DRILL MAST', 2, .5, 1, '#151a1f']
+  ],
+  /* x fraction, upper deck, lower deck. Ladder k joins deck k and k+1 */
+  ladders: [[.36, 0, 1], [.62, 1, 2]],
+  /* walk-through openings between rooms: deck, x fraction (visual only: the hatch is just a door) */
+  doors: [[0, .5], [1, .5], [2, .5]],
+  /* id, name, deck, x fraction */
+  stations: [['helm', 'Helm', 0, .12], ['bunk', 'Bunk', 0, .80], ['bench', 'Bench', 1, .2], ['engine', 'Engine', 2, .12], ['winch', 'Winch', 2, .85]],
+  /* decor boxes: deck, x fraction, width, height (tiles), colour, label */
+  decor: [
+    [0, .30, 3, 1.6, '#2c3a40', 'COMMS'], [0, .93, 3.2, 1.4, '#3a3026', 'GALLEY'],
+    [1, .68, 3.4, 1.3, '#26343a', 'LAB'], [1, .88, 4.4, .9, '#27422f', 'GROW']
+  ]
+};
+function buildLayout(L){
+  return {
+    L,
+    rooms: LAYOUT_DATA.rooms.map(r => ({id: r[0], name: r[1], deck: r[2], x0: r[3]*L, x1: r[4]*L, tint: r[5]})),
+    ladders: LAYOUT_DATA.ladders.map(l => ({x: l[0]*L, a: l[1], b: l[2]})),
+    doors: LAYOUT_DATA.doors.map(d => ({deck: d[0], x: d[1]*L})),
+    stations: LAYOUT_DATA.stations.map(s => ({id: s[0], name: s[1], deck: s[2], x: s[3]*L})),
+    decor: LAYOUT_DATA.decor.filter(d => d[4]).map(d => ({deck: d[0], x: d[1]*L, w: d[2], h: d[3], col: d[4], label: d[5]}))
+  };
+}
+/* ===================== end of interior data ===================== */
+
+/* ---------- state ---------- */
+let Lay = buildLayout(60), STN = {};
+let rnd = mulberry(1), G = {}, P = {}, log = [], paused = false, acc = 0, lastT = performance.now();
+const keys = {}, Q = [], ZONE = 1.6;
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const say = s => { log.unshift(s); log = log.slice(0, 3); $('log').innerHTML = log.map((l, i) => '<div style="opacity:' + (1 - i*.3) + '">' + l + '</div>').join(''); };
+const held = k => keys[k] ? 1 : 0;
+
+function restart(){
+  Lay = buildLayout(V.length); STN = {}; Lay.stations.forEach(s => STN[s.id] = s);
+  rnd = mulberry(V.seed);
+  G = {t: 0, dist: V.route, heat: .8, slip: 0, dust: 0, end: null, tread: 0, power: 1, moving: false,
+    f: {engine: false, winch: false, breach: null}, fp: {engine: 0, winch: 0, breach: 0}, nf: V.faultEvery*.6,
+    walkT: 0, workT: 0, idleT: 0, parts: [], use: {}, bots: []};
+  for (let i = 0; i < V.bots; i++) G.bots.push({i, x: STN.bunk.x + i*1.5, deck: 0, y: FY(0), lad: null, dir: 0, asg: 'bunk', arr: false, face: 1, ph: 0});
+  P = {x: STN.helm.x + 3, deck: 0, y: FY(0), lad: null, use: null, face: 1, moving: false, ph: 0};
+  Q.length = 0; log = []; $('log').innerHTML = ''; $('banner').classList.remove('on'); acc = 0;
+  say('Crawler idling. Stand at the helm and press E. Keep the engine fed and the winch load held.');
+}
+
+/* ---------- movement (shared by player and bots) ---------- */
+function moveTo(e, tx, sp, dt){
+  const d = tx - e.x;
+  if (Math.abs(d) <= sp*dt) { e.x = tx; return true; }
+  e.x += Math.sign(d)*sp*dt; e.face = Math.sign(d); e.ph += sp*dt; return false;
+}
+function climb(e, dir, dt){
+  const l = e.lad, lo = FY(l.a), hi = FY(l.b);
+  e.y += dir*V.ladder*dt; e.ph += Math.abs(dir)*V.ladder*dt;
+  if (e.y <= lo) { e.y = lo; e.deck = l.a; e.lad = null; }
+  else if (e.y >= hi) { e.y = hi; e.deck = l.b; e.lad = null; }
+}
+function playerStep(dt){
+  while (Q.length) {
+    const q = Q.shift();
+    if (q === 'e') {
+      if (P.use) { say('Stopped using ' + STN[P.use].name + '.'); P.use = null; }
+      else if (!P.lad) {
+        const s = Lay.stations.find(s => s.deck === P.deck && Math.abs(s.x - P.x) <= ZONE);
+        if (s) { P.use = s.id; say('Using ' + s.name + '. Leave it and it stops.'); } else say('No station here.');
+      }
+    } else if (q[0] === '#') assign(q.slice(1));
+  }
+  const up = held('KeyW') || held('ArrowUp'), down = held('KeyS') || held('ArrowDown');
+  const dir = (held('KeyD') || held('ArrowRight')) - (held('KeyA') || held('ArrowLeft'));
+  P.moving = false;
+  if (P.lad) { if (up !== down) { climb(P, down - up, dt); P.moving = true; } }
+  else {
+    if (dir) { P.x = clamp(P.x + dir*V.walk*dt, 1.2, Lay.L - 1.2); P.face = dir; P.ph += V.walk*dt; P.moving = true; }
+    if (up !== down) {
+      const l = Lay.ladders.find(l => Math.abs(l.x - P.x) < 1.3 && (up ? l.b === P.deck : l.a === P.deck));
+      if (l) { P.lad = l; P.x = l.x; }
+    }
+  }
+  if (P.use) {
+    const s = STN[P.use];
+    if (P.lad || s.deck !== P.deck || Math.abs(s.x - P.x) > ZONE) { say(s.name + ' left unattended.'); P.use = null; }
+  }
+}
+function botStep(b, dt){
+  const tg = STN[b.asg], tx = tg.x - .8 + (tg.id === 'bunk' ? b.i*1.5 : 0), sp = V.walk*.9;
+  b.arr = false;
+  if (b.lad) climb(b, b.dir, dt);
+  else if (b.deck === tg.deck) b.arr = moveTo(b, tx, sp, dt);
+  else {
+    const down = tg.deck > b.deck, l = Lay.ladders.find(l => down ? l.a === b.deck : l.b === b.deck);
+    if (moveTo(b, l.x, sp, dt)) { b.lad = l; b.dir = down ? 1 : -1; }
+  }
+}
+function assign(id){
+  if (!G.bots.length) return say('No bots aboard. Raise "Bot crewmates" in tuning.');
+  if (id === 'all') { G.bots.forEach(b => b.asg = 'bunk'); return say('All bots to the bunks.'); }
+  const here = G.bots.find(b => b.asg === id);
+  if (here) { here.asg = 'bunk'; return say('Bot ' + (here.i + 1) + ' released from ' + STN[id].name + '.'); }
+  const b = G.bots.find(b => b.asg === 'bunk');
+  if (!b) return say('All bots are busy. Press a station number to release its bot.');
+  b.asg = id; say('Bot ' + (b.i + 1) + ' to ' + STN[id].name + '. It will only stand there.');
+}
+
+/* ---------- simulation step ---------- */
+function stepSim(){
+  const dt = STEP; G.t += dt;
+  playerStep(dt); G.bots.forEach(b => botStep(b, dt));
+  /* who is working which station */
+  const use = {helm: 0, engine: 0, winch: 0, bench: 0, bunk: 0};
+  if (P.use) use[P.use]++;
+  G.bots.forEach(b => { if (b.arr && b.asg !== 'bunk') use[b.asg]++; });
+  G.use = use;
+  /* player time accounting */
+  if (P.moving) G.walkT += dt; else if (P.use && P.use !== 'bunk') G.workT += dt; else G.idleT += dt;
+  /* engine */
+  if (use.engine) G.heat = Math.min(1, G.heat + V.stokeRate/100*dt);
+  G.heat = Math.max(0, G.heat - dt/V.stoke);
+  G.power = G.f.engine ? 0 : Math.min(1, G.heat/(V.floor/100));
+  /* helm */
+  G.moving = false;
+  if (use.helm && G.power > 0 && !G.end) {
+    const sp = V.speed*G.power*(1 - V.dustSlow/100*G.dust/100);
+    G.dist -= sp*dt; G.tread += sp*dt; G.moving = sp > .05;
+  }
+  /* winch */
+  if (use.winch) G.slip = Math.max(0, G.slip - V.hold*dt);
+  else G.slip += V.slip*(G.f.winch ? V.surge : 1)*dt;
+  /* faults */
+  G.nf -= dt;
+  if (G.nf <= 0) {
+    G.nf = V.faultEvery*(.5 + rnd());
+    const open = ['engine', 'winch', 'breach'].filter(k => !G.f[k]);
+    if (open.length) {
+      const k = open[(rnd()*open.length) | 0];
+      if (k === 'breach') { G.f.breach = {deck: (rnd()*3) | 0, side: rnd() < .5 ? 0 : 1}; say('Hull breach, deck ' + (G.f.breach.deck + 1) + '. Dust is coming in. Patch it at the workshop bench.'); }
+      else { G.f[k] = true; say(k === 'engine' ? 'Engine fault: power is gone until someone stands at the engine.' : 'Winch jam: the load is slipping fast. Stand at the winch.'); }
+      G.fp[k] = 0;
+    }
+  }
+  [['engine', 'engine'], ['winch', 'winch'], ['breach', 'bench']].forEach(([k, st]) => {
+    if (!G.f[k] || !use[st]) return;
+    G.fp[k] += dt/V.repair;
+    if (G.fp[k] >= 1) { G.f[k] = k === 'breach' ? null : false; G.fp[k] = 0; say(k === 'breach' ? 'Breach patched.' : k === 'engine' ? 'Engine fault cleared.' : 'Winch jam cleared.'); }
+  });
+  /* dust */
+  if (G.f.breach) {
+    G.dust = Math.min(100, G.dust + V.dustRate*dt);
+    if (rnd() < .6) { const b = G.f.breach, x = b.side ? Lay.L : 0; G.parts.push({x, y: FY(b.deck) - 1 - rnd()*3, vx: (b.side ? -1 : 1)*(2 + rnd()*4), vy: (rnd() - .6)*.8, l: 1.6}); }
+  } else G.dust = Math.max(0, G.dust - V.dustClear*dt);
+  G.parts.forEach(p => { p.x += p.vx*dt; p.y += p.vy*dt; p.l -= dt; });
+  G.parts = G.parts.filter(p => p.l > 0);
+  /* end states */
+  if (G.slip >= 100) endRun('slip');
+  else if (G.dust >= 100) endRun('dust');
+  else if (G.dist <= 0) { G.dist = 0; endRun('win'); }
+}
+function endRun(k){
+  G.end = k; if (P.use) P.use = null;
+  const msg = {
+    win: ['Arrived<small>Load intact (slip ' + G.slip.toFixed(0) + '%) in ' + G.t.toFixed(0) + ' s. You walked ' + G.walkT.toFixed(0) + ' s and worked ' + G.workT.toFixed(0) + ' s. R to go again.</small>'],
+    slip: ['Load lost<small>The winch let go with ' + G.dist.toFixed(0) + ' m to go. R to try again.</small>'],
+    dust: ['Cabin choked<small>The dust won with ' + G.dist.toFixed(0) + ' m to go. R to try again.</small>']
+  }[k][0];
+  $('banner').innerHTML = msg; $('banner').classList.add('on');
+}
+
+/* ---------- rendering ---------- */
+const cx = $('cv').getContext('2d');
+let K = 15, OX = 20, OY = 62;
+function txt(s, x, y, px, col, al){
+  cx.save(); cx.setTransform(1, 0, 0, 1, 0, 0); cx.font = '600 ' + px + 'px "JetBrains Mono",Consolas,monospace';
+  cx.fillStyle = col || '#8e958f'; cx.textAlign = al || 'left'; cx.fillText(s, OX + x*K, OY + y*K); cx.restore();
+}
+function bar(x, y, w, f, col){ cx.fillStyle = '#0c0f11'; cx.fillRect(x, y, w, .5); cx.fillStyle = col; cx.fillRect(x + .06, y + .06, Math.max(0, (w - .12)*clamp(f, 0, 1)), .38); }
+function man(e, col, label, active){
+  const lad = !!e.lad, sw = lad ? Math.sin(e.ph*1.4)*.4 : Math.sin(e.ph*1.6)*.5;
+  cx.save(); cx.translate(e.x, e.y);
+  cx.fillStyle = col; cx.fillRect(-.5 + sw*.5, -1.1, .45, 1.1); cx.fillRect(.05 - sw*.5, -1.1, .45, 1.1);
+  cx.fillRect(-.6, -2.3, 1.2, 1.3);
+  cx.fillRect(-.45, -3.1, .9, .8);
+  cx.fillStyle = '#0c0f11'; cx.fillRect(e.face > 0 ? .02 : -.45, -2.85, .43, .35);
+  if (active) { cx.strokeStyle = '#6fdcc0'; cx.lineWidth = .08; cx.strokeRect(-.85, -3.3, 1.7, 3.4); }
+  cx.restore();
+  if (label) txt(label, e.x, e.y - 3.5, 11, col, 'center');
+}
+function draw(){
+  const L = Lay.L, pw = G.power;
+  K = Math.min((CW - 40)/L, (CH - 96)/25); OX = (CW - L*K)/2; OY = 56;
+  cx.setTransform(1, 0, 0, 1, 0, 0);
+  cx.fillStyle = '#0a0d0f'; cx.fillRect(0, 0, CW, CH);
+  const gy = OY + 25*K; cx.fillStyle = '#17130f'; cx.fillRect(0, gy - 6, CW, CH);
+  cx.fillStyle = '#2a221a';
+  for (let i = 0; i < 40; i++) { const px = (((i*97 - G.tread*16) % 1000) + 1000) % 1000 - 20; cx.fillRect(px, gy + 8 + (i*37 % 60), 8 + i % 5*4, 3); }
+  /* route bar and flag */
+  const prog = 1 - G.dist/V.route;
+  cx.fillStyle = '#13171a'; cx.fillRect(130, 18, 700, 8); cx.fillStyle = '#c96a3b'; cx.fillRect(130, 18, 700*clamp(prog, 0, 1), 8);
+  cx.font = '600 11px "JetBrains Mono",monospace'; cx.fillStyle = '#8e958f'; cx.textAlign = 'left'; cx.fillText('ROUTE', 70, 27);
+  cx.textAlign = 'right'; cx.fillText(G.dist.toFixed(0) + ' m to go', 930, 27); cx.fillStyle = '#6fdcc0'; cx.fillRect(828, 12, 3, 20);
+  const fx = OX + L*K + 30 + G.dist*1.4;
+  if (fx < CW - 14) { cx.fillStyle = '#6fdcc0'; cx.fillRect(fx, gy - 70, 3, 70); cx.fillRect(fx + 3, gy - 70, 26, 16); }
+  else { cx.fillStyle = '#6fdcc0'; cx.beginPath(); cx.moveTo(CW - 8, gy - 30); cx.lineTo(CW - 24, gy - 40); cx.lineTo(CW - 24, gy - 20); cx.fill(); }
+
+  cx.setTransform(K, 0, 0, K, OX, OY);
+  /* undercarriage */
+  cx.fillStyle = '#1d2327'; cx.fillRect(.6, 21.4, L - 1.2, 3.1);
+  cx.fillStyle = '#0c0f11';
+  for (let x = .6; x < L - .6; x += 1) cx.fillRect(x + ((G.tread % 1) + 1) % 1 - .35 + .4, 24.2, .45, .45);
+  for (let x = 3; x < L - 2; x += 4.5) {
+    cx.fillStyle = '#2b3237'; cx.beginPath(); cx.arc(x, 23, 1.25, 0, 7); cx.fill();
+    cx.strokeStyle = '#0c0f11'; cx.lineWidth = .12; const a = G.tread*1.5 + x; cx.beginPath(); cx.moveTo(x + Math.cos(a)*1.1, 23 + Math.sin(a)*1.1); cx.lineTo(x - Math.cos(a)*1.1, 23 - Math.sin(a)*1.1); cx.stroke();
+  }
+  /* rooms */
+  Lay.rooms.forEach(r => {
+    cx.fillStyle = r.tint; cx.fillRect(r.x0, FY(r.deck) - DECK_H, r.x1 - r.x0, DECK_H);
+    cx.fillStyle = '#262d32'; for (let x = r.x0 + 3; x < r.x1; x += 6) cx.fillRect(x, FY(r.deck) - DECK_H + .4, .08, DECK_H - .8);
+    txt(r.name, r.x0 + .6, FY(r.deck) - DECK_H + 1, 10, '#6a726c');
+  });
+  Lay.decor.forEach(d => { cx.fillStyle = d.col; cx.fillRect(d.x - d.w/2, FY(d.deck) - d.h, d.w, d.h); txt(d.label, d.x, FY(d.deck) - d.h - .3, 9, '#59605b', 'center'); });
+  /* floors with ladder hatches, walls with doors */
+  for (let d = 0; d < 3; d++) {
+    const gaps = Lay.ladders.filter(l => l.a === d).map(l => l.x);
+    let x0 = 0;
+    gaps.concat([L + 1]).forEach(g => { const e = Math.min(L, g - .9); cx.fillStyle = '#3a4248'; cx.fillRect(x0, FY(d), Math.max(0, e - x0), .4); x0 = g + .9; });
+  }
+  cx.fillStyle = '#3a4248'; cx.fillRect(0, -.4, L, .4); cx.fillRect(-.4, -.4, .4, 21.8); cx.fillRect(L, -.4, .4, 21.8);
+  Lay.doors.forEach(d => { cx.fillStyle = '#3a4248'; cx.fillRect(d.x - .15, FY(d.deck) - DECK_H, .3, DECK_H - 4.4); cx.fillStyle = '#c96a3b'; cx.fillRect(d.x - .3, FY(d.deck) - 4.5, .6, .2); });
+  Lay.ladders.forEach(l => { cx.fillStyle = '#5d6469'; cx.fillRect(l.x - .5, FY(l.a), .1, FY(l.b) - FY(l.a)); cx.fillRect(l.x + .4, FY(l.a), .1, FY(l.b) - FY(l.a)); for (let y = FY(l.a) + .5; y < FY(l.b); y += .9) cx.fillRect(l.x - .5, y, 1, .1); });
+  drawStations();
+  /* dust particles, fog, power dim */
+  cx.fillStyle = '#c9a06a'; G.parts.forEach(p => cx.fillRect(p.x, p.y, .22, .22));
+  if (G.f.breach) { const b = G.f.breach, bx = b.side ? L - .3 : -.1, by = FY(b.deck) - 3.4; cx.fillStyle = (G.t*4 | 0) % 2 ? '#e2553f' : '#7a2c20'; cx.beginPath(); cx.moveTo(bx, by); cx.lineTo(bx + .6, by + .6); cx.lineTo(bx, by + 1.4); cx.lineTo(bx + .5, by + 2.2); cx.lineTo(bx - .2, by + 2.2); cx.fill(); }
+  cx.fillStyle = 'rgba(196,150,92,' + (G.dust/100*.4).toFixed(3) + ')'; cx.fillRect(0, 0, L, 21);
+  cx.fillStyle = 'rgba(4,6,8,' + ((1 - pw)*.6 + (pw < .3 && (G.t*9 | 0) % 3 === 0 ? .15 : 0)).toFixed(3) + ')'; cx.fillRect(0, 0, L, 21);
+  /* people */
+  G.bots.forEach(b => man(b, '#c96a3b', String(b.i + 1) + (b.asg === 'bunk' ? '' : ' ' + b.asg), false));
+  man(P, '#6fdcc0', null, !!P.use);
+  if (!P.lad && !G.end) {
+    const s = Lay.stations.find(s => s.deck === P.deck && Math.abs(s.x - P.x) <= ZONE);
+    if (s) txt(P.use ? 'using ' + s.name.toLowerCase() + ' (E to stop)' : '[E] use ' + s.name.toLowerCase(), P.x, P.y - 4.2, 11, '#e4ddcf', 'center');
+  }
+}
+function drawStations(){
+  const H = STN.helm, E = STN.engine, W = STN.winch, B = STN.bench, K2 = STN.bunk, u = G.use || {};
+  const alert = (s, y) => { if ((G.t*3 | 0) % 2) { cx.fillStyle = '#e2553f'; cx.beginPath(); cx.moveTo(s.x, FY(s.deck) - y); cx.lineTo(s.x + .8, FY(s.deck) - y + 1.4); cx.lineTo(s.x - .8, FY(s.deck) - y + 1.4); cx.fill(); } };
+  /* helm */
+  cx.fillStyle = '#2c3a40'; cx.fillRect(H.x - 1.6, FY(0) - 1.3, 3.2, 1.3); cx.fillStyle = u.helm ? '#6fdcc0' : '#33474d'; cx.fillRect(H.x - 1.3, FY(0) - 2.4, 2.6, 1.1);
+  bar(H.x - 3, FY(0) - 5.6, 6, 1 - G.dist/V.route, '#c96a3b'); txt('HELM', H.x, FY(0) - 5.9, 10, '#8e958f', 'center');
+  /* bunk */
+  cx.fillStyle = '#3a3a40'; cx.fillRect(K2.x - 3, FY(0) - 1.3, 6, 1.3); cx.fillStyle = '#4b4f58'; cx.fillRect(K2.x - 3, FY(0) - 1.9, 2, .6); txt('BUNK', K2.x, FY(0) - 2.4, 10, '#59605b', 'center');
+  /* bench */
+  cx.fillStyle = '#4a4338'; cx.fillRect(B.x - 2.2, FY(1) - 1.4, 4.4, 1.4); cx.fillStyle = '#6a6254'; cx.fillRect(B.x - 1.8, FY(1) - 1.7, .6, .3); cx.fillRect(B.x + .6, FY(1) - 1.9, .3, .5);
+  txt('BENCH', B.x, FY(1) - 2.3, 10, '#8e958f', 'center');
+  if (G.f.breach) { bar(B.x - 2, FY(1) - 3.4, 4, G.fp.breach, '#e3a33f'); alert(B, 5.2); }
+  /* engine: glow follows heat */
+  const hot = G.heat; cx.fillStyle = '#2b2522'; cx.fillRect(E.x - 3, FY(2) - 4.4, 6, 4.4);
+  cx.fillStyle = 'rgb(' + (90 + hot*165 | 0) + ',' + (40 + hot*90 | 0) + ',30)'; cx.fillRect(E.x - 2.4, FY(2) - 3.4, 4.8, 2.4);
+  cx.fillStyle = '#0c0f11'; cx.fillRect(E.x - 3, FY(2) - 4.9, 6, .3);
+  bar(E.x - 3, FY(2) - 5.6, 6, G.heat, G.heat < V.floor/100 ? '#e2553f' : '#e3a33f'); txt('ENGINE  ' + (G.f.engine ? 'FAULT' : 'heat ' + (G.heat*100 | 0) + '%'), E.x, FY(2) - 5.9, 10, G.f.engine ? '#e2553f' : '#8e958f', 'center');
+  if (G.f.engine) { bar(E.x - 3, FY(2) - 6.4, 6, G.fp.engine, '#6fdcc0'); alert(E, 8.2); }
+  /* winch: drum, cable, load that sags as it slips */
+  cx.fillStyle = '#2a3036'; cx.fillRect(W.x - 3, FY(2) - 6.4, 6, .7); cx.fillStyle = '#c96a3b'; cx.beginPath(); cx.arc(W.x, FY(2) - 5.2, 1.1, 0, 7); cx.fill();
+  const ly = FY(2) - 3.9 + G.slip/100*3.2; cx.fillStyle = '#7d7b73'; cx.fillRect(W.x - .05, FY(2) - 5.2, .1, ly - FY(2) + 5.2);
+  cx.fillStyle = G.slip > 66 ? '#e2553f' : G.slip > 33 ? '#e3a33f' : '#6fdcc0'; cx.fillRect(W.x - 1, ly, 2, 1.2);
+  txt('WINCH  slip ' + G.slip.toFixed(0) + '%', W.x, FY(2) - 6.9, 10, G.f.winch ? '#e2553f' : '#8e958f', 'center');
+  if (G.f.winch) { bar(W.x - 3, FY(2) - 7.5, 6, G.fp.winch, '#6fdcc0'); alert(W, 9); }
+  cx.fillStyle = '#26343a'; cx.fillRect(W.x + 4, FY(2) - 1, 5, 1);   /* mast base */
+}
+
+/* ---------- hud ---------- */
+const ROS = [['helm', 'Helm'], ['engine', 'Engine'], ['winch', 'Winch'], ['bench', 'Bench'], ['bunk', 'Bunk']].map(([id, n]) => {
+  const r = document.createElement('div'); r.className = 'row'; r.innerHTML = '<b>' + n + '</b><span></span><i></i>'; $('roster').append(r); return {id, el: r, sp: r.children[1], i: r.children[2]};
+});
+function hud(){
+  const num = (id, s, c) => { const e = $(id); if (e.textContent !== s) e.textContent = s; if (c !== undefined) e.className = c; };
+  const walk = G.walkT, work = G.workT;
+  num('r-dist', G.dist.toFixed(0) + ' m'); num('r-pow', (G.power*100).toFixed(0) + '%', G.power < .3 ? 'c' : G.power < .7 ? 'w' : '');
+  $('a-pow').style.width = (G.power*100) + '%';
+  num('r-slip', G.slip.toFixed(0) + '%', G.slip > 66 ? 'c' : G.slip > 33 ? 'w' : ''); $('a-slip').style.width = G.slip + '%';
+  num('r-dust', G.dust.toFixed(0) + '%', G.dust > 66 ? 'c' : G.dust > 20 ? 'w' : '');
+  num('r-walk', walk.toFixed(0) + ' s'); num('r-work', work.toFixed(0) + ' s');
+  const ratio = work >= 1 ? walk/work : null; num('r-ratio', ratio === null ? '-' : ratio.toFixed(2), ratio === null ? '' : ratio < .5 ? 'g' : ratio < 1 ? 'w' : 'c');
+  num('r-time', G.t.toFixed(0) + ' s'); num('r-bots', G.bots.length + ''); num('r-seed', V.seed + '');
+  const u = G.use || {};
+  ROS.forEach(r => {
+    const who = [P.use === r.id ? 'you' : null].concat(G.bots.filter(b => b.arr && b.asg === r.id).map(b => 'bot ' + (b.i + 1))).filter(Boolean);
+    const bad = (r.id === 'engine' && G.f.engine) || (r.id === 'winch' && G.f.winch) || (r.id === 'bench' && G.f.breach);
+    r.el.className = 'row' + (u[r.id] ? ' on' : '') + (bad ? ' bad' : '');
+    r.sp.textContent = u[r.id] ? 'manned' : 'empty'; r.i.textContent = who.join(', ') || (bad ? 'needs attention' : 'nobody');
+  });
+}
+
+/* ---------- control flow ---------- */
+function setPause(p){ paused = p; $('pausemsg').classList.toggle('on', p); lastT = performance.now(); }
+function frame(now){
+  const dt = Math.min(.1, (now - lastT)/1000); lastT = now;
+  if (!paused) { acc += dt; let n = 0; while (acc >= STEP && n < 5) { if (!G.end) stepSim(); acc -= STEP; n++; } if (n === 5) acc = 0; }
+  draw(); hud();
+  requestAnimationFrame(frame);
+}
+function buildTune(){
+  const box = $('tune'); box.innerHTML = '';
+  TUNE.forEach(([k, label, mn, mx, st]) => {
+    const l = document.createElement('label'), o = document.createElement('output'), inp = document.createElement('input');
+    inp.type = 'range'; inp.min = mn; inp.max = mx; inp.step = st; inp.value = V[k]; o.textContent = V[k];
+    inp.addEventListener('input', () => { V[k] = +inp.value; o.textContent = V[k]; writeHash(); if (RESTART.includes(k)) restart(); });
+    inp.addEventListener('change', () => inp.blur());
+    l.append(label, inp, o); box.append(l);
+  });
+}
+addEventListener('keydown', e => {
+  const c = e.code;
+  if (e.target.tagName === 'INPUT' && c.startsWith('Arrow')) return;
+  if (c.startsWith('Arrow') || c === 'Space') e.preventDefault();
+  if (e.repeat) return;
+  keys[c] = 1;
+  if (c === 'KeyE') Q.push('e');
+  else if (/^Digit[1-4]$/.test(c)) Q.push('#' + ['helm', 'engine', 'winch', 'bench'][+c[5] - 1]);
+  else if (c === 'Digit5') Q.push('#all');
+  else if (c === 'KeyR') restart();
+  else if (c === 'KeyN') { V.seed = 1 + (Math.random()*9999 | 0); writeHash(); buildTune(); restart(); }
+  else if (c === 'KeyP') setPause(!paused);
+});
+addEventListener('keyup', e => { delete keys[e.code]; });
+addEventListener('blur', () => { for (const k in keys) delete keys[k]; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+addEventListener('hashchange', () => { readHash(); buildTune(); restart(); });
+$('reset').addEventListener('click', e => { TUNE.forEach(t => V[t[0]] = t[5]); writeHash(); buildTune(); restart(); e.target.blur(); });
+
+readHash(); buildTune(); restart();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
