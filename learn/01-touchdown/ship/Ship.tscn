@@ -1,0 +1,50 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ship/Ship.cs" id="1"]
+[ext_resource type="PackedScene" path="res://ship/Interior.tscn" id="2"]
+
+[sub_resource type="PhysicsMaterial" id="hull_mat"]
+friction = 1.0
+
+[sub_resource type="RectangleShape2D" id="hull"]
+size = Vector2(336, 136)
+
+[sub_resource type="RectangleShape2D" id="foot"]
+size = Vector2(36, 8)
+
+[node name="Ship" type="RigidBody2D"]
+collision_mask = 1
+mass = 10.0
+physics_material_override = SubResource("hull_mat")
+center_of_mass_mode = 1
+contact_monitor = true
+max_contacts_reported = 4
+angular_damp = 1.5
+script = ExtResource("1")
+
+[node name="Hull" type="CollisionShape2D" parent="."]
+shape = SubResource("hull")
+
+[node name="LeftFoot" type="CollisionShape2D" parent="."]
+position = Vector2(-164, 108)
+shape = SubResource("foot")
+
+[node name="RightFoot" type="CollisionShape2D" parent="."]
+position = Vector2(164, 108)
+shape = SubResource("foot")
+
+[node name="LeftThruster" type="Marker2D" parent="."]
+position = Vector2(-110, 70)
+
+[node name="RightThruster" type="Marker2D" parent="."]
+position = Vector2(110, 70)
+
+[node name="InteriorViewport" type="SubViewport" parent="."]
+transparent_bg = true
+canvas_item_default_texture_filter = 0
+size = Vector2i(320, 120)
+render_target_update_mode = 4
+
+[node name="Interior" parent="InteriorViewport" instance=ExtResource("2")]
+
+[node name="InteriorView" type="Sprite2D" parent="."]

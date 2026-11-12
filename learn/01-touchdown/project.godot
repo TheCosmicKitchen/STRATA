@@ -1,0 +1,68 @@
+; Engine configuration file.
+; Most of this is easier to change in the editor: Project → Project Settings.
+
+config_version=5
+
+[application]
+
+config/name="Touchdown"
+config/description="Land the ship from inside it. The two thruster levers are at opposite ends of the cabin."
+run/main_scene="res://title/Title.tscn"
+config/features=PackedStringArray("4.7", "C#")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+
+[dotnet]
+
+project/assembly_name="Touchdown"
+
+[input]
+
+move_left={
+"deadzone": 0.3,
+"events": [Object(InputEventKey,"device":-1,"physical_keycode":65), Object(InputEventKey,"device":-1,"physical_keycode":4194319), Object(InputEventJoypadMotion,"device":-1,"axis":0,"axis_value":-1.0), Object(InputEventJoypadButton,"device":-1,"button_index":13)]
+}
+move_right={
+"deadzone": 0.3,
+"events": [Object(InputEventKey,"device":-1,"physical_keycode":68), Object(InputEventKey,"device":-1,"physical_keycode":4194321), Object(InputEventJoypadMotion,"device":-1,"axis":0,"axis_value":1.0), Object(InputEventJoypadButton,"device":-1,"button_index":14)]
+}
+jump={
+"deadzone": 0.3,
+"events": [Object(InputEventKey,"device":-1,"physical_keycode":32), Object(InputEventJoypadButton,"device":-1,"button_index":0)]
+}
+lever_up={
+"deadzone": 0.3,
+"events": [Object(InputEventKey,"device":-1,"physical_keycode":87), Object(InputEventKey,"device":-1,"physical_keycode":4194320), Object(InputEventJoypadMotion,"device":-1,"axis":1,"axis_value":-1.0), Object(InputEventJoypadButton,"device":-1,"button_index":11)]
+}
+lever_down={
+"deadzone": 0.3,
+"events": [Object(InputEventKey,"device":-1,"physical_keycode":83), Object(InputEventKey,"device":-1,"physical_keycode":4194322), Object(InputEventJoypadMotion,"device":-1,"axis":1,"axis_value":1.0), Object(InputEventJoypadButton,"device":-1,"button_index":12)]
+}
+restart={
+"deadzone": 0.3,
+"events": [Object(InputEventKey,"device":-1,"physical_keycode":82), Object(InputEventJoypadButton,"device":-1,"button_index":6)]
+}
+back={
+"deadzone": 0.3,
+"events": [Object(InputEventKey,"device":-1,"physical_keycode":4194305), Object(InputEventJoypadButton,"device":-1,"button_index":4)]
+}
+
+[layer_names]
+
+2d_physics/layer_1="world"
+2d_physics/layer_2="crew"
+2d_physics/layer_3="cargo"
+
+[physics]
+
+common/physics_ticks_per_second=60
+2d/default_gravity=200.0
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.04, 0.045, 0.07, 1)
