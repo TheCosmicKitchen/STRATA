@@ -35,6 +35,8 @@ That's why tilting the ship tilts "down" for the crew, thrusting presses you int
 
 ## Your four jobs
 
+For a step-by-step path through these, with what to read and try at each step, see [GUIDE.md](GUIDE.md).
+
 Each one is a method marked `// YOU:` with hints in its comment. Do them in this order; each makes the game a bit more alive.
 
 | # | Where | What | Done when |
