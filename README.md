@@ -10,7 +10,6 @@ A 2D co-op expedition game for 2–4 friends, made in Godot 4. You crew a huge t
 | Published interactive mockups | [STRATA mockups](https://claude.ai/artifact/LDVDo9uA4VjxFwn4pSPDCR) |
 | Mockups source (open in a browser) | [mockups/strata-mockups.html](mockups/strata-mockups.html) |
 | Design summary for working in this repo | [docs/design-summary.md](docs/design-summary.md) |
-| Godot learning roadmap (small games in varied genres) and syllabus | [docs/learning-roadmap.md](docs/learning-roadmap.md), [docs/godot-syllabus.md](docs/godot-syllabus.md), games in [learn/](learn/) |
 | Prototype specs (playable diagrams and experiments, for delegation) | [docs/specs/prototypes.md](docs/specs/prototypes.md) |
 | Ash-can alpha plan (end-to-end fun tests) | [docs/specs/alphas.md](docs/specs/alphas.md) |
 | Networking spec (safe peer-to-peer) | [docs/specs/networking.md](docs/specs/networking.md) |
