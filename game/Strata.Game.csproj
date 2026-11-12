@@ -1,0 +1,13 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- The simulation is the hot path: optimise even in Debug, or the game cannot keep up. -->
+    <Optimize>true</Optimize>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>Strata.Game</RootNamespace>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\Strata.Rules\Strata.Rules.csproj" />
+  </ItemGroup>
+</Project>

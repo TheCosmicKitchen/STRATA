@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STRATA E11 · Haul it home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@500;700&display=swap">
+<style>
+:root{color-scheme:dark;--bg:#0c0f11;--panel:#13171a;--line:#262d32;--ink:#e4ddcf;--muted:#8e958f;--rust:#c96a3b;--glow:#6fdcc0;--warn:#e3a33f;--crit:#e2553f;
+--f-title:"Big Shoulders Stencil Display",Impact,sans-serif;--f-body:"Barlow","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body)}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
+h1{font:800 34px/1 var(--f-title);letter-spacing:.04em;margin:0;text-transform:uppercase}
+h1 small{color:var(--rust);font-size:.55em;letter-spacing:.12em;margin-right:.6em}
+.q{color:var(--muted);margin:6px 0 14px;max-width:70ch}
+.stage{position:relative;border:1px solid var(--line);background:#000;aspect-ratio:16/9;max-width:960px}
+.stage canvas#c{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair}
+.msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:rgba(8,10,12,.82);font:800 30px/1.2 var(--f-title);letter-spacing:.06em;text-transform:uppercase;padding:20px}
+.msg small{display:block;font:400 14px var(--f-mono);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:8px;max-width:60ch}
+.msg canvas{width:min(520px,80%);height:auto;margin-top:10px;image-rendering:pixelated}
+.msg.on{display:flex}
+.strip{display:flex;flex-wrap:wrap;gap:6px 22px;background:var(--panel);border:1px solid var(--line);border-top:0;padding:10px 14px;font:400 13px var(--f-mono);max-width:960px}
+.strip div span{color:var(--muted);margin-right:6px;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+.strip b{font-weight:600}
+.strip .w{color:var(--warn)}.strip .c{color:var(--crit)}
+.bar{display:inline-block;width:54px;height:5px;background:var(--line);vertical-align:middle;margin-left:6px}
+.bar i{display:block;height:100%;background:var(--muted)}
+#hint{max-width:960px;min-height:22px;font:400 13px var(--f-mono);color:var(--glow);padding:6px 2px 0}
+#log{max-width:960px;min-height:22px;font:400 13px var(--f-mono);color:var(--rust);padding:2px 2px 6px}
+h2{font:600 18px var(--f-title);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+.tune{background:var(--panel);border:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 28px;max-width:1180px}
+.tune label{display:grid;grid-template-columns:150px 1fr 48px;gap:8px;align-items:center;font-size:13px}
+.tune output{font:400 12px var(--f-mono);color:var(--glow);text-align:right}
+input[type=range]{accent-color:var(--rust);width:100%}
+input:focus-visible,button:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+button{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:6px 14px;font:500 13px var(--f-body);cursor:pointer;margin-top:6px}
+button:hover{border-color:var(--rust)}
+.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px 24px;font-size:13px;color:var(--muted)}
+kbd{font:600 12px var(--f-mono);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:1px 6px;margin-right:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1><small>E11</small>Haul it home</h1>
+<p class="q">Is bringing a heavy, fragile piece of found tech back to base a tense trip in its own right?</p>
+
+<div class="stage">
+  <canvas id="c" width="960" height="540"></canvas>
+  <div class="msg" id="banner"><div id="bt"></div><canvas id="endc" width="520" height="260"></canvas><small id="bs"></small></div>
+  <div class="msg" id="pausemsg">Paused<small>press P to resume</small></div>
+</div>
+<div class="strip">
+  <div><span>speed</span><b id="r-speed"></b></div>
+  <div><span>fuel</span><b id="r-fuel"></b><span class="bar"><i id="a-fuel"></i></span></div>
+  <div><span>to base</span><b id="r-dist"></b></div>
+  <div><span>noise</span><b id="r-noise"></b><span class="bar"><i id="a-noise"></i></span></div>
+  <div><span>mode</span><b id="r-mode"></b></div>
+  <div><span>straps</span><b id="r-straps"></b></div>
+  <div><span>time</span><b id="r-time"></b></div>
+  <div><span>seed</span><b id="r-seed"></b></div>
+</div>
+<div id="hint"></div>
+<div id="log"></div>
+
+<h2>Tuning</h2>
+<div class="tune" id="tune"></div>
+<button id="reset">Reset to defaults</button>
+
+<h2>Controls</h2>
+<div class="keys">
+  <div><kbd>A</kbd><kbd>D</kbd>on foot: walk. In the cab: reverse / brake, gas</div>
+  <div><kbd>Space</kbd>on foot: hold beside the tech to drag it. In the cab: handbrake</div>
+  <div><kbd>Q</kbd>hold beside the tech: work the pry bar</div>
+  <div><kbd>E</kbd>get in / out of the cab (stopped)</div>
+  <div><kbd>C</kbd>in the cab, stopped: crane on / off</div>
+  <div><kbd>A</kbd><kbd>D</kbd><kbd>W</kbd><kbd>S</kbd>crane: trolley out / in, hook up / down</div>
+  <div><kbd>Space</kbd>crane: hook on / release the tech</div>
+  <div><kbd>W</kbd><kbd>S</kbd>driving, in the air: lean back / forward. On foot: W hops</div>
+  <div><kbd>click</kbd>a strap point on the bed, then the cargo. Click a strapped point again to tighten. Right-click it to cast off</div>
+  <div><kbd>R</kbd>restart, same seed <kbd>N</kbd>new seed <kbd>P</kbd>pause (also when tab hidden)</div>
+  <div>Goal: free the tech, get it onto the hauler, strap it down, drive it to the base lights at the far right.</div>
+</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const W = 960, H = 540, SC = 11, STEP = 1 / 60, SUB = 4, DT = STEP / SUB, G = 9.81, GY = H * .62;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const $ = id => document.getElementById(id);
+
+/* ---------- tunables (stored in URL hash) ---------- */
+const TUNE = [
+  ['weight', 'Tech weight (kg)', 600, 2400, 50, 1200],
+  ['drag', 'Drag speed (m/s)', .4, 2.5, .1, 1.1],
+  ['dragDmg', 'Drag damage', 0, 2, .05, .5],
+  ['dragNoise', 'Drag noise', 0, 2, .1, 1],
+  ['reach', 'Crane reach (m)', 3, 10, .5, 7],
+  ['strength', 'Strap strength (kN)', 3, 30, 1, 14],
+  ['slack', 'Strap slack (%)', 0, 25, 1, 10],
+  ['vEmpty', 'Hauler speed empty (m/s)', 10, 30, 1, 22],
+  ['vLoaded', 'Hauler speed loaded (m/s)', 5, 22, 1, 13],
+  ['tip', 'Rollover angle (deg)', 40, 110, 5, 70],
+  ['bog', 'Bog threshold (kg)', 300, 2400, 50, 900],
+  ['rattleThr', 'Knock threshold (m/s)', .5, 6, .1, 2.2],
+  ['rattle', 'Rattle damage', 0, 3, .1, 1],
+  ['route', 'Route length (m)', 400, 1800, 50, 900],
+  ['rough', 'Terrain roughness', .3, 2, .1, 1],
+  ['soft', 'Soft ground frequency', 0, 3, .25, 1],
+  ['rocks', 'Rock frequency', 0, 3, .25, 1],
+  ['fuel', 'Fuel capacity', 40, 300, 5, 90],
+  ['attract', 'Creature attraction', 0, 3, .1, 1],
+  ['cspeed', 'Creature speed (m/s)', 2, 14, .5, 6],
+  ['quiet', 'Quiet to lose it (s)', 2, 15, .5, 5],
+  ['seed', 'Seed', 1, 9999, 1, 11]
+];
+const V = {};
+TUNE.forEach(t => { V[t[0]] = t[5]; });
+function readHash(){
+  TUNE.forEach(t => V[t[0]] = t[5]);
+  location.hash.slice(1).split('&').forEach(p => {
+    const [k, v] = p.split('='), t = TUNE.find(x => x[0] === k), n = parseFloat(v);
+    if (t && isFinite(n)) V[k] = clamp(n, t[2], t[3]);
+  });
+}
+function writeHash(){
+  const s = TUNE.filter(t => V[t[0]] !== t[5]).map(t => t[0] + '=' + V[t[0]]).join('&');
+  try { history.replaceState(null, '', s ? '#' + s : location.pathname + location.search); } catch (e) { /* file:// quirks */ }
+}
+
+/* ---------- world: height map, rubble, rocks, soft ground ---------- */
+const RES = .25, X0 = -30, WR = .8;
+let HT, RG, SF, NX, rnd = mulberry(1), softZones = [], rockList = [], outpost = {}, stars = [];
+function gen(){
+  rnd = mulberry(V.seed);
+  const R = V.route, xe = R + 100; NX = Math.ceil((xe - X0) / RES) + 1;
+  HT = new Float32Array(NX); RG = new Float32Array(NX); SF = new Uint8Array(NX);
+  const ph = [rnd()*6, rnd()*6, rnd()*6, rnd()*6], sm = u => { u = clamp(u, 0, 1); return u*u*(3 - 2*u); };
+  const bumps = [];
+  const bump = (c, a, s) => bumps.push([c, a, s]);
+  for (let k = 0; k < 16; k++) bump(34 + rnd()*40, .15 + rnd()*.5, .5 + rnd()*.9);              /* rubble in the collapsed building */
+  for (let k = 0, n = Math.round(R/230); k < n; k++) bump(190 + rnd()*(R - 300), 1 + rnd()*1.2, 5 + rnd()*3); /* crests */
+  rockList = [];
+  for (let k = 0, n = Math.round(R/70*V.rocks); k < n; k++) { const c = 170 + rnd()*(R - 230), a = .35 + rnd()*.4; bump(c, a, .55); rockList.push(c); }
+  softZones = [];
+  for (let k = 0, n = Math.round(R/230*V.soft); k < n; k++) { const s = 200 + (k + rnd()*.8)*(R - 330)/Math.max(1, n), l = 28 + rnd()*20; softZones.push([s, s + l]); }
+  for (let i = 0; i < NX; i++) {
+    const x = X0 + i*RES, fl = sm((x - 110)/170)*sm((R - x)/140);
+    let h = fl*V.rough*(4.5*Math.sin(x*.011 + ph[0]) + 3*Math.sin(x*.027 + ph[1]) + 1.4*Math.sin(x*.061 + ph[2]) + .5*Math.sin(x*.13 + ph[3]));
+    for (const b of bumps) { const d = (x - b[0])/b[2]; if (d*d < 16) h += b[1]*Math.exp(-d*d); }
+    HT[i] = h;
+    for (const z of softZones) if (x >= z[0] && x <= z[1]) SF[i] = 1;
+  }
+  for (let i = 0; i < NX; i++) { const a = HT[Math.max(0, i - 6)], b = HT[Math.min(NX - 1, i + 6)]; RG[i] = Math.min(1.5, Math.abs(a + b - 2*HT[i])); }
+  stars = Array.from({length: 60}, () => [rnd()*W, rnd()*H*.5, .3 + rnd()*.6]);
+  outpost = {tx: 50, rocks: Array.from({length: 7}, () => [24 + rnd()*100, .5 + rnd()*1.6, rnd()*.6 - .3])};
+}
+const ix = x => clamp((x - X0)/RES, 0, NX - 1.001);
+const hAt = x => { const f = ix(x), i = f | 0, t = f - i; return HT[i]*(1 - t) + HT[i + 1]*t; };
+const slopeAt = x => (hAt(x + .25) - hAt(x - .25))/.5;
+const roughAt = x => RG[Math.round(ix(x))];
+const softAt = x => SF[Math.round(ix(x))] === 1;
+
+/* ---------- bodies ---------- */
+const rot = (th, x, y) => [x*Math.cos(th) - y*Math.sin(th), x*Math.sin(th) + y*Math.cos(th)];
+const mkBody = (m, I) => ({x: 0, y: 0, th: 0, vx: 0, vy: 0, w: 0, m, I, fx: 0, fy: 0, tq: 0});
+function fApply(b, px, py, fx, fy){ b.fx += fx; b.fy += fy; b.tq += (px - b.x)*fy - (py - b.y)*fx; }
+function vAt(b, px, py){ return [b.vx - b.w*(py - b.y), b.vy + b.w*(px - b.x)]; }
+function pointForce(A, B, px, py, nx, ny, pen, k, c, mu){
+  const va = vAt(A, px, py), vb = B ? vAt(B, px, py) : [0, 0], rx = va[0] - vb[0], ry = va[1] - vb[1];
+  const vn = rx*nx + ry*ny, tx = -ny, ty = nx, vt = rx*tx + ry*ty;
+  const N = Math.max(0, k*pen - c*vn), Ft = -mu*N*clamp(vt/.12, -1, 1);
+  const fx = N*nx + Ft*tx, fy = N*ny + Ft*ty;
+  fApply(A, px, py, fx, fy); if (B) fApply(B, px, py, -fx, -fy);
+  return [N, vn];
+}
+function integ(b){
+  b.vx += b.fx/b.m*DT; b.vy += (b.fy/b.m - G)*DT; b.w += b.tq/b.I*DT; b.w *= .9995;
+  b.x += b.vx*DT; b.y += b.vy*DT; b.th += b.w*DT; b.fx = b.fy = b.tq = 0;
+}
+
+/* ---------- hauler constants (hard-coded) ---------- */
+const TM = 2600, KS = 1.2e5, CS = 9e3, FE = 18000, BR = 14000;
+const BODY_PTS = [[3.5, .1], [-3.5, .5], [2.9, 2.5], [.7, 2.5], [3.4, 1.2], [-3.4, 1.0]];
+const BED = {x0: -3.35, x1: .4, y: .7, wallTop: 2.0};
+const SPOINTS = [[-3.25, .78], [-3.25, 2.0], [.3, .78], [.3, 2.0]];
+const CHW = 1.7, CHH = .85;
+const CPTS = [[-CHW, -CHH], [CHW, -CHH], [CHW, CHH], [-CHW, CHH], [0, -CHH], [-.85, -CHH], [.85, -CHH]];
+const BOOM_Y = 3.8, MAST_X = -3.1;
+
+/* ---------- state ---------- */
+let T, C, P, K, CR, D, straps, pending, S, Nz;
+let log = [], paused = false, acc = 0, lastT = performance.now(), camX = 0, camY = 0;
+const keys = {}, Q = [];
+const say = s => { log.unshift(s); log = log.slice(0, 3); $('log').innerHTML = log.map((l, i) => '<div style="opacity:' + (1 - i*.3) + '">' + l + '</div>').join(''); };
+const held = k => keys[k] ? 1 : 0;
+const toLocal = (b, px, py) => rot(-b.th, px - b.x, py - b.y);
+const toWorld = (b, lx, ly) => { const r = rot(b.th, lx, ly); return [b.x + r[0], b.y + r[1]]; };
+
+function reset(){
+  gen();
+  T = mkBody(TM, 13000); T.x = 98; T.y = hAt(98) + WR + .2; T.u = 0; T.brake = true; T.sink = 0; T.lastU = 0; T.wr = 0; T.loadF = 0; T.grip = [0, 0];
+  C = mkBody(V.weight, V.weight*(CHW*CHW + CHH*CHH)*4/12); C.x = outpost.tx; C.y = hAt(C.x) + CHH + .1; C.pinned = 0; C.contact = new Array(10).fill(0); C.hung = false;
+  D = {body: 0, pipe: 0, plate: 0, dents: [], plateGone: false, lost: null};
+  P = {x: 86, z: 0, vz: 0, face: 1, mode: 'foot', hurt: 0, bites: 0, walk: 0, lever: 0, drag: false, levering: false};
+  K = {tr: MAST_X - 3.5, len: 2.2, a: 0, av: 0, hooked: false, pvx: 0};
+  CR = {a: 0, on: false, x: 0, st: 'none', t: 0, quiet: 0, shake: 0, bite: 0, chew: 0, face: 1};
+  straps = []; pending = -1; Nz = 0;
+  S = {end: null, t: 0, fuel: V.fuel, noiseTarget: 0, crash: 0, rollT: 0, strandT: 0, beam: 0, tipT: 0, gate: 0};
+  for (let k = 0; k < 240; k++) { wheelsForces(); integ(T); cargoForces(true); integ(C); }
+  T.vx = T.vy = T.w = C.vx = C.vy = C.w = 0;
+  camX = P.x; camY = hAt(P.x);
+}
+
+/* ---------- hauler physics ---------- */
+function bedMass(){ return onBed() ? C.m : 0; }
+function onBed(){ const q = toLocal(T, C.x, C.y); return q[0] > BED.x0 - .4 && q[0] < BED.x1 + .3 && q[1] > .3 && q[1] < 3.4; }
+function trailerSpeed(){ return Math.hypot(T.vx, T.vy); }
+function vmaxNow(){
+  const l = T.loadF, v = V.vEmpty - (V.vEmpty - V.vLoaded)*l;
+  const lw = clamp((bedMass() + (CR.st === 'latched' ? 300 : 0))/V.bog, 0, 2);
+  return (T.grip[0] || T.grip[1] ? 1 : 1) * v * (T.sinkOn ? 1 - .5*clamp(lw/1.2, 0, 1) : 1) * (CR.st === 'latched' ? .88 : 1);
+}
+function wheelsForces(){
+  const bm = bedMass(); T.loadF += (clamp(bm/V.weight, 0, 1) - T.loadF)*.02/SUB;
+  const vmax = vmaxNow(), u = T.u;
+  T.sinkOn = false;
+  [1, -1].forEach((sx, wi) => {
+    const wc = toWorld(T, sx*2.2, 0), soft = softAt(wc[0]);
+    if (soft) T.sinkOn = true;
+    const hh = Math.max(hAt(wc[0] - .4), hAt(wc[0]), hAt(wc[0] + .4)) - (soft ? T.sink : 0), py = wc[1] - WR, pen = hh - py;
+    T.grip[wi] = 0;
+    if (pen <= 0) return;
+    const s = slopeAt(wc[0]), L = Math.hypot(s, 1), nx = -s/L, ny = 1/L, va = vAt(T, wc[0], py), vn = va[0]*nx + va[1]*ny;
+    const N = Math.max(0, KS*pen + (pen > .5 ? KS*3*(pen - .5) : 0) - CS*vn);
+    fApply(T, wc[0], py, N*nx, N*ny);
+    T.grip[wi] = 1;
+    const tx = ny, ty = -nx, vt = va[0]*tx + va[1]*ty;
+    const mu = 1.1*(soft ? 1 - .85*T.sink/.55 : 1);
+    let F = -vt*60;
+    if (T.brake) F = -clamp(vt/.3, -1, 1)*BR;
+    else if (u > .02) F += vt < -.5 ? BR*.5 : u*FE/2*Math.max(0, 1 - vt/vmax);
+    else if (u < -.02) F += vt > .5 ? -BR/2*(-u) : u*FE/2*.7*Math.max(0, 1 + vt/7);
+    else { F -= vt*900; if (Math.abs(vt) < 1.2) F = -clamp(vt/.25, -1, 1)*mu*N*.85; }
+    F = clamp(F, -mu*N, mu*N);
+    fApply(T, wc[0], py, F*tx, F*ty);
+    if (wi === 0) T.wr += vt*DT/WR;
+  });
+  BODY_PTS.forEach((b, k) => {
+    const p = toWorld(T, b[0], b[1]), pen = hAt(p[0]) - p[1];
+    if (pen <= 0 || pen > 1.5) return;
+    const s = slopeAt(p[0]), L = Math.hypot(s, 1), r = pointForce(T, null, p[0], p[1], -s/L, 1/L, pen, 1.5e5, 1e4, .6);
+    if (r[0] > 0 && r[1] < -4) { S.crash = Math.max(S.crash, Math.min(1.5, -r[1]/8)); if (k === 2 || k === 3) S.tipT += DT*10; }
+  });
+}
+
+/* ---------- cargo physics, straps, crane ---------- */
+function knock(e, lx, ly){
+  if (e < .02) return;
+  D.body += e; D.pipe += e*(ly > .2 ? 1.1 : .3); D.plate += e*(lx < 0 ? .9 : .5);
+  if (e > .1 && D.dents.length < 16) D.dents.push({x: clamp(lx*.9, -1.5, 1.5), y: clamp(ly*.9, -.75, .75), r: .1 + Math.min(.35, e*.35)});
+  S.crash = Math.max(S.crash, Math.min(1.2, e*1.5));
+  if (D.plate > 3 && !D.plateGone) { D.plateGone = true; D.lost = {x: C.x - 1, y: C.y + 1, vx: -1 - Math.random(), vy: 3, th: 0}; say('Something clangs off the tech and is gone.'); }
+}
+function scrape(e){ D.body += e; D.pipe += e*.6; D.plate += e*.7; if (rnd() < e*1.5 && D.dents.length < 16) D.dents.push({x: (rnd()*2 - 1)*1.3, y: -.55, r: .12 + rnd()*.12}); }
+function cargoForces(settle){
+  C.m = V.weight; C.I = C.m*(CHW*CHW + CHH*CHH)*4/12;
+  const k = C.m*350, c = C.m*12, tm = C.m*G;
+  CPTS.forEach((lp, i) => {
+    const p = toWorld(C, lp[0], lp[1]);
+    let N = 0, vn = 0, hit = 0;
+    const pen = hAt(p[0]) - p[1];
+    if (pen > 0 && pen < .9) { const s = slopeAt(p[0]), L = Math.hypot(s, 1), r = pointForce(C, null, p[0], p[1], -s/L, 1/L, pen, k, c, .55); N = r[0]; vn = r[1]; hit = 1; }
+    const q = toLocal(T, p[0], p[1]);
+    if (q[0] > BED.x0 && q[0] < BED.x1 + .05 && q[1] < BED.y + .02 && BED.y - q[1] < .8) {
+      const nw = rot(T.th, 0, 1), r = pointForce(C, T, p[0], p[1], nw[0], nw[1], BED.y - q[1], k, c, .5); N = r[0]; vn = r[1]; hit = 2;
+    } else if (q[0] > BED.x1 - .05 && q[0] < BED.x1 + .9 && q[1] > BED.y && q[1] < BED.wallTop) {
+      const nw = rot(T.th, -1, 0), r = pointForce(C, T, p[0], p[1], nw[0], nw[1], q[0] - (BED.x1 - .05), k, c, .4); N = r[0]; vn = r[1]; hit = 3;
+    }
+    if (hit && !C.contact[i] && -vn > V.rattleThr && !settle) knock((-vn - V.rattleThr)*.3*V.rattle, lp[0], lp[1]);
+    if (hit && N/(tm/2) > 2.5 && !settle) knock((N/(tm/2) - 2.5)*.9*DT*V.rattle, lp[0], lp[1]);
+    C.contact[i] = hit;
+  });
+  if (settle) return;
+  for (const s of straps) strapForce(s);
+  if (K.hooked) {
+    C.fx -= C.m*1.1*(C.vx - T.vx); C.tq -= C.I*2.5*C.w;   /* swing is damped */
+    const tp = toWorld(T, K.tr, BOOM_Y), lug = toWorld(C, 0, CHH), dx = tp[0] - lug[0], dy = tp[1] - lug[1], d = Math.hypot(dx, dy);
+    if (d > K.len && d > .01) {
+      const va = vAt(C, lug[0], lug[1]), vb = vAt(T, tp[0], tp[1]), rate = -((va[0] - vb[0])*dx + (va[1] - vb[1])*dy)/d;
+      const Tn = 2.5e5*(d - K.len) + 1.5e4*Math.max(0, rate), fx = Tn*dx/d, fy = Tn*dy/d;
+      fApply(C, lug[0], lug[1], fx, fy); fApply(T, tp[0], tp[1], -fx, -fy);
+    }
+  }
+}
+function strapForce(s){
+  const bp = toWorld(T, SPOINTS[s.bi][0], SPOINTS[s.bi][1]), cp = toWorld(C, s.lx, s.ly), dx = bp[0] - cp[0], dy = bp[1] - cp[1], d = Math.hypot(dx, dy);
+  s.T = 0;
+  if (d <= s.rest || d < .01) return;
+  const va = vAt(C, cp[0], cp[1]), vb = vAt(T, bp[0], bp[1]), rate = -((va[0] - vb[0])*dx + (va[1] - vb[1])*dy)/d;
+  const Tn = 8e4*(d - s.rest) + 1500*Math.max(0, rate); s.T = Tn;
+  if (Tn > V.strength*1000) { s.dead = true; say('A strap snaps.'); S.crash = Math.max(S.crash, 1); return; }
+  fApply(C, cp[0], cp[1], Tn*dx/d, Tn*dy/d); fApply(T, bp[0], bp[1], -Tn*dx/d, -Tn*dy/d);
+}
+
+/* ---------- on-foot, crane, input ---------- */
+const nearCargoX = () => Math.abs(P.x - C.x) < CHW + 2.2 && C.contact.some(v => v === 1) && !K.hooked;
+function cargoOnGround(){ return !K.hooked && !onBed(); }
+function stepInput(){
+  while (Q.length) {
+    const e = Q.shift();
+    if (S.end) continue;
+    if (e === 'KeyE') {
+      if (P.mode === 'foot') { if (Math.hypot(P.x - (T.x + 3), P.z) < 6) { P.mode = 'truck'; T.brake = false; say('In the cab. Engine on, and it is loud.'); } else say('Too far from the cab.'); }
+      else if (P.mode === 'truck') { if (trailerSpeed() < 2.5) { P.mode = 'foot'; T.brake = true; T.u = 0; P.x = T.x + 4.4; P.z = 0; say('Out. The engine is off.'); } else say('Stop first.'); }
+      else { P.mode = 'truck'; }
+    } else if (e === 'KeyC') {
+      if (P.mode === 'truck') { if (trailerSpeed() < 1.5) { P.mode = 'crane'; T.brake = true; say('Crane on. Park first, the load swings.'); } else say('Stop the truck before using the crane.'); }
+      else if (P.mode === 'crane') { P.mode = 'truck'; T.brake = false; }
+    } else if (e === 'Space' && P.mode === 'crane') {
+      if (K.hooked) { K.hooked = false; say('Hook released.'); }
+      else if (C.pinned < 3) say('Something still holds it down.');
+      else { const h = hookPos(), lug = toWorld(C, 0, CHH); if (Math.hypot(h[0] - lug[0], h[1] - lug[1]) < 1.4) { K.hooked = true; const tp = toWorld(T, K.tr, BOOM_Y); K.len = Math.max(.4, Math.hypot(tp[0] - lug[0], tp[1] - lug[1])); say('Hooked on.'); } else say('Hook is not on the lifting eye.'); }
+    }
+  }
+}
+function hookPos(){ const tp = toWorld(T, K.tr, BOOM_Y); return [tp[0] + K.len*Math.sin(K.a), tp[1] - K.len*Math.cos(K.a)]; }
+function stepCrane(){
+  const l = held('KeyA') || held('ArrowLeft'), r = held('KeyD') || held('ArrowRight'), up = held('KeyW') || held('ArrowUp'), dn = held('KeyS') || held('ArrowDown');
+  const act = P.mode === 'crane';
+  if (act) {
+    K.tr = clamp(K.tr + (r - l)*2.4*STEP, MAST_X - V.reach, -.3);
+    const d = (dn - up)*1.6*STEP;
+    K.len = clamp(K.len + d, .4, 6.5);
+  }
+  const tp = toWorld(T, K.tr, BOOM_Y), vx = vAt(T, tp[0], tp[1])[0], ax = (vx - K.pvx)/STEP; K.pvx = vx;
+  if (!K.hooked) {
+    K.av += (-(G/K.len)*Math.sin(K.a) - ax/K.len*Math.cos(K.a) - .8*K.av)*STEP; K.a = clamp(K.a + K.av*STEP, -1.2, 1.2);
+    const gnd = hAt(hookPos()[0]) + .15, hp = hookPos(); if (hp[1] < gnd) K.len = Math.max(.4, K.len - (gnd - hp[1]));
+  } else { K.a *= .9; }
+  if (act && (r - l || dn - up)) S.noiseTarget += .45;
+}
+function stepFoot(){
+  const left = held('KeyA') || held('ArrowLeft'), right = held('KeyD') || held('ArrowRight'), dir = right - left;
+  P.drag = false; P.levering = false;
+  if (P.mode !== 'foot') return;
+  const grounded = P.z <= 0 && P.vz <= 0;
+  const dragging = held('Space') && C.pinned >= 3 && cargoOnGround() && Math.abs(P.x - C.x) < CHW + 2.2 && grounded;
+  const lever = held('KeyQ') && Math.abs(P.x - C.x) < CHW + 1.6 && cargoOnGround() && grounded;
+  let sp = (dragging ? V.drag : 4.6)*(P.hurt ? .55 : 1);
+  if (lever) sp = 0;
+  const vx = dir*sp;
+  if (dir) P.face = dir;
+  P.x += vx*STEP; P.walk += Math.abs(vx)*STEP;
+  if (grounded && held('KeyW') && !dragging && !lever) { P.vz = 5; }
+  P.vz -= 14*STEP; P.z = Math.max(0, P.z + P.vz*STEP); if (P.z === 0 && P.vz < 0) P.vz = 0;
+  P.drag = dragging && dir !== 0;
+  if (dragging && dir) { C.dragV = vx; S.noiseTarget += 1.1*V.dragNoise; scrape(STEP*V.dragDmg*(.05 + .4*roughAt(C.x))*.5); }
+  else C.dragV = null;
+  if (lever) {
+    P.levering = true; S.noiseTarget += .3; P.lever += STEP/1.7;
+    if (P.lever >= 1) {
+      P.lever = 0;
+      if (C.pinned < 3) { C.pinned++; S.beam = C.pinned/3; say(C.pinned < 3 ? 'The beam groans and shifts.' : 'The beam slides clear. The tech is free.'); }
+      else { C.x += P.face*.9; C.y += .25; C.vy = 1.2; C.w = -P.face*.3; say('Levered along.'); }
+    }
+  } else P.lever = Math.max(0, P.lever - STEP);
+}
+function stepTruckInput(){
+  if (P.mode === 'truck') {
+    const u = (held('KeyD') || held('ArrowRight')) - (held('KeyA') || held('ArrowLeft'));
+    T.u = S.fuel > 0 ? u : 0; T.brake = !!held('Space');
+    if (u && T.sink > .05 && T.sinkOn && Math.sign(u) !== Math.sign(T.lastU) && Math.abs(T.vx) < 1.6) T.sink = Math.max(0, T.sink - .09);
+    if (u) T.lastU = u;
+    if (!(T.grip[0] || T.grip[1])) { const lean = (held('KeyS') || held('ArrowDown')) - (held('KeyW') || held('ArrowUp')); T.w += lean*1.4*STEP; }
+    const sp = trailerSpeed();
+    S.fuel = Math.max(0, S.fuel - STEP*(.03 + .5*Math.abs(T.u)*(.8 + .7*T.loadF)*(sp > 1 || u ? 1 : 0)));
+    S.noiseTarget += .12 + .55*Math.abs(T.u)*(1 + .6*T.loadF) + .25*clamp(sp/10, 0, 1)*(1 + T.loadF);
+  } else { T.u = 0; T.brake = true; }
+  /* bogging */
+  const spd = Math.abs(T.vx);
+  if (T.sinkOn) {
+    const lw = .25 + clamp(bedMass()/V.bog, 0, 2);
+    T.sink = clamp(T.sink + lw*.12*(1 - clamp(spd/9, 0, 1))*STEP - (spd > 9 ? .1*STEP : 0), 0, .55);
+  } else T.sink = Math.max(0, T.sink - .5*STEP);
+}
+
+/* ---------- creature ---------- */
+function stepCreature(){
+  const target = P.mode === 'foot' ? P : T, tx = target.x;
+  Nz += (S.noiseTarget + S.crash - Nz)*.08; S.noiseTarget = 0; S.crash = Math.max(0, S.crash - STEP*.8);
+  if (!CR.on) {
+    if (Nz*V.attract > .35) CR.a += (Nz*V.attract - .35)*.035*STEP*60; else CR.a = Math.max(0, CR.a - .06*STEP);
+    if (CR.a >= 1) { CR.on = true; CR.st = 'prowl'; CR.a = 0; CR.x = tx + (rnd() < .5 && tx > 90 ? -1 : 1)*85; CR.x = Math.max(CR.x, -20); CR.quiet = 0; CR.shake = 0; say('Something is moving out in the dark.'); }
+    return;
+  }
+  const sp = trailerSpeed(), d = Math.abs(CR.x - tx);
+  CR.t += STEP;
+  if (CR.st === 'prowl') {
+    CR.face = Math.sign(tx - CR.x) || 1; CR.x += CR.face*V.cspeed*(Nz > .25 ? 1 : .35)*STEP;
+    if (Nz*V.attract < .25) CR.quiet += STEP; else CR.quiet = Math.max(0, CR.quiet - STEP);
+    if (CR.quiet > V.quiet && d > 9) { CR.st = 'flee'; CR.t = 0; say('It loses interest and drifts off.'); }
+    if (P.mode === 'foot' && d < 2.4 && P.z < 1.2) { P.bites++; P.hurt = 1; CR.st = 'flee'; CR.t = -4; say(P.bites > 2 ? 'It drags you down.' : 'It lunges and bites your leg.'); if (P.bites > 2) endRun('down'); }
+    else if (P.mode !== 'foot' && Math.abs(CR.x - T.x) < 3 && sp < V.cspeed*1.15) { CR.st = 'latched'; CR.shake = 0; CR.chew = 0; say('It has latched onto the hauler.'); }
+  } else if (CR.st === 'latched') {
+    CR.x = T.x - 2.2; CR.shake += STEP*(Math.max(0, sp - 8)*.2 + .15*roughAt(T.x)*sp/6) - (sp < 4 ? .2*STEP : 0); CR.shake = Math.max(0, CR.shake);
+    CR.chew += STEP; S.noiseTarget += .3;
+    if (CR.chew > 2.2) { CR.chew = 0; const live = straps.filter(s => !s.dead); if (live.length) { live[(rnd()*live.length) | 0].dead = true; say('It chews through a strap.'); } else if (onBed()) { C.vx -= 1.5; C.w += .3; } }
+    if (CR.shake > 1) { CR.st = 'flee'; CR.t = 0; say('Shaken off, it tumbles away behind you.'); }
+  } else if (CR.st === 'flee') {
+    CR.x -= (CR.face || 1)*V.cspeed*.9*STEP; if (CR.t > 6 || d > 120) { CR.on = false; CR.a = 0; }
+  }
+}
+
+/* ---------- step ---------- */
+function endRun(k){
+  if (S.end) return; S.end = k;
+  const q = toLocal(T, C.x, C.y), inBase = Math.abs(C.x - V.route - 25) < 40, loaded = onBed() || inBase;
+  const t = {home: loaded ? 'Home' : 'Home, without it', rolled: 'The hauler rolled', stranded: 'Out of fuel', down: 'Crew member down'}[k];
+  $('bt').textContent = t;
+  $('bs').textContent = k === 'home' ? (loaded ? 'This is the tech as it arrived. ' : 'The tech lies ' + Math.abs(C.x - T.x).toFixed(0) + ' m from the hauler, as left. ') + 'R to go again, N for a new route.' : 'The tech lies as it fell. R to try again.';
+  $('banner').classList.add('on');
+}
+function stepSim(){
+  S.t += STEP;
+  stepInput(); stepFoot(); stepTruckInput(); stepCrane();
+  for (let k = 0; k < SUB; k++) {
+    if (C.dragV != null && C.pinned >= 3) {   /* dragged: rides the ground like a sled */
+      let top = -9; for (let o = -1.5; o <= 1.5; o += .75) top = Math.max(top, hAt(C.x + o));
+      C.x += C.dragV*DT; C.vx = C.dragV; C.vy = C.w = 0; C.y += (top + CHH + .03 - C.y)*.2; C.th += (clamp(Math.atan((hAt(C.x + 1.5) - hAt(C.x - 1.5))/3), -.3, .3) - C.th)*.08; C.contact.fill(0); C.fx = C.fy = C.tq = 0;
+      wheelsForces(); integ(T); continue;
+    }
+    wheelsForces(); integ(T);
+    cargoForces(false);
+    if (C.pinned < 3) { C.fx = C.fy = C.tq = 0; C.vx = C.vy = C.w = 0; } else integ(C);
+  }
+  C.dragV = null;
+  straps = straps.filter(s => !s.dead);
+  if (D.lost) { D.lost.vy -= G*STEP; D.lost.x += D.lost.vx*STEP; D.lost.y += D.lost.vy*STEP; D.lost.th += D.lost.vx*STEP; const g = hAt(D.lost.x) + .1; if (D.lost.y < g) { D.lost.y = g; D.lost.vy = 0; D.lost.vx *= .8; } }
+  stepCreature();
+  if (S.end) return;
+  /* end conditions */
+  const sp = trailerSpeed();
+  if (P.mode !== 'foot' && T.x > V.route && T.x < V.route + 45 && sp < 1.5) endRun('home');
+  if (Math.abs(T.th) > V.tip*Math.PI/180 && sp < 2.5) S.rollT += STEP; else S.rollT = Math.max(0, S.rollT - STEP);
+  if (S.rollT > 1.5) endRun('rolled');
+  if (S.fuel <= 0 && sp < 1) S.strandT += STEP; else S.strandT = 0;
+  if (S.strandT > 3) endRun('stranded');
+  if (P.mode === 'foot' && Math.abs(P.x - T.x) < 5 && T.x > V.route + 0 && sp < 1) { /* walking back to a parked hauler at base also counts */ }
+}
+
+/* ---------- strap placement ---------- */
+function clickWorld(wx, wy, right){
+  if (S.end || paused) return;
+  if (P.mode !== 'foot') return say('Get out of the cab first (E).');
+  if (Math.hypot(P.x - T.x, P.z) > 11) return say('Too far from the hauler to reach the straps.');
+  if (trailerSpeed() > 1.5) return say('Hauler is moving.');
+  let hit = -1;
+  SPOINTS.forEach((p, i) => { const w = toWorld(T, p[0], p[1]); if (Math.hypot(w[0] - wx, w[1] - wy) < .6) hit = i; });
+  if (pending >= 0) { const q0 = toLocal(C, wx, wy); if (Math.abs(q0[0]) < CHW + .3 && Math.abs(q0[1]) < CHH + .3) hit = -1; }
+  if (right) { if (hit >= 0) { const s = straps.find(s => s.bi === hit); if (s) { s.dead = true; say('Strap cast off.'); } } return; }
+  if (hit >= 0) {
+    const s = straps.find(s => s.bi === hit);
+    if (s) { const fl = s.d0 - .3*V.strength*1000/8e4; s.rest = Math.max(fl, s.rest - .08); say(s.rest <= fl + .001 ? 'Strap is as tight as it goes.' : 'Ratchet clicks. Tighter.'); pending = -1; }
+    else { pending = hit; say('Now click the cargo to set the other end.'); }
+    return;
+  }
+  if (pending < 0) return;
+  const q = toLocal(C, wx, wy);
+  if (Math.abs(q[0]) > CHW + .6 || Math.abs(q[1]) > CHH + .6) { pending = -1; return say('Strap cancelled.'); }
+  if (!onBed()) { pending = -1; return say('The cargo is not on the bed.'); }
+  let lx = q[0], ly = q[1];
+  if (Math.abs(lx) < CHW && Math.abs(ly) < CHH) { const dx = CHW - Math.abs(lx), dy = CHH - Math.abs(ly); if (dx < dy) lx = Math.sign(lx || 1)*CHW; else ly = Math.sign(ly || 1)*CHH; }
+  lx = clamp(lx, -CHW, CHW); ly = clamp(ly, -CHH, CHH);
+  const bp = toWorld(T, SPOINTS[pending][0], SPOINTS[pending][1]), cp = toWorld(C, lx, ly), d0 = Math.max(.3, Math.hypot(bp[0] - cp[0], bp[1] - cp[1]));
+  straps.push({bi: pending, lx, ly, d0, rest: d0*(1 + V.slack/100), T: 0}); pending = -1; say('Strap set. Click its point on the bed to tighten.');
+}
+
+/* ---------- drawing ---------- */
+const ctx = $('c').getContext('2d');
+const SX = x => (x - camX)*SC + W/2, SY = y => GY - (y - camY)*SC;
+function frame2(x, y, th, fn, cx){ const g = cx || ctx; g.save(); g.translate(SX(x), SY(y)); g.scale(SC, -SC); g.rotate(th); fn(g); g.restore(); }
+function poly(g, pts, fill, stroke){ g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) g.stroke(); }
+function cargoArt(g, t, hang){
+  g.lineWidth = .06; g.strokeStyle = '#161a1c';
+  /* flywheel and gearbox ends */
+  g.fillStyle = '#3d4347'; g.beginPath(); g.arc(CHW, 0, .62, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = '#2b3033'; g.beginPath(); g.arc(CHW, 0, .22, 0, 7); g.fill();
+  g.fillStyle = '#444b4f'; g.fillRect(-CHW - .25, -.45, .3, .9); g.strokeRect(-CHW - .25, -.45, .3, .9);
+  /* block */
+  g.fillStyle = '#50585c'; g.fillRect(-CHW, -CHH, 2*CHW, 2*CHH); g.strokeRect(-CHW, -CHH, 2*CHW, 2*CHH);
+  g.fillStyle = '#3a4044'; g.fillRect(-CHW, -CHH, 2*CHW, .3);
+  g.fillStyle = 'rgba(150,84,48,.5)'; g.fillRect(-1.2, -.4, .7, .5); g.fillRect(.5, .1, .9, .4); g.fillRect(.1, -.7, .5, .25);
+  for (let k = 0; k < 3; k++) { g.fillStyle = '#626b70'; g.fillRect(-1.15 + k*.8, CHH, .6, .22); g.strokeRect(-1.15 + k*.8, CHH, .6, .22); }
+  g.fillStyle = '#262b2e'; g.fillRect(-.15, CHH, .3, .1); g.strokeStyle = '#c96a3b'; g.lineWidth = .09; g.beginPath(); g.arc(0, CHH + .1, .16, 0, 7); g.stroke();   /* lifting eye */
+  /* pipe */
+  g.strokeStyle = D.pipe > 3 ? '#8a5a44' : '#8d959a'; g.lineWidth = .14; g.beginPath(); g.moveTo(.6, CHH + .2);
+  if (D.pipe > 1.5) { g.quadraticCurveTo(.9, CHH + .95, 1.35, CHH + .7); g.lineTo(1.5, CHH + .45); } else g.quadraticCurveTo(1, CHH + .7, 1.4, CHH + .2);
+  g.stroke();
+  g.fillStyle = '#aab2b6'; g.fillRect(.5, CHH + .12, .22, .12);
+  /* cover plate */
+  const px = -1.55, py = .02, pw = .85, ph = .7;
+  if (!D.plateGone) {
+    g.save();
+    if (D.plate > 1.2) { const w = Math.min(1, (D.plate - 1.2)/1.5), j = Math.sin(t*(11 + D.plate*2))*.05*w; g.translate(px, py); g.rotate(.18*w + j); g.translate(-px, -py); }
+    g.fillStyle = '#6a7378'; g.fillRect(px, py, pw, ph); g.strokeStyle = '#161a1c'; g.lineWidth = .05; g.strokeRect(px, py, pw, ph);
+    g.fillStyle = '#2a2f32'; [[px + .1, py + .1], [px + pw - .15, py + .1], [px + .1, py + ph - .15], [px + pw - .15, py + ph - .15]].forEach((b, i) => { if (D.plate > 1.2 && i > 1) return; g.fillRect(b[0], b[1], .06, .06); });
+    g.restore();
+  } else { g.fillStyle = '#1b1f21'; g.fillRect(px, py, pw, ph); g.fillStyle = '#0b0d0e'; [[px + .1, py + .1], [px + pw - .15, py + .1], [px + .1, py + ph - .15], [px + pw - .15, py + ph - .15]].forEach(b => g.fillRect(b[0], b[1], .08, .08)); }
+  /* dents */
+  D.dents.forEach(d => { g.fillStyle = 'rgba(10,12,14,.5)'; g.beginPath(); g.ellipse(d.x, d.y, d.r, d.r*.8, 0, 0, 7); g.fill(); g.strokeStyle = 'rgba(190,196,198,.35)'; g.lineWidth = .04; g.beginPath(); g.arc(d.x, d.y, d.r, .5, 2.4); g.stroke(); });
+  /* hiss */
+  if (D.pipe > 1.5) { const n = D.pipe > 3 ? 7 : 4; for (let k = 0; k < n; k++) { const a = (t*.9 + k/n) % 1; g.fillStyle = 'rgba(220,226,228,' + (.5*(1 - a)).toFixed(2) + ')'; g.beginPath(); g.arc(1.45 + a*.5 + Math.sin(t*3 + k)*.05, CHH + .5 + a*1.5, .1 + a*.3, 0, 7); g.fill(); } }
+  if (D.body > 4.5) { g.strokeStyle = 'rgba(20,16,12,.8)'; g.lineWidth = .06; g.beginPath(); g.moveTo(-.4, -CHH); g.lineTo(-.4, -CHH - .25 - ((t*1.5) % 1)*.4); g.stroke(); }
+}
+function drawTruck(){
+  frame2(T.x, T.y, T.th, g => {
+    g.lineWidth = .05; g.strokeStyle = '#0c0e0f';
+    poly(g, [[-3.5, -.25], [3.5, -.25], [3.5, .7], [-3.5, .7]], '#3b3f40', 1);
+    g.fillStyle = '#5a4a3a'; g.fillRect(-3.4, .6, 3.8, .12);
+    poly(g, [[.4, .4], [.4, 2.5], [2.3, 2.5], [3.0, 1.7], [3.5, 1.5], [3.5, .4]], '#a85d38', 1);
+    poly(g, [[.9, 1.55], [.9, 2.3], [2.2, 2.3], [2.8, 1.55]], P.mode === 'foot' ? '#1b2428' : '#2a4a50');
+    if (P.mode !== 'foot') { g.fillStyle = '#cfc6b2'; g.beginPath(); g.arc(1.6, 1.85, .25, 0, 7); g.fill(); }
+    g.fillStyle = '#d6c58a'; g.fillRect(3.45, .9, .15, .3);
+    g.fillStyle = '#2c3032'; g.fillRect(.4, BED.y, .15, 1.3);
+    g.fillStyle = '#c96a3b'; g.fillRect(-3.3, BED.y, .1, 1.3);    /* rear stanchion */
+    g.strokeStyle = '#b8b2a2'; g.lineWidth = .12; g.beginPath(); g.moveTo(MAST_X, .7); g.lineTo(MAST_X, BOOM_Y); g.lineTo(MAST_X - V.reach, BOOM_Y); g.stroke();
+    g.lineWidth = .06; g.beginPath(); g.moveTo(MAST_X, BOOM_Y); g.lineTo(-.4, BOOM_Y); g.stroke();
+    g.fillStyle = '#e3a33f'; g.fillRect(K.tr - .25, BOOM_Y - .2, .5, .4);
+  });
+  [1, -1].forEach(sx => {
+    const wc = toWorld(T, sx*2.2, 0);
+    frame2(wc[0], wc[1], T.wr, g => {
+      g.fillStyle = '#14171a'; g.beginPath(); g.arc(0, 0, WR, 0, 7); g.fill();
+      g.fillStyle = '#6d7377'; g.beginPath(); g.arc(0, 0, .42, 0, 7); g.fill();
+      g.strokeStyle = '#2a2f32'; g.lineWidth = .08; for (let k = 0; k < 4; k++) { g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(k*1.57)*.4, Math.sin(k*1.57)*.4); g.stroke(); }
+    });
+  });
+}
+function drawFigure(){
+  if (P.mode !== 'foot') return;
+  const y = hAt(P.x) + P.z, sw = P.z > 0 ? 0 : Math.sin(P.walk*1.6)*.35;
+  frame2(P.x, y, 0, g => {
+    g.scale(P.face, 1);
+    g.fillStyle = P.hurt ? '#c9a05c' : '#bdb6a4';
+    g.save(); g.translate(0, .8); g.rotate(sw); g.fillRect(-.08, -.8, .16, .8); g.restore();
+    g.save(); g.translate(0, .8); g.rotate(-sw*(P.hurt ? .3 : 1)); g.fillStyle = P.hurt ? '#e3a33f' : '#a49d8c'; g.fillRect(-.08, -.8, .16, .8); g.restore();
+    g.fillStyle = '#cfc6b2'; g.fillRect(-.22, .8, .44, .8); g.beginPath(); g.arc(0, 1.85, .2, 0, 7); g.fill();
+    g.fillStyle = '#e3a33f'; g.fillRect(-.22, 1.95, .44, .1);
+    if (P.levering || P.drag) { g.strokeStyle = '#8e958f'; g.lineWidth = .07; g.beginPath(); g.moveTo(.1, 1.2); g.lineTo(.9, P.levering ? .5 + Math.sin(S.t*8)*.1 : 1.0); g.stroke(); }
+    if (P.levering) { g.strokeStyle = '#6fdcc0'; g.lineWidth = .08; g.beginPath(); g.arc(0, 2.5, .3, -1.57, -1.57 + 6.28*P.lever); g.stroke(); }
+  });
+}
+function drawCreature(){
+  if (!CR.on) return;
+  const y = hAt(CR.x), d = Math.hypot(CR.x - T.x, 0), vis = d < 30 ? 1 : 0;
+  frame2(CR.x, y, 0, g => {
+    g.scale(CR.face || 1, 1);
+    if (vis) { g.fillStyle = '#1a1c1d'; g.beginPath(); g.ellipse(0, .55, 1.1, .5, 0, 0, 7); g.fill(); [-.9, -.4, .4, .9].forEach(l => { g.strokeStyle = '#1a1c1d'; g.lineWidth = .1; g.beginPath(); g.moveTo(l*.7, .5); g.lineTo(l + Math.sin(S.t*9 + l*3)*.2, 0); g.stroke(); }); }
+    g.fillStyle = 'rgba(111,220,192,' + (.55 + .3*Math.sin(S.t*5)) + ')'; g.fillRect(.75, .75, .1, .08); g.fillRect(.95, .75, .1, .08);
+  });
+}
+function drawCargoWorld(){
+  frame2(C.x, C.y, C.th, g => cargoArt(g, S.t));
+  if (C.pinned < 3) {
+    const a = .12 + (S.beam < 1 ? 0 : 0);
+    frame2(C.x - .2, C.y + 1.4, .2 + S.beam*.5 + a, g => { g.fillStyle = '#5a4332'; g.fillRect(-3, -.2, 6, .4); g.fillStyle = '#74573f'; g.fillRect(-3, .05, 6, .1); });
+  }
+  if (D.lost) frame2(D.lost.x, D.lost.y, D.lost.th, g => { g.fillStyle = '#6a7378'; g.fillRect(-.42, -.1, .85, .2); });
+}
+function drawStraps(){
+  ctx.lineCap = 'round';
+  const nearTruck = P.mode === 'foot' && Math.hypot(P.x - T.x, P.z) < 11;
+  SPOINTS.forEach((p, i) => {
+    const w = toWorld(T, p[0], p[1]), has = straps.some(s => s.bi === i);
+    if (nearTruck || pending === i) { ctx.strokeStyle = pending === i ? '#6fdcc0' : has ? '#e3a33f' : 'rgba(228,221,207,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(SX(w[0]), SY(w[1]), .28*SC + (pending === i ? 2*Math.sin(S.t*8) : 0), 0, 7); ctx.stroke(); }
+  });
+  straps.forEach(s => {
+    const bp = toWorld(T, SPOINTS[s.bi][0], SPOINTS[s.bi][1]), cp = toWorld(C, s.lx, s.ly), d = Math.hypot(bp[0] - cp[0], bp[1] - cp[1]);
+    const r = clamp(s.T/(V.strength*1000), 0, 1), sag = Math.max(0, (s.rest - d)*.9), fray = r > .6 ? Math.sin(S.t*40)*.5 : 0;
+    ctx.strokeStyle = r > .6 ? '#e2553f' : '#e3a33f'; ctx.lineWidth = 3 - r*1.5;
+    ctx.beginPath(); ctx.moveTo(SX(bp[0]), SY(bp[1])); ctx.quadraticCurveTo(SX((bp[0] + cp[0])/2) + fray, SY((bp[1] + cp[1])/2) + sag*SC*1.2, SX(cp[0]), SY(cp[1])); ctx.stroke();
+    ctx.fillStyle = '#e3a33f'; ctx.beginPath(); ctx.arc(SX(cp[0]), SY(cp[1]), 3, 0, 7); ctx.fill();
+  });
+  if (K.tr !== undefined && (P.mode === 'crane' || K.hooked || K.len < 6.4)) {
+    const tp = toWorld(T, K.tr, BOOM_Y), hp = K.hooked ? toWorld(C, 0, CHH + .1) : hookPos();
+    ctx.strokeStyle = '#c9c2b0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(SX(tp[0]), SY(tp[1])); ctx.lineTo(SX(hp[0]), SY(hp[1])); ctx.stroke();
+    ctx.strokeStyle = '#e3a33f'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(SX(hp[0]), SY(hp[1]) + 4, 5, -.5, 3.6); ctx.stroke();
+    if (P.mode === 'crane' && !K.hooked && C.pinned >= 3) { const lug = toWorld(C, 0, CHH); if (Math.hypot(hp[0] - lug[0], hp[1] - lug[1]) < 1.4) { ctx.strokeStyle = '#6fdcc0'; ctx.beginPath(); ctx.arc(SX(lug[0]), SY(lug[1]), 14, 0, 7); ctx.stroke(); } }
+  }
+}
+function drawWorld(){
+  const g = ctx, gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#0a0d10'); gr.addColorStop(.7, '#1d1a17'); gr.addColorStop(1, '#2a2119');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  stars.forEach(s => { g.fillStyle = 'rgba(228,221,207,' + s[2]*.5 + ')'; g.fillRect(s[0], s[1], 1.5, 1.5); });
+  [[.25, '#14171a', 55], [.5, '#1a1b1b', 30]].forEach(l => {
+    g.fillStyle = l[1]; g.beginPath(); g.moveTo(0, H);
+    for (let px = 0; px <= W; px += 12) { const wx = (px - W/2)/SC*l[0]*2 + camX*l[0]*2 + 0; g.lineTo(px, GY - (camY*l[0]*SC) - 20 - l[2]*(1 + Math.sin(wx*.03) *.5 + Math.sin(wx*.11)*.25)); }
+    g.lineTo(W, H); g.fill();
+  });
+  const x0 = camX - W/2/SC - 2, x1 = camX + W/2/SC + 2;
+  /* outpost ruins (behind the ground line) */
+  const ox = SX(0);
+  if (x0 < 140) {
+    g.fillStyle = '#23272a'; g.strokeStyle = '#3a4146'; g.lineWidth = 2;
+    const tx = outpost.tx;
+    [[tx - 12, 5.5, 0], [tx + 8, 3.2, .1], [tx + 15, 6.5, -.05]].forEach(p => { const y = hAt(p[0]); frame2(p[0], y, p[2], gg => { gg.fillRect(-.6, 0, 1.2, p[1]); gg.strokeStyle = '#3a4146'; gg.lineWidth = .08; gg.strokeRect(-.6, 0, 1.2, p[1]); }); });
+    frame2(tx - 3, hAt(tx - 3) + 6.2, -.18, gg => { gg.fillStyle = '#2d3235'; gg.fillRect(-10, -.3, 20, .6); gg.strokeStyle = '#4a5358'; gg.lineWidth = .06; gg.strokeRect(-10, -.3, 20, .6); });
+    frame2(tx + 28, hAt(tx + 28) + .4, .1, gg => { gg.strokeStyle = '#4a5358'; gg.lineWidth = .18; gg.beginPath(); gg.moveTo(-8, 0); gg.lineTo(8, .3); gg.stroke(); gg.beginPath(); gg.moveTo(-5, 0); gg.lineTo(-4, .9); gg.moveTo(4, .2); gg.lineTo(4.7, 1); gg.stroke(); });
+    frame2(10, hAt(10) + .3, 0, gg => { gg.fillStyle = '#2b2a28'; gg.beginPath(); gg.ellipse(0, .6, 4, 1.4, 0, Math.PI, 0); gg.fill(); });
+    g.fillStyle = '#24282b'; outpost.rocks.forEach(r => frame2(r[0], hAt(r[0]), r[2], gg => gg.fillRect(-r[1]/2, 0, r[1], .6)));
+  }
+  /* base */
+  const bx = V.route + 25;
+  if (x1 > V.route - 20) {
+    for (let k = 0; k < 4; k++) { const x = bx + 8 + k*9, y = hAt(x); frame2(x, y, 0, gg => { gg.fillStyle = k % 2 ? '#2f3a3c' : '#3b3f40'; gg.fillRect(-3.5, 0, 7, 3.2); gg.fillStyle = '#6fdcc0'; gg.globalAlpha = .6; gg.fillRect(-2.5, 1.7, 1.2, .8); gg.fillRect(1, 1.7, 1.2, .8); gg.globalAlpha = 1; }); }
+    for (let k = 0; k < 3; k++) { const x = V.route + 4 + k*14, y = hAt(x); frame2(x, y, 0, gg => { gg.strokeStyle = '#8e958f'; gg.lineWidth = .12; gg.beginPath(); gg.moveTo(0, 0); gg.lineTo(0, 5); gg.stroke(); const lg = gg.createRadialGradient(0, 5, 0, 0, 5, 7); lg.addColorStop(0, 'rgba(227,163,63,.5)'); lg.addColorStop(1, 'rgba(227,163,63,0)'); gg.fillStyle = lg; gg.fillRect(-7, -2, 14, 14); }); }
+  }
+  /* terrain */
+  g.beginPath(); g.moveTo(0, H);
+  for (let px = -4; px <= W + 4; px += 4) { const wx = camX + (px - W/2)/SC; g.lineTo(px, SY(hAt(wx))); }
+  g.lineTo(W + 4, H); g.closePath();
+  const tg = g.createLinearGradient(0, GY - 120, 0, H); tg.addColorStop(0, '#3a2c22'); tg.addColorStop(1, '#17120f'); g.fillStyle = tg; g.fill();
+  g.strokeStyle = '#6a5240'; g.lineWidth = 2; g.stroke();
+  g.fillStyle = 'rgba(138,117,82,.35)';
+  softZones.forEach(z => { if (z[1] < x0 || z[0] > x1) return; g.beginPath(); const a = Math.max(z[0], x0), b = Math.min(z[1], x1); g.moveTo(SX(a), SY(hAt(a))); for (let x = a; x <= b; x += .5) g.lineTo(SX(x), SY(hAt(x))); for (let x = b; x >= a; x -= .5) g.lineTo(SX(x), SY(hAt(x) - 1.1)); g.fill(); });
+  rockList.forEach(r => { if (r < x0 || r > x1) return; frame2(r, hAt(r), 0, gg => { gg.fillStyle = '#4a4540'; gg.beginPath(); gg.ellipse(0, .1, .8, .45, 0, 0, 7); gg.fill(); }); });
+  /* base arrival strip */
+  g.fillStyle = 'rgba(111,220,192,.5)'; const a = SX(V.route), b = SX(V.route + 45); if (b > 0 && a < W) { g.fillRect(a, SY(hAt(V.route)) - 3, 3, 8); g.fillRect(b, SY(hAt(V.route + 45)) - 3, 3, 8); }
+}
+function drawSoftFront(){
+  ctx.fillStyle = 'rgba(138,117,82,.55)';
+  const x0 = T.x - 6, x1 = T.x + 6;
+  softZones.forEach(z => { if (z[1] < x0 || z[0] > x1) return; ctx.beginPath(); const a = Math.max(z[0], x0), b = Math.min(z[1], x1); ctx.moveTo(SX(a), SY(hAt(a) - .1)); for (let x = a; x <= b; x += .5) ctx.lineTo(SX(x), SY(hAt(x) - .1)); for (let x = b; x >= a; x -= .5) ctx.lineTo(SX(x), SY(hAt(x) - .9)); ctx.fill(); });
+}
+function drawHud(){
+  ctx.font = '12px "JetBrains Mono",monospace'; ctx.textAlign = 'center';
+  /* ground sense: the distance home reads as a marker on the horizon, nothing else */
+  const bxs = SX(V.route + 25);
+  if (bxs > W - 14) { ctx.fillStyle = '#6fdcc0'; ctx.fillText('base >', W - 40, 24); } else if (bxs < 14) { ctx.fillText('< base', 40, 24); }
+  if (S.t < 1e9 && CR.on && Math.abs(CR.x - camX) > W/2/SC) { ctx.fillStyle = 'rgba(111,220,192,.8)'; const left = CR.x < camX; ctx.fillRect(left ? 6 : W - 10, GY - 40, 4, 3); ctx.fillRect(left ? 6 : W - 10, GY - 34, 4, 3); }
+}
+function drawEnd(){
+  const c = $('endc').getContext('2d'); c.clearRect(0, 0, 520, 260);
+  c.fillStyle = '#17120f'; c.fillRect(0, 200, 520, 60); c.strokeStyle = '#6a5240'; c.beginPath(); c.moveTo(0, 200); c.lineTo(520, 200); c.stroke();
+  c.save(); c.translate(260, 200 - 45); c.scale(52, -52); c.rotate(onBed() || C.th === 0 ? 0 : 0); cargoArt(c, S.t); c.restore();
+  if (D.lost) { c.fillStyle = '#6a7378'; c.fillRect(380, 192, 36, 8); }
+}
+function render(){
+  const f = P.mode === 'foot' ? P : T, fy = P.mode === 'foot' ? hAt(P.x) : T.y;
+  camX += (f.x + (P.mode === 'foot' ? 0 : T.vx*.35) - camX)*.08; camY += (fy + 3 - camY)*.05;
+  if (S.end) { camX = camX; }
+  drawWorld(); drawCreature(); drawTruck(); drawCargoWorld(); drawFigure(); drawStraps(); drawSoftFront(); drawHud();
+  if (S.end) drawEnd();
+}
+
+/* ---------- readouts ---------- */
+function hud(){
+  $('r-speed').textContent = trailerSpeed().toFixed(1) + ' m/s';
+  const fr = S.fuel/V.fuel, fe = $('r-fuel'); fe.textContent = Math.round(S.fuel); fe.className = fr < .15 ? 'c' : fr < .3 ? 'w' : ''; $('a-fuel').style.width = (fr*100).toFixed(0) + '%';
+  $('r-dist').textContent = Math.max(0, V.route - T.x).toFixed(0) + ' m';
+  $('r-noise').textContent = Nz < .3 ? 'quiet' : Nz < .9 ? 'loud' : 'very loud'; $('a-noise').style.width = clamp(Nz*50, 0, 100).toFixed(0) + '%';
+  $('r-mode').textContent = {foot: 'on foot', truck: 'driving', crane: 'crane'}[P.mode] + (T.sink > .15 ? ', bogged' : '');
+  $('r-straps').textContent = straps.length + ' / ' + SPOINTS.length;
+  $('r-time').textContent = S.t.toFixed(0) + ' s'; $('r-seed').textContent = V.seed;
+  let h = '';
+  if (P.mode === 'foot') {
+    if (C.pinned < 3 && Math.abs(P.x - C.x) < CHW + 2) h = 'Q (hold): pry at the beam that pins the tech.';
+    else if (cargoOnGround() && Math.abs(P.x - C.x) < CHW + 2.2) h = 'Space + A/D: drag it (slow, loud). Q: lever it. Or reverse the hauler up and use the crane.';
+    else if (Math.hypot(P.x - T.x, P.z) < 6) h = onBed() ? 'Click a strap point, then the cargo. E: get in.' : 'E: get in the cab. C in the cab: crane.';
+  } else if (P.mode === 'crane') h = 'A/D trolley, W/S hook, Space hook on / release. C: crane off.';
+  else h = 'D gas, A brake / reverse, Space handbrake, C crane, E get out.';
+  $('hint').textContent = h;
+}
+
+/* ---------- control flow ---------- */
+function restart(){
+  reset(); Q.length = 0; log = []; $('log').innerHTML = ''; $('banner').classList.remove('on'); acc = 0;
+  say('The tech is under a fallen beam. The hauler is parked up the slope.');
+}
+function setPause(p){ paused = p; $('pausemsg').classList.toggle('on', p); lastT = performance.now(); }
+function frame(now){
+  const dt = Math.min(.1, (now - lastT)/1000); lastT = now;
+  if (!paused) { acc += dt; let n = 0; while (acc >= STEP && n < 5) { if (!S.end) stepSim(); acc -= STEP; n++; } if (n === 5) acc = 0; }
+  render(); hud();
+  requestAnimationFrame(frame);
+}
+function buildTune(){
+  const box = $('tune'); box.innerHTML = '';
+  TUNE.forEach(([k, label, mn, mx, st]) => {
+    const l = document.createElement('label'), o = document.createElement('output'), inp = document.createElement('input');
+    inp.type = 'range'; inp.min = mn; inp.max = mx; inp.step = st; inp.value = V[k]; o.textContent = V[k];
+    inp.addEventListener('input', () => { V[k] = +inp.value; o.textContent = V[k]; writeHash(); if (['seed', 'route', 'rough', 'soft', 'rocks', 'weight'].includes(k)) restart(); });
+    inp.addEventListener('change', () => inp.blur());
+    l.append(label, inp, o); box.append(l);
+  });
+}
+addEventListener('keydown', e => {
+  const c = e.code;
+  if (e.target.tagName === 'INPUT' && (c === 'Space' || c.startsWith('Arrow'))) return;
+  if (c === 'Space' || c.startsWith('Arrow')) e.preventDefault();
+  if (e.repeat) return;
+  keys[c] = 1;
+  if (c === 'Space' || c === 'KeyE' || c === 'KeyC') Q.push(c);
+  else if (c === 'KeyR') restart();
+  else if (c === 'KeyN') { V.seed = 1 + (Math.random()*9999 | 0); writeHash(); buildTune(); restart(); }
+  else if (c === 'KeyP') setPause(!paused);
+});
+addEventListener('keyup', e => { delete keys[e.code]; });
+addEventListener('blur', () => { for (const k in keys) delete keys[k]; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+addEventListener('hashchange', () => { readHash(); buildTune(); restart(); });
+$('c').addEventListener('mousedown', e => {
+  const r = $('c').getBoundingClientRect(), mx = (e.clientX - r.left)*W/r.width, my = (e.clientY - r.top)*H/r.height;
+  clickWorld(camX + (mx - W/2)/SC, camY + (GY - my)/SC, e.button === 2);
+});
+$('c').addEventListener('contextmenu', e => e.preventDefault());
+$('reset').addEventListener('click', e => { TUNE.forEach(t => V[t[0]] = t[5]); writeHash(); buildTune(); restart(); e.target.blur(); });
+
+readHash(); buildTune(); restart();
+requestAnimationFrame(frame);
+window.__e11 = {V, get S(){return S;}, get T(){return T;}, get C(){return C;}, get P(){return P;}, get D(){return D;}, get straps(){return straps;}, step: stepSim, keys, Q, clickWorld, hookPos, get K(){return K;}};
+})();
+</script>
+</body>
+</html>

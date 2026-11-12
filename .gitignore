@@ -10,3 +10,12 @@ export_presets.cfg
 *.o
 *.dblite
 bin/
+
+# .NET
+obj/
+.vs/
+*.user
+TestResults/
+
+# Godot
+game/.godot/

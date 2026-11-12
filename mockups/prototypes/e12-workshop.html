@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STRATA E12 · Workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@500;700&display=swap">
+<style>
+:root{color-scheme:dark;--bg:#0c0f11;--panel:#13171a;--line:#262d32;--ink:#e4ddcf;--muted:#8e958f;--rust:#c96a3b;--glow:#6fdcc0;--warn:#e3a33f;--crit:#e2553f;
+--paper:#e3dbc9;--paper-ink:#2b2621;--paper-rule:#c9bfa9;
+--f-title:"Big Shoulders Stencil Display",Impact,sans-serif;--f-body:"Barlow","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",Consolas,monospace;--f-hand:"Caveat","Segoe Print","Comic Sans MS",cursive}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body)}
+.wrap{max-width:1240px;margin:0 auto;padding:18px 16px 40px}
+h1{font:800 34px/1 var(--f-title);letter-spacing:.04em;margin:0;text-transform:uppercase}
+h1 small{color:var(--rust);font-size:.55em;letter-spacing:.12em;margin-right:.6em}
+.q{color:var(--muted);margin:6px 0 14px;max-width:70ch}
+.play{display:grid;grid-template-columns:minmax(0,1080px) 130px;gap:14px;align-items:start}
+.stage{position:relative;border:1px solid var(--line);background:#000;aspect-ratio:180/100;cursor:crosshair;user-select:none}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:pixelated;pointer-events:none}
+#fx{image-rendering:auto}
+.msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:rgba(8,10,12,.72);font:800 30px/1.2 var(--f-title);letter-spacing:.06em;text-transform:uppercase;padding:20px}
+.msg small{display:block;font:400 14px var(--f-mono);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:8px}
+.msg.on{display:flex}
+.side{background:var(--panel);border:1px solid var(--line);padding:12px;text-align:center}
+.side .cap{font:400 11px var(--f-mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.side svg{width:100%;height:auto;max-width:100px}
+.p{fill:#151a1d;stroke:#4a5358;stroke-width:1.5}.p.hurt{stroke:var(--warn);fill:rgba(227,163,63,.3)}.p.down{stroke:var(--crit);fill:rgba(226,85,63,.3)}
+.strip{display:flex;flex-wrap:wrap;gap:6px 22px;background:var(--panel);border:1px solid var(--line);border-top:0;padding:10px 14px;font:400 13px var(--f-mono);max-width:1080px}
+.strip div span{color:var(--muted);margin-right:6px;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+.strip b{font-weight:600}
+.bar{display:inline-block;width:54px;height:5px;background:var(--line);vertical-align:middle;margin-left:6px}.bar i{display:block;height:100%;background:var(--rust)}
+#log{max-width:1080px;min-height:22px;font:400 13px var(--f-mono);color:var(--rust);padding:6px 2px}
+h2{font:600 18px var(--f-title);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+.tune{background:var(--panel);border:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:8px 28px;max-width:1240px}
+.tune label{display:grid;grid-template-columns:170px 1fr 48px;gap:8px;align-items:center;font-size:13px}
+.tune output{font:400 12px var(--f-mono);color:var(--glow);text-align:right}
+input[type=range]{accent-color:var(--rust);width:100%}
+input:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+button{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:6px 14px;font:500 13px var(--f-body);cursor:pointer;margin-top:6px}
+button:hover{border-color:var(--rust)}
+.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:4px 24px;font-size:13px;color:var(--muted)}
+kbd{font:600 12px var(--f-mono);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:1px 6px;margin-right:6px}
+#book{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(6,8,9,.82);z-index:10}
+#book.on{display:flex}
+.page{width:min(720px,94vw);background:var(--paper);color:var(--paper-ink);border-radius:3px;padding:18px 26px 20px;box-shadow:0 6px 30px #000a;border-left:10px solid #8a6a4a}
+.page header{display:flex;justify-content:space-between;align-items:center;font:400 11px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:#6b6254}
+.page button{background:transparent;color:var(--paper-ink);border-color:#9c917b;padding:3px 10px;margin:0 0 0 6px}
+.page input,.page textarea{display:block;width:100%;background:transparent;border:0;color:var(--paper-ink);font-family:var(--f-hand);resize:none}
+.page input{font-size:34px;font-weight:700;border-bottom:1px solid var(--paper-rule);margin-top:8px;line-height:44px}
+.page textarea{font-size:25px;line-height:32px;height:416px;padding:0;background-image:repeating-linear-gradient(to bottom,transparent 0 31px,var(--paper-rule) 31px 32px);background-attachment:local}
+@media(max-width:900px){.play{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1><small>E12</small>Workshop</h1>
+<p class="q">Is hands-on crafting from carried resources satisfying, and can it go wrong in interesting ways?</p>
+<div class="play">
+  <div class="stage" id="stage">
+    <canvas id="sim" width="180" height="100"></canvas>
+    <canvas id="fx" width="1080" height="600"></canvas>
+    <canvas id="air" width="180" height="100"></canvas>
+    <div class="msg" id="banner"></div>
+    <div class="msg" id="pausemsg">Paused<small>press P to resume</small></div>
+  </div>
+  <aside class="side">
+    <div class="cap">body</div>
+    <svg viewBox="0 0 110 220" role="img" aria-label="Body silhouette showing hurt parts">
+      <circle id="b-0" class="p" cx="55" cy="22" r="14"/><rect id="b-1" class="p" x="34" y="40" width="42" height="64" rx="10"/>
+      <rect id="b-2" class="p" x="18" y="44" width="12" height="54" rx="6"/><rect id="b-3" class="p" x="80" y="44" width="12" height="54" rx="6"/>
+      <rect class="p b-4" x="36" y="108" width="16" height="50" rx="7"/><rect class="p b-4" x="36" y="160" width="16" height="50" rx="7"/>
+      <rect class="p b-5" x="58" y="108" width="16" height="50" rx="7"/><rect class="p b-5" x="58" y="160" width="16" height="50" rx="7"/>
+    </svg>
+  </aside>
+</div>
+<div class="strip">
+  <div><span>made</span><b id="r-made"></b></div><div><span>junk</span><b id="r-junk"></b></div><div><span>time</span><b id="r-time"></b></div>
+  <div><span>noise</span><span class="bar"><i id="a-noise"></i></span></div><div><span>tech</span><b id="r-tech"></b></div><div><span>seed</span><b id="r-seed"></b></div>
+</div>
+<div id="log"></div>
+
+<h2>Tuning</h2>
+<div class="tune" id="tune"></div>
+<button id="reset">Reset to defaults</button>
+
+<h2>Controls</h2>
+<div class="keys">
+  <div><kbd>A</kbd><kbd>D</kbd>walk. The mouse aims both hands (reach is limited)</div>
+  <div><kbd>E</kbd>pick up what you aim at with a free hand; else use it (door, vent chain, switch, pile); else put down / place what you hold</div>
+  <div><kbd>Q</kbd>drop the left-hand item</div>
+  <div><kbd>Left mouse</kbd>use the right-hand item (strike, grip, spray, light, throw)</div>
+  <div><kbd>Right mouse</kbd>use the left-hand item. An empty hand pumps or twists what it aims at; hold to keep going</div>
+  <div><kbd>Space</kbd>pump the bellows when in reach</div>
+  <div><kbd>J</kbd>open the journal when you hold it (game pauses). <kbd>Esc</kbd> closes</div>
+  <div><kbd>R</kbd>restart, same seed. <kbd>N</kbd>new seed. <kbd>P</kbd>pause (also when tab hidden)</div>
+  <div>No list tells you what makes what. Try things, and write down what worked.</div>
+</div>
+</div>
+
+<div id="book"><div class="page">
+  <header><span>Field journal · yours</span><span><span id="pgno"></span><button id="pg-prev">‹</button><button id="pg-next">›</button><button id="pg-new">new page</button><button id="pg-close">close (Esc)</button></span></header>
+  <input id="pg-title" maxlength="60" placeholder="name this page" aria-label="Page title">
+  <textarea id="pg-body" spellcheck="false" aria-label="Page text"></textarea>
+</div></div>
+
+<script>
+/* ===========================================================================================
+   HIDDEN RECIPE LIST (implemented below; none of this appears in the UI, no menu, no hints)
+   A "strike" is a hammer blow on the bench; "glow" = metal heat in [0.5, 0.5+glow window];
+   "quench" = dunk in the barrel.
+   - metal lump      : 1 ore in forge, heat >= 0.7 for `smelt` s. Two ores finishing within ~30% of
+                       each other fuse into one heavy lump (mass 2).
+   - splint          : mass-1 lump, 1-3 hot strikes (flattened), then cool.
+   - piton           : mass-1 lump, 4-8 hot strikes, then cool.  (9+ strikes = slag)
+   - ladder rung     : mass-2 lump, 3-10 hot strikes.            (fewer or more = slag)
+     Metal quality = share of strikes landed in the glow window x quench factor (dunk while heat in
+     [0.30, 0.30+quench window] = 1.0, no quench 0.85, too hot = 0.6 or cracks, too cold 0.9).
+     Cold strikes (heat < 0.4, or struck with a rock) do not shape; two of them crack it (slag).
+   - glass jar       : 2 sand in forge, heat >= 0.8 for `melt` s -> molten glass; 1-2 hot strikes on the
+                       bench, then cool slowly. Quenching hot glass shatters it; 3+ strikes = slag;
+                       one sand only gives a bead (junk).
+   - rope            : 3 fibre clamped in the vice, an empty hand twists (hold the mouse); release at
+                       0.85-1.3 x `twist` time. Early = cord (junk), late = frayed (junk). 1-2 fibre =
+                       cord. Quality = how close to the ideal twist time.
+   - blade           : obsidian on the bench, knapped with a rock in hand (a hammer shatters it 35% per
+                       strike vs 8% for the rock); done after 5-7 strikes, quality from strike rhythm.
+                       Heated obsidian cracks to shards.
+   - flare           : 1+ salt and 1+ fibre on the bench, methane sprayed at them from the canister, then
+                       3 hammer strikes (tamp). 2 salt makes it better.
+   - filter          : 2+ fibre and 1+ sand (no salt, no methane) on the bench, 3 hammer strikes.
+   - anything else   : 3 strikes on a mix of 2+ unmatched items = sludge (junk). Fibre, rope, flare and
+                       the like in the forge burn to ash.
+   Accidents: bare hand on a hot piece (arm burns, then you drop it); a dropped glowing piece (or lit
+   flare) = floor fire that spreads to fibre, rope, journal, bench, shelf; methane within `ignite`
+   cells of the forge ignites (and any flame ignites methane); sparks from hammering with methane
+   about, from over-hot metal, or from the blower; canister near flame explodes; vent shut + forge =
+   smoke fills the room from the ceiling down (head, then torso); fire on the figure burns parts.
+   =========================================================================================== */
+(() => {
+'use strict';
+const W = 180, H = 100, N = W * H, K = 6, STEP = 1 / 60, FLOOR = 90;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ---------- tunables (stored in URL hash) ---------- */
+const TUNE = [
+  ['rate', 'Forge heat rate', .2, 3, .05, .9], ['pump', 'Bellows pump strength', .1, .8, .05, .45],
+  ['glow', 'Glow window (good metal)', .08, .5, .01, .25], ['quench', 'Quench window', .05, .4, .01, .18],
+  ['cool', 'Cooling in air', .02, .3, .01, .07], ['smelt', 'Ore smelt time (s)', 1, 12, .5, 4],
+  ['melt', 'Glass melt time (s)', 1, 15, .5, 5], ['twist', 'Rope twist time (s)', 1, 10, .25, 3.5],
+  ['ignite', 'Methane ignition dist', 3, 40, 1, 14], ['spark', 'Spark chance (methane)', 0, .6, .02, .12],
+  ['smoke', 'Smoke rate (cells/s)', 20, 600, 10, 300], ['sdecay', 'Smoke thinning (%/tick)', .5, 20, .5, 1],
+  ['vent', 'Vent / door draw', .05, 1, .05, .5], ['choke', 'Smoke harm', .2, 5, .1, 1],
+  ['burn', 'Burn threshold (heat)', .1, .8, .05, .3], ['firelife', 'Floor fire life (s)', 3, 40, 1, 14],
+  ['pile', 'Pile size', 2, 20, 1, 6], ['ventopen', 'Vent starts open', 0, 1, 1, 0],
+  ['blower', 'tech: blower', 0, 1, 1, 0], ['seed', 'Seed', 1, 9999, 1, 12]
+];
+const V = {}; TUNE.forEach(t => { V[t[0]] = t[5]; });
+function readHash(){
+  TUNE.forEach(t => V[t[0]] = t[5]);
+  location.hash.slice(1).split('&').forEach(p => { const [k, v] = p.split('='), t = TUNE.find(x => x[0] === k), n = parseFloat(v); if (t && isFinite(n)) V[k] = Math.min(t[3], Math.max(t[2], n)); });
+}
+function writeHash(){
+  const s = TUNE.filter(t => V[t[0]] !== t[5]).map(t => t[0] + '=' + V[t[0]]).join('&');
+  try { history.replaceState(null, '', s ? '#' + s : location.pathname + location.search); } catch (e) { /* file:// quirks */ }
+}
+
+/* ---------- sand sim (ported from mockup; only the materials this room uses) ---------- */
+const E=0, ROCK=1, SAND=2, WATER=3, GAS=4, FIRE=5, STEAM=6, SMOKE=13;
+const T = new Uint8Array(N), Lf = new Uint8Array(N), Sh = new Uint8Array(N), Mv = new Uint8Array(N);
+const DEN = new Float32Array(16);
+DEN[E]=1; DEN[GAS]=.3; DEN[STEAM]=.4; DEN[SMOKE]=.5; DEN[FIRE]=.6; DEN[WATER]=10; DEN[SAND]=20;
+const SOLID = new Uint8Array(16); SOLID[ROCK] = 1;
+const NB = [-1, 1, -W, W], SMIX = .08;
+let rnd = mulberry(1), stamp = 1, tick = 0;
+function set(i, t, l){ T[i] = t; Lf[i] = l || 0; Sh[i] = (rnd()*255) | 0; }
+function swap(i, j){ const t = T[i], l = Lf[i], s = Sh[i]; T[i] = T[j]; Lf[i] = Lf[j]; Sh[i] = Sh[j]; T[j] = t; Lf[j] = l; Sh[j] = s; Mv[i] = stamp; Mv[j] = stamp; }
+const lighter = (j, d) => j >= 0 && j < N && !SOLID[T[j]] && DEN[T[j]] < d;
+const heavier = (j, d) => j >= 0 && j < N && !SOLID[T[j]] && DEN[T[j]] > d;
+function liquid(x, y, i, d, disp){
+  if (y >= H - 1) return;
+  if (lighter(i + W, d)) return swap(i, i + W);
+  const dir = rnd() < .5 ? -1 : 1;
+  if (lighter(i + W + dir, d)) return swap(i, i + W + dir);
+  if (lighter(i + W - dir, d)) return swap(i, i + W - dir);
+  for (const s of [dir, -dir]) {
+    let best = -1;
+    for (let k = 1; k <= disp; k++) { const nx = x + s*k; if (nx < 0 || nx >= W) break; const j = i + s*k; if (!lighter(j, d)) break; best = j; if (lighter(j + W, d)) break; }
+    if (best >= 0) return swap(i, best);
+  }
+}
+function rise(x, y, i, prob, side){
+  if (rnd() > prob) return;
+  if (y === 0) { if (rnd() < .25) set(i, E); return; }
+  const d = DEN[T[i]], dir = rnd() < .5 ? -1 : 1;
+  if (rnd() < side) { if (heavier(i + dir, d)) return swap(i, i + dir); }
+  if (heavier(i - W, d)) return swap(i, i - W);
+  if (heavier(i - W + dir, d)) return swap(i, i - W + dir);
+  if (heavier(i - W - dir, d)) return swap(i, i - W - dir);
+  if (heavier(i + dir, d)) return swap(i, i + dir);
+}
+function inverted(x, y, i){   /* smoke pools under the ceiling like a liquid upside down */
+  if (rnd() > .85) return;
+  if (y === 0) { if (rnd() < .25) set(i, E); return; }
+  const d = DEN[SMOKE], dir = rnd() < .5 ? -1 : 1;
+  if (heavier(i - W, d)) return swap(i, i - W);
+  if (heavier(i - W + dir, d)) return swap(i, i - W + dir);
+  if (heavier(i - W - dir, d)) return swap(i, i - W - dir);
+  for (const s of [dir, -dir]) {
+    let best = -1;
+    for (let k = 1; k <= 6; k++) { const nx = x + s*k; if (nx < 0 || nx >= W) break; const j = i + s*k; if (!heavier(j, d)) break; best = j; if (heavier(j - W, d)) break; }
+    if (best >= 0) return swap(i, best);
+  }
+}
+function drift(x, y, i){
+  const dx = (rnd()*3 | 0) - 1, dy = rnd() < .45 ? -1 : (rnd() < .5 ? 0 : 1), j = i + dy*W + dx;
+  if (j >= 0 && j < N && T[j] === E) swap(i, j);
+}
+function fire(x, y, i){
+  if (--Lf[i] === 0 || Lf[i] > 250) { set(i, rnd() < .3 ? SMOKE : E, 120); return false; }
+  for (const o of NB) {
+    const j = i + o; if (j < 0 || j >= N) continue;
+    const u = T[j];
+    if (u === WATER) { set(i, STEAM, 70); return false; }
+    if (u === GAS) set(j, FIRE, 22 + (rnd()*20 | 0));
+  }
+  return true;
+}
+function decay(i, p, to){ if (rnd() < p && --Lf[i] <= 1) { set(i, to, 0); return false; } return true; }
+function update(x, y, i, t){
+  switch (t) {
+    case WATER: liquid(x, y, i, 10, 4); break;
+    case GAS: rise(x, y, i, .35, .7); break;
+    case FIRE: if (fire(x, y, i)) rise(x, y, i, .6, .5); break;
+    case STEAM: if (decay(i, .6, rnd() < .35 ? WATER : E)) rise(x, y, i, .5, .7); break;
+    case SMOKE: if (decay(i, V.sdecay / 100, E)) { if (rnd() < SMIX) drift(x, y, i); else inverted(x, y, i); } break;   /* prototype tweak: smoke spreads under the ceiling and mixes, so a shut room fills downward */
+  }
+}
+function simStep(){
+  stamp = stamp === 255 ? 1 : stamp + 1; tick++;
+  for (let y = H - 1; y >= 0; y--) {
+    const ltr = rnd() < .5;
+    for (let k = 0; k < W; k++) { const x = ltr ? k : W - 1 - k, i = y*W + x; if (Mv[i] === stamp) continue; const t = T[i]; if (t === E || t === ROCK) continue; update(x, y, i, t); }
+  }
+}
+function puff(x, y, t, l){ x |= 0; y |= 0; for (let k = 0; k < 5; k++) { const yy = y - k; if (yy < 4 || x < 3 || x >= W - 3) return; const i = yy*W + x; if (T[i] === E) { set(i, t, l); return; } } }
+function cnt(x0, y0, x1, y1, t){ let c = 0; for (let y = Math.max(0, y0 | 0); y <= Math.min(H - 1, y1 | 0); y++) for (let x = Math.max(0, x0 | 0); x <= Math.min(W - 1, x1 | 0); x++) if (T[y*W + x] === t) c++; return c; }
+
+/* ---------- room layout ---------- */
+const BX0 = 68, BX1 = 106, BENCH = 78, SHELF = 65, MOUTH = [123, 80];
+const RG = {vice: [69, 66, 78, 79], forge: [111, 66, 135, 90], barrel: [151, 72, 167, 90], bell: [136, 74, 149, 90], bench: [68, 70, 106, 90], chain: [102, 40, 111, 68], door: [168, 64, 180, 90]};
+const inR = (r, x, y) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3];
+const regionAt = (x, y) => ['vice', 'forge', 'barrel', 'bell', 'bench', 'chain', 'door'].find(k => inR(RG[k], x, y)) || null;
+const PD = [['rock', 7], ['ore', 15], ['sand', 23], ['salt', 31], ['fibre', 39], ['obs', 47]];
+const NAME = {rock:'rock', ore:'metal ore', sand:'sand', salt:'salt', fibre:'fungal fibre', obs:'obsidian', tongs:'tongs', hammer:'hammer', bucket:'bucket', can:'methane canister', journal:'journal',
+  lump:'metal lump', gob:'molten glass', splint:'splint', piton:'piton', rung:'ladder rung', jar:'glass jar', filter:'filter', flare:'flare', rope:'rope', blade:'blade',
+  slag:'slag', shards:'shards', cord:'cord', frayed:'frayed fibre', ash:'ash', sludge:'sludge', bead:'bead'};
+const MADE = ['splint', 'piton', 'rung', 'jar', 'filter', 'flare', 'rope', 'blade'], JUNK = ['slag', 'shards', 'cord', 'frayed', 'ash', 'sludge', 'bead'];
+const FLAM = ['fibre', 'rope', 'cord', 'frayed', 'journal', 'flare', 'filter'], TOOL = ['tongs', 'hammer', 'bucket', 'can', 'journal'];
+
+/* ---------- world state ---------- */
+const $ = id => document.getElementById(id), keys = {}, Q = [];
+let F, items, FF, held, FG, VT, BN, FX, piles, VENT, DOOR, room, noise, made, junk, aim = {x: 100, y: 60}, mouse = [0, 0];
+let log = [], paused = false, reading = false, acc = 0, lastT = performance.now();
+let pages = [{t: '', b: ''}], pgi = 0;
+const say = s => { log.unshift(s); log = log.slice(0, 3); $('log').innerHTML = log.map((l, i) => '<div style="opacity:' + (1 - i*.3) + '">' + l + '</div>').join(''); };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function mk(k, x, y, o){ const it = Object.assign({k, x, y, vx: 0, vy: 0, heat: 0, at: null, hand: -1, cook: 0, st: 0, good: 0, tot: 0, m: 1, q: 1, lit: 0, qf: .85, cold: 0, wet: 0, dunk: 0, hot: 0, exp: 0, grip: null, full: 0, left: 700, tp: 0}, o || {}); items.push(it); return it; }
+function setVent(o){ VENT.open = o; for (let y = 0; y < 4; y++) for (let x = 100; x < 112; x++) { const i = y*W + x; T[i] = o ? E : ROCK; Lf[i] = 0; } }
+function setDoor(o){ DOOR.open = o; for (let y = 66; y < FLOOR; y++) for (let x = W - 3; x < W; x++) { const i = y*W + x; T[i] = o ? E : ROCK; Lf[i] = 0; } }
+function reset(){
+  rnd = mulberry(V.seed); stamp = 1; tick = 0; T.fill(E); Lf.fill(0); Mv.fill(0);
+  for (let i = 0; i < N; i++) { const x = i % W, y = (i / W) | 0; Sh[i] = (rnd()*255) | 0; if (y >= FLOOR || y < 4 || x < 3 || x >= W - 3) T[i] = ROCK; }
+  VENT = {}; DOOR = {}; setVent(!!V.ventopen); setDoor(false);
+  items = []; FF = []; held = [null, null]; made = 0; junk = 0; room = 0; noise = 0; log = []; $('log').innerHTML = '';
+  FG = {heat: .22, blast: 0, anim: 0, sa: 0, blow: false}; VT = {p: 0, tw: false}; BN = {gas: 0, last: -9};
+  FX = [{n: 'bench', b: [BX0, 76, BX1, 80], burn: 0, on: 0}, {n: 'shelf', b: [5, 63, 55, 66], burn: 0, on: 0}, {n: 'pile', b: [37, 82, 41, 90], burn: 0, on: 0}];
+  piles = PD.map(p => ({k: p[0], x: p[1], n: V.pile}));
+  F = {x: 96, y: FLOOR, face: 1, P: [0, 0, 0, 0, 0, 0], downed: false, sm: 0, t: 0, cough: 0, fireT: 0, walk: 0, end: null, swing: [0, 0]};
+  mk('tongs', 12, SHELF); mk('hammer', 22, SHELF); mk('bucket', 44, SHELF); mk('journal', 32, SHELF); mk('can', 58, FLOOR);
+  $('banner').classList.remove('on'); acc = 0;
+}
+
+/* ---------- items: heat, forge, settling ---------- */
+const handPos = h => { const sx = F.x + (h ? 1.3 : -1.3), sy = F.y - 4.2, dx = aim.x - sx, dy = aim.y - sy, L = Math.hypot(dx, dy) || 1, r = Math.min(L, 3.6); return {x: sx + dx/L*r, y: sy + dy/L*r, sx, sy, a: Math.atan2(dy, dx)}; };
+const hold = (it, h) => { it.at = 'held'; it.hand = h; held[h] = it; };
+function unlink(it){
+  if (it.k === 'tongs' && it.grip) { const g = it.grip, hp = handPos(Math.max(0, it.hand)); it.grip = null; g.at = null; g.x = hp.x + Math.cos(hp.a)*3.6; g.y = hp.y + Math.sin(hp.a)*3.6; g.vx = g.vy = 0; }
+  if (it.at === 'held') { held[it.hand] = null; it.hand = -1; }
+  held.forEach(t => { if (t && t.grip === it) t.grip = null; }); it.at = null;
+}
+function remove(it){ unlink(it); const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); }
+function become(it, k, q){ it.k = k; if (q != null) it.q = clamp(q, .1, 1); if (MADE.includes(k)) made++; else if (JUNK.includes(k)) junk++; }
+function addFF(x){ FF.push({x: clamp(x, 6, W - 7), t: V.firelife}); say('Fire on the floor.'); }
+function burnItem(it){
+  if (it.k === 'journal') { pages = [{t: '', b: ''}]; pgi = 0; say('The journal burns.'); }
+  const x = it.x, y = it.y; remove(it); for (let k = 0; k < 6; k++) puff(x + rnd()*4 - 2, y - 1 - rnd()*3, rnd() < .5 ? FIRE : SMOKE, rnd() < .5 ? 30 : 120);
+  if (y >= FLOOR - 1) addFF(x);
+}
+function injure(p, n){ F.P[p] = Math.min(2, F.P[p] + (n || 1)); if (F.P[0] === 2 || F.P[1] === 2) { if (!F.downed) say('You go down.'); F.downed = true; } }
+function glowCol(h){ if (h < .22) return null; const k = clamp((h - .22)/.78, 0, 1); return 'rgb(' + (110 + 145*Math.min(1, k*2.2) | 0) + ',' + (20 + 220*Math.max(0, k*1.6 - .25) | 0) + ',' + (20 + 200*Math.max(0, k*2 - 1) | 0) + ')'; }
+function quench(it){
+  it.wet = 1; const h = it.heat; if (h > .3) for (let k = 0; k < 8; k++) puff(RG.barrel[0] + 3 + rnd()*8, 74, STEAM, 60);
+  if (it.k === 'gob' || it.k === 'jar') { if (h > .35) { become(it, 'shards'); say('It shatters in the water.'); } return; }
+  if (it.k === 'obs' && h > .3) return become(it, 'shards');
+  if (it.k !== 'lump') return;
+  const lo = .3, hi = .3 + V.quench;
+  if (h > hi) { if (rnd() < (h - hi)*2.5) { become(it, 'slag'); say('It cracks in the water.'); } else it.qf = .6; }
+  else if (h < lo) it.qf = .9; else it.qf = 1;
+}
+function settle(it){
+  const q = it.st ? it.good/it.st*it.qf : 0;
+  if (it.k === 'lump') {
+    if (it.m === 1) { if (it.st <= 3) become(it, 'splint', q); else if (it.st <= 8) become(it, 'piton', q); else become(it, 'slag'); }
+    else { if (it.st >= 3 && it.st <= 10) become(it, 'rung', q); else become(it, 'slag'); }
+  } else if (it.k === 'gob') { if (it.m === 2 && it.st <= 2) become(it, 'jar', q); else become(it, it.m === 1 ? 'bead' : 'slag'); }
+}
+function updateItem(it, dt){
+  if (items.indexOf(it) < 0) return;
+  if (it.at === 'held' && it.hot > 0 && (it.hot -= dt) <= 0) { unlink(it); it.x = F.x + (rnd() - .5)*3; it.y = FLOOR - 4; it.vy = 0; say('You drop it.'); }
+  const inForge = it.at === 'forge', inBarrel = it.at === 'barrel', dunking = it.dunk; it.dunk = 0;
+  if (inForge) it.heat += (FG.heat - it.heat)*Math.min(1, V.rate*dt*1.2);
+  else if (inBarrel || dunking) it.heat = Math.max(0, it.heat - 1.6*dt);
+  else it.heat = Math.max(0, it.heat - V.cool*dt*(.4 + it.heat)*(1 - .4*room));
+  if (!dunking && !inBarrel) it.wet = 0;
+  if (inForge) {
+    const k = it.k;
+    if (k === 'ore') it.cook = it.heat >= .7 ? it.cook + dt : Math.max(0, it.cook - dt*.5);
+    if (k === 'ore' && it.cook >= V.smelt) { const o = items.find(j => j !== it && j.at === 'forge' && j.k === 'ore' && j.cook >= V.smelt*.7); become(it, 'lump'); it.cook = 0; if (o) { remove(o); it.m = 2; } }
+    if (k === 'sand') it.cook = it.heat >= .8 ? it.cook + dt : Math.max(0, it.cook - dt*.5);
+    if (k === 'sand' && it.cook >= V.melt) { const o = items.find(j => j !== it && j.at === 'forge' && j.k === 'sand' && j.cook >= V.melt*.7); become(it, 'gob'); it.cook = 0; if (o) { remove(o); it.m = 2; } }
+    if (k === 'obs' && it.heat > .55) { it.cook += dt; if (it.cook > 1.5) become(it, 'shards'); }
+    if (FLAM.includes(k) && it.heat > .3 && (it.cook += dt) > .8) { remove(it); for (let j = 0; j < 14; j++) puff(114 + rnd()*18, 85, SMOKE, 250); return; }
+  }
+  if (!inForge && it.heat < .12 && it.st > 0 && (it.k === 'lump' || it.k === 'gob')) settle(it);
+  if (it.lit > 0) { it.lit -= dt; it.heat = 1; if (rnd() < .05) puff(it.x, it.y - 3, FIRE, 6); if (rnd() < .1) puff(it.x, it.y - 4, SMOKE, 120); if (it.lit <= 0) { it.heat = .2; become(it, 'ash'); } }
+  else if (FLAM.includes(it.k) && (tick % 4 === 0) && !inForge && cnt(it.x - 2, it.y - 4, it.x + 2, it.y + 1, FIRE) > 0) { if (it.at === 'held') injure(2 + it.hand); return burnItem(it); }
+  if (it.k === 'can' && tick % 4 === 0) { if (cnt(it.x - 3, it.y - 5, it.x + 3, it.y + 1, FIRE) > 0) it.exp += 4*dt; else it.exp = Math.max(0, it.exp - dt); if (it.exp > 1.2) { say('The canister goes up.'); const x = it.x, y = it.y; remove(it); for (let k = 0; k < 70; k++) puff(x + (rnd() - .5)*16, y - rnd()*8, FIRE, 20 + (rnd()*20 | 0)); return; } }
+  if (it.at) return;
+  /* free flight / falling */
+  it.vy += 70*dt; it.x += it.vx*dt; const py = it.y; it.y += it.vy*dt; it.vx *= .995;
+  if (it.x < 5 || it.x > W - 6) { it.x = clamp(it.x, 5, W - 6); it.vx *= -.3; }
+  if (inR(RG.forge, it.x, it.y - 2) && it.y < 86 && !TOOL.includes(it.k)) { it.at = 'forge'; it.x = 118 + items.filter(j => j.at === 'forge').length*4; it.y = 86; return; }
+  if (inR(RG.barrel, it.x, it.y - 2) && it.y < 84 && !TOOL.includes(it.k)) { it.at = 'barrel'; quench(it); return; }
+  let s = FLOOR; if (it.x >= 5 && it.x <= 55 && py <= SHELF + .5) s = SHELF; else if (it.x >= BX0 && it.x <= BX1 && py <= BENCH + .5) s = BENCH;
+  if (it.y >= s) { it.y = s; if (it.vy > 8 && (it.heat > .45 || it.lit > 0) && s === FLOOR) addFF(it.x); it.vy = 0; it.vx *= .6; }
+}
+
+/* ---------- striking, twisting, tamping ---------- */
+function strikeGood(h){ const gap = F.t - BN.last; BN.last = F.t; return (gap > .3 && gap < 1.1 ? 1 : gap > 1.1 ? .7 : .4)*(F.P[2 + h] ? .7 : 1); }
+function sparkAt(x){ for (let k = 0; k < 3; k++) puff(x + rnd()*4 - 2, BENCH - 2 - rnd()*2, FIRE, 6); }
+function strike(tool, h){
+  noise = Math.min(1, noise + .35);
+  const sl = items.filter(i => i.at === 'bench'); if (!sl.length) return;
+  if ((BN.gas > 0 || cnt(BX0, 60, BX1, BENCH, GAS) > 0) && rnd() < V.spark) { sparkAt(aim.x); say('A spark.'); }
+  const w = sl.find(i => i.k === 'lump' || i.k === 'gob' || i.k === 'obs');
+  if (w) {
+    if (w.k === 'obs') {
+      w.st++; w.good += strikeGood(h);
+      if (rnd() < (tool === 'hammer' ? .35 : .08)) { become(w, 'shards'); return; }
+      if (w.st >= 5 && rnd() < .6) become(w, 'blade', w.good/w.st);
+      return;
+    }
+    const lo = .5, hot = w.heat;
+    if (tool === 'rock' || hot < .4) { w.cold++; if (w.cold >= 2 || (w.k === 'gob' && rnd() < .5)) { become(w, 'slag'); say('It cracks.'); } return; }
+    if (hot > lo + V.glow + .15) sparkAt(w.x);
+    w.st++; w.good += (hot > lo + V.glow ? .55 : hot < lo ? .45 : 1)*(F.P[2 + h] ? .7 : 1); return;
+  }
+  const c = k => sl.filter(i => i.k === k).length, s = c('salt'), f = c('fibre'), d = c('sand'), g = BN.gas;
+  const gp = strikeGood(h); sl.forEach(i => { i.tp++; i.good += gp; });
+  if (sl[0].tp < 3 || sl.length < 2) return;
+  const q = sl[0].good/sl[0].tp, x = sl[0].x; let res = 'sludge';
+  if (s >= 1 && f >= 1 && g >= .5) res = 'flare'; else if (f >= 2 && d >= 1 && s === 0 && g < .5) res = 'filter';
+  sl.forEach(i => remove(i)); BN.gas = 0;
+  become(mk(res, x, BENCH - 1), res, res === 'flare' ? q*.7 + (s >= 2 ? .3 : .1) : q);
+}
+function resolveTwist(){
+  const vi = items.filter(i => i.at === 'vice'), p = VT.p; VT.tw = false; VT.p = 0;
+  if (!vi.length || p < .4) return;
+  const n = vi.length; vi.forEach(i => remove(i));
+  const o = mk('cord', 73, BENCH - 3);
+  if (n === 3 && p >= .85 && p <= 1.3) become(o, 'rope', 1 - Math.abs(p - 1)*2.2); else if (n === 3 && p > 1.3) become(o, 'frayed'); else become(o, 'cord');
+}
+
+/* ---------- hands: pick, place, use ---------- */
+const reach = (x, y) => Math.hypot(x - F.x, y - (F.y - 4)) <= 30;
+function nearest(x, y, r){ let b = null, bd = r; items.forEach(i => { if (i.at === 'held' || i.at === 'tongs') return; const d = Math.hypot(i.x - x, i.y - 1.5 - y); if (d < bd) { bd = d; b = i; } }); return b; }
+const armBlocked = h => F.P[2 + h] === 2 || F.downed;
+function pickUp(it, h){
+  const hotHand = it.heat > V.burn && it.at !== 'tongs' && it.lit <= 0;
+  it.at = null; hold(it, h);
+  if (hotHand) { injure(2 + h, it.heat > .85 ? 2 : 1); it.hot = .35; say('Your hand burns.'); }
+}
+function place(it, h){
+  const r = regionAt(aim.x, aim.y), n = a => items.filter(i => i.at === a).length, hp = handPos(h);
+  unlink(it); it.x = hp.x; it.y = Math.max(hp.y, 8); it.vx = (aim.x - F.x)*.6; it.vy = -2;
+  if (TOOL.includes(it.k)) return;
+  if (r === 'forge' && n('forge') < 4) { it.at = 'forge'; it.x = 118 + n('forge')*4; it.y = 86; }
+  else if (r === 'bench' && n('bench') < 4) { it.at = 'bench'; it.x = 80 + n('bench')*6; it.y = BENCH; BN.last = -9; }
+  else if (r === 'vice' && it.k === 'fibre' && n('vice') < 3) { it.at = 'vice'; it.x = 73; it.y = BENCH - 2 - n('vice')*1.5; VT.p = 0; }
+  else if (r === 'barrel') { it.at = 'barrel'; it.x = 156 + rnd()*5; it.y = 84; quench(it); }
+}
+function interact(){
+  if (F.downed || !reach(aim.x, aim.y)) return;
+  const fh = [1, 0].find(h => !held[h] && !armBlocked(h)), r = regionAt(aim.x, aim.y), it = nearest(aim.x, aim.y, 5);
+  const car = held[1] && !TOOL.includes(held[1].k) ? held[1] : held[0] && !TOOL.includes(held[0].k) ? held[0] : null;
+  const acc = car && (r === 'forge' || r === 'bench' || r === 'barrel' || (r === 'vice' && car.k === 'fibre'));
+  if (fh != null && it && !acc) return pickUp(it, fh);
+  if (r === 'door') return setDoor(!DOOR.open);
+  if (r === 'chain') return setVent(!VENT.open);
+  if (r === 'bell' && V.blower) { FG.blow = !FG.blow; return; }
+  const pl = fh != null && piles.find(p => Math.abs(aim.x - p.x) < 5 && aim.y > 80);
+  if (pl) { if (pl.n > 0) { pl.n--; pickUp(mk(pl.k, F.x, F.y - 3), fh); } return; }
+  const h = car ? held.indexOf(car) : held[1] ? 1 : held[0] ? 0 : -1; if (h >= 0) place(held[h], h);
+}
+function useEdge(h){
+  if (F.downed || armBlocked(h)) return;
+  const it = held[h], r = regionAt(aim.x, aim.y), rc = reach(aim.x, aim.y);
+  F.swing[h] = .25;
+  if (!it) { if (r === 'bell' && rc && !V.blower) pump(); else if (r === 'vice' && rc && items.some(i => i.at === 'vice')) VT.tw = true; return; }
+  if (it.k === 'tongs') {
+    if (!rc) return;
+    if (!it.grip) { const g = nearest(aim.x, aim.y, 6); if (g && !TOOL.includes(g.k)) { unlink(g); g.at = 'tongs'; it.grip = g; } return; }
+    const g = it.grip; if (r === 'barrel') { if (!g.wet) quench(g); return; }
+    place(g, h); return;
+  }
+  if (it.k === 'hammer' || it.k === 'rock') { if (r === 'bench' && rc) strike(it.k, h); else if (it.k === 'rock') throwIt(it, h); return; }
+  if (it.k === 'bucket') { if (r === 'barrel' && rc) it.full = 1; else if (it.full) { it.full = 0; for (let k = 0; k < 60; k++) puff(aim.x + rnd()*6 - 3, aim.y - rnd()*5, WATER, 0); } return; }
+  if (it.k === 'flare') { if (!it.lit) it.lit = 5 + 10*it.q; return; }
+  if (it.k === 'journal') return openBook(true);
+  if (it.k !== 'can') throwIt(it, h);
+}
+function throwIt(it, h){ const hp = handPos(h); unlink(it); it.x = hp.x; it.y = hp.y; const dx = aim.x - hp.x, dy = aim.y - hp.y, L = Math.hypot(dx, dy) || 1; it.vx = dx/L*45; it.vy = dy/L*45 - 8; }
+function pump(){ FG.blast = Math.min(1, FG.blast + V.pump); FG.anim = .3; noise = Math.min(1, noise + .1); }
+function holdUse(dt){
+  [0, 1].forEach(h => {
+    if (!mouse[h] || F.downed) return; const it = held[h], r = regionAt(aim.x, aim.y), rc = reach(aim.x, aim.y);
+    if (!it && r === 'vice' && VT.tw && rc) { VT.p += dt/V.twist; if (VT.p > 1.6) resolveTwist(); }
+    if (it && it.k === 'tongs' && it.grip && r === 'barrel' && rc) it.grip.dunk = 1;
+    if (it && it.k === 'can' && it.left > 0) {
+      const hp = handPos(h), n = 30*dt + rnd(); it.left -= 30*dt;
+      if (r === 'bench' && rc && items.some(i => i.at === 'bench')) BN.gas += dt*1.6;
+      for (let c = 0; c < n; c++) puff(hp.x + Math.cos(hp.a)*2 + rnd() - .5, hp.y + Math.sin(hp.a)*2, GAS, 0);
+    }
+  });
+}
+
+/* ---------- room dynamics ---------- */
+function roomStep(dt){
+  const blast = V.blower ? (FG.blow ? 1.5 : 0) : FG.blast;
+  FG.heat += (.22 + blast*.8 - FG.heat)*Math.min(1, V.rate*(V.blower ? 2 : 1)*dt); FG.blast = Math.max(0, FG.blast - .35*dt); FG.anim = Math.max(0, FG.anim - dt);
+  room += (FG.heat*.9 - room)*dt*(.04 + (VENT.open ? .05 : 0) + (DOOR.open ? .05 : 0));
+  noise = Math.max(0, noise - dt*.9, (V.blower && FG.blow ? .6 : 0) + blast*.2);
+  FG.sa += V.smoke*FG.heat*dt*(V.blower ? 1.4 : 1); while (FG.sa >= 1) { FG.sa--; puff(112 + (rnd()*22 | 0), 85, SMOKE, 250); }
+  if (V.blower && FG.blow && rnd() < .12) puff(MOUTH[0] - 3 + rnd()*6, 79, FIRE, 5 + (rnd()*4 | 0));
+  if (!items.some(i => i.at === 'bench')) BN.gas = 0; else BN.gas = Math.max(0, BN.gas - .03*dt);
+  if (FG.heat > .15 && tick % 2 === 0) { const r = V.ignite; for (let y = MOUTH[1] - r; y <= MOUTH[1] + r; y++) for (let x = MOUTH[0] - r; x <= MOUTH[0] + r; x++) { if (x < 0 || y < 0 || x >= W || y >= H) continue; const i = y*W + x; if (T[i] === GAS && (x - MOUTH[0])**2 + (y - MOUTH[1])**2 <= r*r) set(i, FIRE, 24 + (rnd()*20 | 0)); } }
+  if (VENT.open) for (let y = 0; y < 3; y++) for (let x = 100; x < 112; x++) { const i = y*W + x; if (T[i] !== E && T[i] !== ROCK && rnd() < V.vent) set(i, E); }
+  if (DOOR.open) for (let y = 66; y < FLOOR; y++) for (let x = W - 3; x < W; x++) { const i = y*W + x; if (T[i] !== E && T[i] !== ROCK && rnd() < V.vent) set(i, E); }
+  FF.forEach(f => { f.t -= dt; if (rnd() < .35) puff(f.x + (rnd()*6 - 3), FLOOR - 1, FIRE, 25 + (rnd()*20 | 0)); if (tick % 10 === 0 && cnt(f.x - 5, FLOOR - 7, f.x + 5, FLOOR, WATER) > 2) f.t = 0;
+    if (tick % 30 === 0) items.slice().forEach(i => { if (FLAM.includes(i.k) && i.at !== 'forge' && Math.abs(i.x - f.x) < 7 && i.y > FLOOR - 6) burnItem(i); }); });
+  FF = FF.filter(f => f.t > 0);
+  if (tick % 6 === 0) FX.forEach(f => {
+    const c = cnt(f.b[0], f.b[1] - 5, f.b[2], f.b[3], FIRE);
+    if (!f.on && !f.dead && c) { f.burn += c*.02; if (f.burn >= 1) { f.on = 12; f.dead = 1; say('The ' + (f.n === 'pile' ? 'fibre' : f.n) + ' catches.'); if (f.n === 'pile') piles[4].n = 0; } }
+    if (f.on > 0) { f.on -= .1; for (let k = 0; k < 2; k++) puff(f.b[0] + rnd()*(f.b[2] - f.b[0]), f.b[1], rnd() < .6 ? FIRE : SMOKE, 30 + (rnd()*40 | 0)); items.slice().forEach(i => { if (FLAM.includes(i.k) && i.at !== 'held' && i.x > f.b[0] - 3 && i.x < f.b[2] + 3 && Math.abs(i.y - f.b[1]) < 5) burnItem(i); }); }
+  });
+}
+
+/* ---------- figure ---------- */
+const hk = k => keys[k] ? 1 : 0;
+function stepFigure(dt){
+  F.t += dt;
+  while (Q.length) { const e = Q.shift(); if (e === 'e') interact(); else if (e === 'q') { if (held[0]) place(held[0], 0); } else if (e === 'space') { if (!V.blower && !F.downed && reach(RG.bell[0] + 6, 82)) pump(); } else if (e === 'j') openBook(); }
+  [0, 1].forEach(h => { if (held[h] && armBlocked(h)) { const t = held[h]; unlink(t); t.x = F.x; t.y = FLOOR - 4; } F.swing[h] = Math.max(0, F.swing[h] - dt); });
+  const dir = F.downed ? 0 : hk('KeyD') + hk('ArrowRight') - hk('KeyA') - hk('ArrowLeft'), lg = Math.max(F.P[4], F.P[5]);
+  const sp = F.downed ? 5 : lg === 2 ? 8 : lg ? 14 : 22; F.x = clamp(F.x + dir*sp*dt, 6, W - 7); F.walk += Math.abs(dir)*sp*dt; F.face = aim.x >= F.x ? 1 : -1;
+  if (cnt(F.x - 2, F.y - 8, F.x + 2, F.y, FIRE) && !F.downed) { F.fireT += dt; if (F.fireT > .5) { F.fireT = 0; const w = [0, 1, 1, 2, 2, 3, 3, 4, 5]; injure(w[rnd()*w.length | 0]); say('Fire catches your clothes.'); } } else F.fireT = Math.max(0, F.fireT - dt);
+  const frac = cnt(F.x - 3, F.y - 9, F.x + 3, F.y - 3, SMOKE)/49;
+  if (frac > .05) F.sm += frac*dt*V.choke*(F.P[1] ? 1.6 : 1)*.5; else F.sm = Math.max(0, F.sm - .25*dt);
+  const was = F.cough; F.cough = Math.max(0, F.cough - dt);
+  if (F.sm > .6 && F.cough <= 0 && rnd() < dt*.8) { F.cough = .5; if (!was) say('You cough.'); }
+  if (F.sm > 2 && !F.P[0]) { injure(0); say('Smoke stings your eyes and throat.'); } if (F.sm > 3.5 && !F.P[1]) injure(1); if (F.sm > 5 && F.P[0] < 2) injure(0);
+  if (F.downed && !F.end) { F.end = 1; $('banner').innerHTML = 'You are down<small>R to start again, same seed.</small>'; $('banner').classList.add('on'); }
+}
+
+/* ---------- journal ---------- */
+function showPage(){ const p = pages[pgi]; $('pg-title').value = p.t; $('pg-body').value = p.b; $('pgno').textContent = (pgi + 1) + ' / ' + pages.length + '  '; }
+function openBook(open){
+  if (open === undefined) open = !reading; if (open && !held.some(t => t && t.k === 'journal')) return;
+  reading = open; $('book').classList.toggle('on', open); if (open) { showPage(); $('pg-body').focus(); } else { try { document.activeElement.blur(); } catch (e) { /* no focus */ } lastT = performance.now(); }
+}
+
+/* ---------- render ---------- */
+const sctx = $('sim').getContext('2d'), simImg = sctx.createImageData(W, H), sp = simImg.data;
+const actx = $('air').getContext('2d'), airImg = actx.createImageData(W, H), ap = airImg.data, fctx = $('fx').getContext('2d');
+function render(){
+  const S = [[MOUTH[0], MOUTH[1], FG.heat*1.4, 24], [20, 40, .25, 40], [90, 30, .25, 50]];
+  FF.forEach(f => S.push([f.x, FLOOR - 3, 1, 16])); items.forEach(i => { if (i.lit > 0) S.push([i.x, i.y - 3, 1.2, 22]); else if (i.heat > .45) S.push([i.x, i.y - 1, i.heat*.6, 9]); });
+  FX.forEach(f => { if (f.on > 0) S.push([(f.b[0] + f.b[2])/2, f.b[1], 1, 16]); });
+  for (let i = 0, c = 0; i < N && c < 40; i += 7) if (T[i] === FIRE) { S.push([i % W, (i/W) | 0, .5, 9]); c++; }
+  const fl = .92 + .08*Math.random();
+  for (let i = 0, p = 0; i < N; i++, p += 4) {
+    const x = i % W, y = (i/W) | 0, t = T[i], s = 1 + (Sh[i] - 128)/128*.1;
+    let l = .5; for (let k = 0; k < S.length; k++) { const a = S[k], dx = x - a[0], dy = y - a[1]; l += a[2]/(1 + (dx*dx + dy*dy)/(a[3]*a[3])*4); }
+    l = Math.min(1.4, l)*fl; let r, g, b;
+    if (t === ROCK) { if (y >= FLOOR) { const top = y === FLOOR; r = top ? 120 : 62; g = top ? 96 : 52; b = top ? 70 : 44; if (y > FLOOR && (x + y) % 9 === 0) { r -= 14; g -= 12; } } else { r = 58; g = 56; b = 54; } }
+    else { const sx = (x % 12 === 0) ? .85 : 1, band = y > 44 ? 1 : .92; r = 58*sx*band; g = 55*sx*band; b = 52*sx*band; }
+    sp[p] = r*s*l*1.1; sp[p + 1] = g*s*l; sp[p + 2] = b*s*l*.85; sp[p + 3] = 255;
+    let al = 0, ar = 0, ag = 0, ab = 0;
+    if (t === SMOKE) { const m = Math.min(1.3, l*.9 + .3); al = .62; ar = 78*m; ag = 78*m; ab = 82*m; }
+    else if (t === FIRE) { al = 1; ar = 255; ag = Math.min(230, 110 + Lf[i]*3); ab = 40; }
+    else if (t === STEAM) { al = .35; ar = 200; ag = 205; ab = 210; }
+    else if (t === WATER) { al = .8; ar = 50; ag = 110; ab = 160; }
+    else if (t === GAS) { al = .07 + .05*((x*7 + y*3 + tick) % 5 === 0); ar = 120; ag = 230; ab = 210; }
+    ap[p] = ar; ap[p + 1] = ag; ap[p + 2] = ab; ap[p + 3] = al*255;
+  }
+  sctx.putImageData(simImg, 0, 0); actx.putImageData(airImg, 0, 0);
+}
+const R = (x, y, w, h, c) => { fctx.fillStyle = c; fctx.fillRect(x*K, y*K, w*K, h*K); };
+function poly(pts, c){ fctx.fillStyle = c; fctx.beginPath(); pts.forEach((p, i) => i ? fctx.lineTo(p[0]*K, p[1]*K) : fctx.moveTo(p[0]*K, p[1]*K)); fctx.closePath(); fctx.fill(); }
+function drawItem(it, x, y, a){
+  const c = fctx, hc = glowCol(it.heat), q = it.q, bend = (1 - q)*1.8; c.save(); c.translate(x*K, y*K); c.rotate(a || 0); c.scale(K, K); c.lineCap = 'round'; c.lineWidth = .55;
+  const P = (pts, col) => { c.fillStyle = hc || col; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.closePath(); c.fill(); };
+  switch (it.k) {
+    case 'rock': P([[-2, 0], [-1.2, -2], [1.4, -1.8], [2.2, 0]], '#8a8174'); break;
+    case 'ore': P([[-2, 0], [-1.4, -2.2], [1.2, -2.4], [2.3, 0]], '#7a5a45'); c.fillStyle = hc || '#c9a24a'; c.fillRect(-.8, -1.6, .8, .7); c.fillRect(.6, -1, .7, .6); break;
+    case 'sand': P([[-2.2, 0], [0, -1.8], [2.2, 0]], '#c9a96a'); break;
+    case 'salt': P([[-1.6, 0], [-1, -1.8], [.2, -2.2], [1.4, -1.4], [1.8, 0]], '#e8e6df'); break;
+    case 'fibre': c.strokeStyle = '#7fa593'; c.lineWidth = .5; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(k*.5, 0); c.quadraticCurveTo(k*.9, -1.6, k*.3 + 1, -3); c.stroke(); } break;
+    case 'obs': P([[-1.2, 0], [-.4, -3], [1.4, -.6], [1.1, 0]], '#1b1722'); break;
+    case 'tongs': c.strokeStyle = '#b8b2a4'; c.lineWidth = .5; c.beginPath(); c.moveTo(-3, 0); c.lineTo(2, -.5); c.moveTo(-3, -1.2); c.lineTo(2, -.7); c.stroke(); break;
+    case 'hammer': c.strokeStyle = '#8a6a4a'; c.lineWidth = .6; c.beginPath(); c.moveTo(-2.5, -.5); c.lineTo(2, -.5); c.stroke(); c.fillStyle = '#9aa0a2'; c.fillRect(1.4, -1.7, 1.6, 2.4); break;
+    case 'bucket': P([[-1.8, -3], [1.8, -3], [1.3, 0], [-1.3, 0]], '#6a757a'); if (it.full) { c.fillStyle = '#3a7aa8'; c.fillRect(-1.6, -3, 3.2, .8); } break;
+    case 'can': c.fillStyle = '#4f7d52'; c.fillRect(-1.3, -4, 2.6, 4); c.fillStyle = '#c96a3b'; c.fillRect(-.6, -5, 1.2, 1); break;
+    case 'journal': c.fillStyle = '#6b4a30'; c.fillRect(-1.8, -2.6, 3.6, 2.6); c.fillStyle = '#e3dbc9'; c.fillRect(-1.5, -2.3, 3, .5); break;
+    case 'lump': { const m = it.m === 2 ? 1.35 : 1; P([[-1.8*m, 0], [-1.2*m, -1.8*m], [1.2*m, -2*m], [2*m, 0]], '#55595c'); } break;
+    case 'gob': { const m = it.m === 2 ? 1.3 : .8; c.beginPath(); c.ellipse(0, -1.2*m, 1.8*m, 1.3*m, 0, 0, 7); c.fillStyle = hc || '#9fd0c4'; c.fill(); } break;
+    case 'splint': c.rotate(bend*.08); c.fillStyle = hc || '#8c9296'; c.fillRect(-3, -.9, 6, 1.1); break;
+    case 'piton': c.strokeStyle = hc || '#9ca2a6'; c.lineWidth = .8; c.beginPath(); c.moveTo(-3, -.4); c.quadraticCurveTo(0, -.4 - bend, 3, -.4); c.stroke(); c.beginPath(); c.arc(-3, -.4, .9, 0, 7); c.stroke(); if (q < .45) { c.fillStyle = '#2a2d2f'; c.fillRect(0, -.9 - bend/2, .6, .4); } break;
+    case 'rung': c.strokeStyle = hc || '#9ca2a6'; c.lineWidth = .8; c.beginPath(); c.moveTo(-3, -.5); c.quadraticCurveTo(0, -.5 - bend*.8, 3, -.5); c.stroke(); c.fillStyle = hc || '#9ca2a6'; c.fillRect(-3.2, -1.4, .8, 1.8); c.fillRect(2.4, -1.4, .8, 1.8); break;
+    case 'jar': c.strokeStyle = hc || 'rgba(160,225,215,.85)'; c.lineWidth = .4; c.strokeRect(-1.5, -3.2 + bend*.2, 3, 3.2 - bend*.2); c.fillStyle = 'rgba(160,225,215,.25)'; c.fillRect(-1.5, -3.2, 3, 3.2); if (q < .5) { c.strokeStyle = '#fff'; c.beginPath(); c.moveTo(-1, -3); c.lineTo(0, -1.5); c.lineTo(-.5, 0); c.stroke(); } break;
+    case 'filter': c.fillStyle = '#6e8e80'; c.fillRect(-1.2, -3.4, 2.4, 3.4); c.fillStyle = '#c9a96a'; c.fillRect(-1.2, -2.2, 2.4, 1); c.fillStyle = q < .5 ? '#3b3a34' : '#a8c2b4'; c.fillRect(-1.2, -3.4, 2.4, .6); break;
+    case 'flare': c.fillStyle = '#c24a38'; c.fillRect(-2.4, -1.2, 4.8, 1.2); c.fillStyle = '#eee'; c.fillRect(-2.6, -1.2, .6, 1.2); if (it.lit > 0) { c.fillStyle = 'rgba(255,200,120,.9)'; c.beginPath(); c.arc(3.4, -.6, 1.2 + Math.random()*.5, 0, 7); c.fill(); } break;
+    case 'rope': c.strokeStyle = '#b79a68'; c.lineWidth = .7; for (let k = 0; k < 3; k++) { c.beginPath(); c.ellipse(0, -1.5, 2.2 - k*.5 + (1 - q)*.5*(k % 2 ? 1 : -1), 1.4 - k*.3, 0, 0, 7); c.stroke(); } break;
+    case 'blade': P([[-2.6, 0], [2.8, -1.3], [-2.4, -.9 - (1 - q)*.8]], '#171420'); c.strokeStyle = '#6a6486'; c.lineWidth = .15; c.beginPath(); c.moveTo(-2, -.4); c.lineTo(2.2, -1); c.stroke(); break;
+    default: P([[-1.5, 0], [-1, -1.4], [.6, -1.6], [1.6, 0]], it.k === 'ash' ? '#555' : it.k === 'frayed' || it.k === 'cord' ? '#8a7a58' : '#3c3a38');
+  }
+  if (it.heat > .25) { c.fillStyle = 'rgba(255,' + (120 + it.heat*100 | 0) + ',60,' + Math.min(.4, it.heat*.4) + ')'; c.beginPath(); c.arc(0, -1.5, 3.2, 0, 7); c.fill(); }
+  c.restore();
+}
+function drawStations(){
+  const hf = FG.heat, gc = glowCol(hf) || '#2a1a14';
+  R(5, SHELF, 50, 1.2, FX[1].dead ? '#2a2018' : '#6b4f36'); R(8, SHELF + 1, 1, 4, '#4a3826'); R(50, SHELF + 1, 1, 4, '#4a3826');
+  piles.forEach(p => { const col = {rock: '#8a8174', ore: '#7a5a45', sand: '#c9a96a', salt: '#e8e6df', fibre: '#7fa593', obs: '#1b1722'}[p.k]; R(p.x - 4, FLOOR - 1, 8, 1, '#2a2622'); for (let k = 0; k < Math.min(p.n, 8); k++) R(p.x - 3 + (k % 4)*1.6, FLOOR - 2.4 - ((k/4) | 0)*1.8, 1.8, 1.8, col); if (p.n === 0) R(p.x - 3, FLOOR - 1.4, 6, .4, '#3a342e'); });
+  R(BX0, BENCH - .2, BX1 - BX0, 1.6, FX[0].dead ? '#2a2018' : '#7a5b3c'); R(BX0 + 2, BENCH + 1.4, 1.6, FLOOR - BENCH - 1.4, '#4e3a26'); R(BX1 - 4, BENCH + 1.4, 1.6, FLOOR - BENCH - 1.4, '#4e3a26');
+  R(70, 72, 1.6, 6, '#8a8f92'); R(75, 72, 1.6, 6, '#8a8f92'); R(69, 71.5, 8, 1, '#5b6063'); R(72.5, 73, 1, 4.5, '#6b7073');
+  R(111, 66, 24, 24, '#4a4642'); R(113, 67, 20, 2, '#3a3733'); R(114, 71, 18, 19, '#35322f'); R(116, 77, 14, 9, '#14100e'); R(117, 83, 12, 3, gc); R(119, 80, 8, 3, hf > .4 ? glowCol(hf - .15) : '#241915');
+  poly([[116, 66], [130, 66], [127, 58], [119, 58]], '#3d3a36'); R(121, 40, 4, 18, '#3d3a36');
+  if (!V.blower) { const sq = FG.anim > 0 ? .5 : 1; R(136, 84 + (1 - sq)*2, 12, 4*sq + 1, '#7a4a30'); R(147, 86, 6, 1, '#555'); R(138, 82, 3, 2, '#5a5f62'); }
+  else { R(137, 77, 11, 12, '#4a5256'); R(139, 79, 7, 7, '#2a3033'); R(141, 81, 3, 3, FG.blow ? '#6fdcc0' : '#3a4a46'); R(147, 80, 2, 2, FG.blow ? '#e2553f' : '#503030'); }
+  R(152, 75, 14, 15, '#5b4630'); R(152, 78, 14, .8, '#3a2c1c'); R(152, 85, 14, .8, '#3a2c1c'); R(153, 75, 12, 1.4, '#2f6a8a');
+  R(100, 0, 12, 4, VENT.open ? '#050607' : '#3a3d40'); if (VENT.open) poly([[100, 4], [112, 4], [114, 9], [98, 9]], '#555a5e'); R(106, 4, .5, 62, '#8a8f92'); R(105, 66, 2.5, 2, '#c96a3b');
+  R(W - 3, 64, 3, FLOOR - 64, DOOR.open ? '#14100e' : '#5a4630'); if (!DOOR.open) R(W - 5, 76, 1.2, 1.2, '#c9a24a');
+  FX.forEach(f => { if (f.on > 0) R(f.b[0], f.b[1] - 1, f.b[2] - f.b[0], 1.2, '#ff8a3a'); });
+}
+function drawFigure(){
+  const k = K, c = fctx; c.save(); c.translate(F.x*k + (F.cough > 0 ? (Math.random() - .5)*3 : 0), F.y*k);
+  const sw = Math.sin(F.walk*.9)*.9, f = F.face;
+  if (F.downed) { c.rotate(f*1.35); c.translate(0, -.5*k); }
+  const col = (p, n) => F.P[p] === 2 ? '#e2553f' : F.P[p] === 1 ? '#e3a33f' : n;
+  [0, 1].forEach(l => { c.fillStyle = col(4 + l, '#bcb4a0'); const off = (l ? .6 : -.6) + (l ? sw : -sw)*(F.P[4 + l] ? .4 : 1); c.fillRect((off - .5)*k, -2.1*k, 1.1*k, 2.1*k); });
+  c.fillStyle = col(1, '#cfc6b4'); c.fillRect(-1.3*k, -4.5*k, 2.6*k, 2.6*k);
+  c.fillStyle = col(0, '#cfc6b4'); c.beginPath(); c.arc(0, -5.3*k, 1*k, 0, 7); c.fill(); c.fillStyle = '#4a4338'; c.fillRect((f > 0 ? .2 : -1.1)*k, -5.6*k, .9*k, .4*k);
+  c.restore();
+  [0, 1].forEach(h => {
+    const hp = handPos(h), st = F.P[2 + h], lim = st === 2 || F.downed; c.strokeStyle = st === 2 ? '#e2553f' : st === 1 ? '#e3a33f' : '#cfc6b4'; c.lineWidth = .9*k; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(hp.sx*k, hp.sy*k); c.lineTo((lim ? hp.sx + (h ? 1 : -1) : hp.x)*k, (lim ? hp.sy + 2.4 : hp.y + (F.swing[h] > 0 ? Math.sin(F.swing[h]*25)*.8 : 0))*k); c.stroke();
+  });
+  [0, 1].forEach(h => { const t = held[h]; if (!t) return; const hp = handPos(h); drawItem(t, hp.x + Math.cos(hp.a)*1.2, hp.y + Math.sin(hp.a)*1.2 + 1.5, t.k === 'tongs' || t.k === 'hammer' ? hp.a : 0);
+    if (t.k === 'tongs' && t.grip) drawItem(t.grip, hp.x + Math.cos(hp.a)*3.6, hp.y + Math.sin(hp.a)*3.6 + 1.5, 0); });
+}
+function overlay(){
+  fctx.clearRect(0, 0, W*K, H*K); drawStations();
+  items.forEach(it => { if (it.at === 'held' || it.at === 'tongs' || it.at === 'vice') return; drawItem(it, it.x, it.at === 'barrel' ? 85 : it.y, 0); });
+  items.filter(i => i.at === 'vice').forEach((it, n) => drawItem(it, 73, BENCH - 1.5 - n*1.6, 0));
+  if (VT.tw && VT.p > 0) { fctx.strokeStyle = '#b79a68'; fctx.lineWidth = 2; for (let k = 0; k < 10; k++) { fctx.beginPath(); fctx.moveTo(73*K, (74 - k*.2)*K); fctx.lineTo(73*K + Math.sin(VT.p*8 + k)*6, (BENCH - 6 - k*.4)*K); fctx.stroke(); } }
+  drawFigure();
+  if (room > .05) { fctx.fillStyle = 'rgba(255,120,40,' + room*.1 + ')'; fctx.fillRect(0, 0, W*K, H*K); }
+  if (F.P[0]) { const rd = (F.P[0] === 2 ? 9 : 18)*K, g = fctx.createRadialGradient(F.x*K, (F.y - 5)*K, rd, F.x*K, (F.y - 5)*K, rd*1.8); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,' + (F.P[0] === 2 ? .96 : .8) + ')'); fctx.fillStyle = g; fctx.fillRect(0, 0, W*K, H*K); }
+  const r = regionAt(aim.x, aim.y), it = nearest(aim.x, aim.y, 5), pl = piles.find(p => Math.abs(aim.x - p.x) < 5 && aim.y > 80);
+  const cap = it ? (it.k === 'lump' && it.m === 2 ? 'heavy metal lump' : NAME[it.k]) : pl ? NAME[pl.k] + ' (' + pl.n + ')' : ({vice: 'vice', forge: 'forge', barrel: 'water barrel', bell: V.blower ? 'blower switch' : 'bellows', bench: 'workbench', chain: 'vent chain', door: 'door'})[r];
+  fctx.strokeStyle = reach(aim.x, aim.y) ? 'rgba(111,220,192,.8)' : 'rgba(142,149,143,.5)'; fctx.lineWidth = 1.5; fctx.beginPath(); fctx.arc(aim.x*K, aim.y*K, 5, 0, 7); fctx.stroke();
+  if (cap) { fctx.font = '500 13px Barlow, sans-serif'; fctx.fillStyle = '#e4ddcf'; fctx.fillText(cap, aim.x*K + 10, aim.y*K - 8); }
+}
+function hud(){
+  for (let p = 0; p < 4; p++) $('b-' + p).setAttribute('class', 'p' + (F.P[p] === 2 ? ' down' : F.P[p] ? ' hurt' : ''));
+  [4, 5].forEach(p => document.querySelectorAll('.b-' + p).forEach(e => e.setAttribute('class', 'p b-' + p + (F.P[p] === 2 ? ' down' : F.P[p] ? ' hurt' : ''))));
+  $('r-made').textContent = made; $('r-junk').textContent = junk; $('r-time').textContent = Math.floor(F.t/60) + ':' + ('0' + Math.floor(F.t % 60)).slice(-2);
+  $('a-noise').style.width = (100*noise | 0) + '%'; $('r-tech').textContent = V.blower ? 'blower ' + (FG.blow ? 'on' : 'off') : 'none'; $('r-seed').textContent = V.seed;
+}
+
+/* ---------- control flow ---------- */
+function setPause(p){ paused = p; $('pausemsg').classList.toggle('on', p); lastT = performance.now(); }
+function frame(now){
+  const dt = Math.min(.1, (now - lastT)/1000); lastT = now;
+  if (!paused && !reading) { acc += dt; let n = 0; while (acc >= STEP && n < 5) { if (!F.end) { stepFigure(STEP); holdUse(STEP); } roomStep(STEP); items.slice().forEach(i => updateItem(i, STEP)); simStep(); acc -= STEP; n++; } if (n === 5) acc = 0; }
+  render(); overlay(); hud(); requestAnimationFrame(frame);
+}
+function buildTune(){
+  const box = $('tune'); box.innerHTML = '';
+  TUNE.forEach(([k, label, mn, mx, st]) => {
+    const l = document.createElement('label'), o = document.createElement('output'), inp = document.createElement('input'), tog = mn === 0 && mx === 1 && st === 1;
+    inp.type = tog ? 'checkbox' : 'range'; if (!tog) { inp.min = mn; inp.max = mx; inp.step = st; inp.value = V[k]; } else inp.checked = !!V[k];
+    o.textContent = tog ? (V[k] ? 'on' : 'off') : V[k];
+    inp.addEventListener('input', () => { V[k] = tog ? (inp.checked ? 1 : 0) : +inp.value; o.textContent = tog ? (V[k] ? 'on' : 'off') : V[k]; writeHash(); if (k === 'seed' || k === 'pile' || k === 'ventopen') restart(); if (k === 'blower') FG.blow = false; });
+    inp.addEventListener('change', () => inp.blur()); l.append(label, inp, o); box.append(l);
+  });
+}
+function restart(){ reset(); say(V.ventopen ? 'The forge is banked. The vent is open.' : 'The forge is banked. The vent is shut.'); }
+function aimFrom(e){ const r = $('stage').getBoundingClientRect(); aim.x = (e.clientX - r.left)/r.width*W; aim.y = (e.clientY - r.top)/r.height*H; }
+const stage = $('stage');
+stage.addEventListener('mousemove', aimFrom);
+stage.addEventListener('contextmenu', e => e.preventDefault());
+stage.addEventListener('mousedown', e => { aimFrom(e); if (paused || reading || e.button === 1) return; const h = e.button === 2 ? 0 : 1; mouse[h] = 1; useEdge(h); e.preventDefault(); });
+addEventListener('mouseup', e => { mouse[e.button === 2 ? 0 : 1] = 0; if (VT.tw && !mouse[0] && !mouse[1]) resolveTwist(); });
+addEventListener('keydown', e => {
+  const c = e.code;
+  if (reading) { if (c === 'Escape') openBook(false); return; }
+  if (e.target.tagName === 'INPUT' && (c === 'Space' || c.startsWith('Arrow'))) return;
+  if (c === 'Space' || c.startsWith('Arrow')) e.preventDefault();
+  if (e.repeat) return; keys[c] = 1;
+  if (c === 'KeyE') Q.push('e'); else if (c === 'KeyQ') Q.push('q'); else if (c === 'Space') Q.push('space'); else if (c === 'KeyJ') Q.push('j');
+  else if (c === 'KeyR') restart(); else if (c === 'KeyN') { V.seed = 1 + (Math.random()*9999 | 0); writeHash(); buildTune(); restart(); } else if (c === 'KeyP') setPause(!paused);
+});
+addEventListener('keyup', e => { delete keys[e.code]; });
+addEventListener('blur', () => { for (const k in keys) delete keys[k]; mouse[0] = mouse[1] = 0; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+addEventListener('hashchange', () => { readHash(); buildTune(); restart(); });
+$('reset').addEventListener('click', e => { TUNE.forEach(t => V[t[0]] = t[5]); writeHash(); buildTune(); restart(); e.target.blur(); });
+$('pg-title').addEventListener('input', () => { pages[pgi].t = $('pg-title').value; });
+$('pg-body').addEventListener('input', () => { pages[pgi].b = $('pg-body').value; });
+$('pg-prev').addEventListener('click', () => { pgi = Math.max(0, pgi - 1); showPage(); });
+$('pg-next').addEventListener('click', () => { pgi = Math.min(pages.length - 1, pgi + 1); showPage(); });
+$('pg-new').addEventListener('click', () => { pages.push({t: '', b: ''}); pgi = pages.length - 1; showPage(); $('pg-title').focus(); });
+$('pg-close').addEventListener('click', () => openBook(false));
+
+if (typeof globalThis !== 'undefined' && globalThis.__E12TEST) globalThis.__E12TEST.api = {V, get F(){ return F; }, get items(){ return items; }, get FG(){ return FG; }, get BN(){ return BN; }, get VT(){ return VT; }, piles: () => piles, T, held: () => held, aim, mouse, useEdge, interact, strike, stepFigure, roomStep, updateItem, simStep, holdUse, made: () => made, junk: () => junk, setVent, setDoor, reset, keys, Q, FF: () => FF, pump, mk, hold, cnt, resolveTwist, STEP, SMOKE, GAS, FIRE};
+readHash(); buildTune(); restart();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

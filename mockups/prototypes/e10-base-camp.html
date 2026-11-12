@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STRATA E10 · Base camp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@500;700&display=swap">
+<style>
+:root{color-scheme:dark;--bg:#0c0f11;--panel:#13171a;--line:#262d32;--ink:#e4ddcf;--muted:#8e958f;--rust:#c96a3b;--glow:#6fdcc0;--warn:#e3a33f;--crit:#e2553f;
+--f-title:"Big Shoulders Stencil Display",Impact,sans-serif;--f-body:"Barlow","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body)}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
+h1{font:800 34px/1 var(--f-title);letter-spacing:.04em;margin:0;text-transform:uppercase}
+h1 small{color:var(--rust);font-size:.55em;letter-spacing:.12em;margin-right:.6em}
+.q{color:var(--muted);margin:6px 0 14px;max-width:70ch}
+.stage{position:relative;border:1px solid var(--line);background:#000;aspect-ratio:16/9;max-width:960px}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;display:block}
+.msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:rgba(8,10,12,.72);font:800 30px/1.2 var(--f-title);letter-spacing:.06em;text-transform:uppercase;padding:20px}
+.msg small{display:block;font:400 14px var(--f-mono);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:8px}
+.msg.on{display:flex}
+.strip{display:flex;flex-wrap:wrap;gap:6px 22px;background:var(--panel);border:1px solid var(--line);border-top:0;padding:10px 14px;font:400 13px var(--f-mono);max-width:960px}
+.strip div span{color:var(--muted);margin-right:6px;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+.strip b{font-weight:600}
+.strip .w{color:var(--warn)}.strip .c{color:var(--crit)}
+#log{max-width:960px;min-height:22px;font:400 13px var(--f-mono);color:var(--rust);padding:6px 2px}
+h2{font:600 18px var(--f-title);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+.tune{background:var(--panel);border:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 28px;max-width:1180px}
+.tune label{display:grid;grid-template-columns:150px 1fr 48px;gap:8px;align-items:center;font-size:13px}
+.tune output{font:400 12px var(--f-mono);color:var(--glow);text-align:right}
+input[type=range]{accent-color:var(--rust);width:100%}
+input:focus-visible,button:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+button{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:6px 14px;font:500 13px var(--f-body);cursor:pointer;margin-top:6px}
+button:hover{border-color:var(--rust)}
+.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:4px 24px;font-size:13px;color:var(--muted)}
+kbd{font:600 12px var(--f-mono);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:1px 6px;margin-right:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1><small>E10</small>Base camp</h1>
+<p class="q">Is choosing a spot and setting up a base by hand satisfying, and does a base you built feel like home worth defending?</p>
+
+<div class="stage">
+  <canvas id="cv" width="960" height="540"></canvas>
+  <div class="msg" id="banner"></div>
+  <div class="msg" id="pausemsg">Paused<small>press P to resume</small></div>
+</div>
+<div class="strip">
+  <div><span>phase</span><b id="r-phase"></b></div>
+  <div><span>setup</span><b id="r-set"></b></div>
+  <div><span>pack</span><b id="r-pack"></b></div>
+  <div><span>connected</span><b id="r-mods"></b></div>
+  <div><span>power draw</span><b id="r-power"></b></div>
+  <div><span>shaft</span><b id="r-shaft"></b></div>
+  <div><span>hands</span><b id="r-hands"></b></div>
+  <div><span>seed</span><b id="r-seed"></b></div>
+</div>
+<div id="log"></div>
+
+<h2>Tuning</h2>
+<div class="tune" id="tune"></div>
+<button id="reset">Reset to defaults</button>
+
+<h2>Controls</h2>
+<div class="keys">
+  <div><kbd>A</kbd><kbd>D</kbd>walk (<kbd>W</kbd> climb the winch frame, <kbd>S</kbd> down)</div>
+  <div><kbd>1</kbd>-<kbd>6</kbd>pull a crate out of the Crawler's hold (at the ramp)</div>
+  <div><kbd>E</kbd>pick up / put down a crate; at the ramp, stow it. Wakes you</div>
+  <div><kbd>Space</kbd>hold: unfold a crate, fold a module, beat a fire</div>
+  <div><kbd>C</kbd>take a power cable from a module, press again at another to plug it</div>
+  <div><kbd>V</kbd>same, with a walkway section</div>
+  <div><kbd>X</kbd>reel in the line you hold, or the nearest one</div>
+  <div><kbd>T</kbd>use: start/stop generator, drill at the frame, sleep in a bunk</div>
+  <div><kbd>L</kbd>lamp of the nearest module (floodlight at the frame)</div>
+  <div><kbd>F</kbd>helmet lamp</div>
+  <div><kbd>K</kbd>crane: hoist a crate in. Heavy crates leave the hold on the crane when you are alone: mouse to aim, click to set down</div>
+  <div><kbd>B</kbd>helper follows / holds position. Heavy crates need the helper close by</div>
+  <div><kbd>Enter</kbd>setup done: night falls. After morning: pack up, storm coming</div>
+  <div><kbd>R</kbd>restart, same seed <kbd>N</kbd>new seed <kbd>P</kbd>pause (also when tab hidden)</div>
+  <div>Goal: set up the base, get through the night, then load everything back before the dust arrives.</div>
+</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const W = 960, H = 540, STEP = 1 / 60, WORLD = 3300, HATCH = 350, GY = 410;
+const CAP = 40, IGN = 45, PLUG = 16, TILT_GEN = .15, TILT_DRILL = .1;   /* hard-coded: see report */
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const sgn = v => v < 0 ? -1 : 1;
+
+/* ---------- tunables (stored in URL hash) ---------- */
+const TUNE = [
+  ['weight', 'Module weight x', .5, 2, .1, 1],
+  ['carry', 'Carry slowdown / weight', 0, .3, .01, .2],
+  ['cable', 'Cable length (px)', 100, 500, 10, 260],
+  ['walkway', 'Walkway length (px)', 60, 300, 10, 150],
+  ['unfold', 'Unfold time (s)', 1, 15, .5, 5],
+  ['crane', 'Crane reach (px, 0 = none)', 0, 500, 10, 260],
+  ['sink', 'Sink rate on soft ground', 0, .5, .01, .1],
+  ['vent', 'Vent spread (px)', 100, 800, 10, 380],
+  ['rockc', 'Overhang collapse chance', 0, 1, .05, .35],
+  ['fire', 'Fire spread (px)', 40, 300, 10, 130],
+  ['noiseA', 'Creature: noise attraction', 0, 3, .1, 1],
+  ['lightA', 'Creature: light attraction', 0, 3, .1, 1],
+  ['cspeed', 'Creature speed (px/s)', 20, 140, 5, 55],
+  ['night', 'Night length (s)', 60, 420, 10, 200],
+  ['sleep', 'Sleep time skip x', 1, 12, 1, 8],
+  ['pack', 'Dust storm arrives (s)', 60, 400, 10, 170],
+  ['bot', 'Bot helper (0/1)', 0, 1, 1, 1],
+  ['seed', 'Seed', 1, 9999, 1, 5]
+];
+const V = {};
+TUNE.forEach(t => { V[t[0]] = t[5]; });
+function readHash(){
+  TUNE.forEach(t => V[t[0]] = t[5]);
+  location.hash.slice(1).split('&').forEach(p => {
+    const [k, v] = p.split('='), t = TUNE.find(x => x[0] === k), n = parseFloat(v);
+    if (t && isFinite(n)) V[k] = clamp(n, t[2], t[3]);
+  });
+}
+function writeHash(){
+  const s = TUNE.filter(t => V[t[0]] !== t[5]).map(t => t[0] + '=' + V[t[0]]).join('&');
+  try { history.replaceState(null, '', s ? '#' + s : location.pathname + location.search); } catch (e) { /* file:// quirks */ }
+}
+
+/* ---------- state ---------- */
+const $ = id => document.getElementById(id);
+const TY = {
+  gen:   {n: 'GEN',   w: 96,  h: 56,  wt: 3,   dr: 0,  pw: 66,  ph: 40},
+  work:  {n: 'WORK',  w: 132, h: 70,  wt: 2,   dr: 12, pw: 86,  ph: 42},
+  bunk:  {n: 'BUNKS', w: 124, h: 62,  wt: 1.6, dr: 4,  pw: 80,  ph: 38},
+  lab:   {n: 'LAB',   w: 112, h: 68,  wt: 2.2, dr: 14, pw: 76,  ph: 40},
+  store: {n: 'STORE', w: 104, h: 58,  wt: 1.4, dr: 2,  pw: 70,  ph: 38},
+  frame: {n: 'WINCH', w: 86,  h: 176, wt: 3.2, dr: 8,  pw: 104, ph: 34}
+};
+const ORDER = ['gen', 'work', 'bunk', 'lab', 'store', 'frame'];
+let rnd, R2, Z, M, B, P, G, Cr, lines, rocks, fx, LS, Q = [], keys = {}, mouse = {x: 480, y: 270}, cam = 0, paused = false, acc = 0, lastT = performance.now(), logq = [];
+const say = s => { logq.unshift(s); logq = logq.slice(0, 3); $('log').innerHTML = logq.map((l, i) => '<div style="opacity:' + (1 - i*.3) + '">' + l + '</div>').join(''); };
+
+const soft = x => { let s = 0; for (const [c, w] of Z.soft) s = Math.max(s, clamp((w/2 - Math.abs(x - c))/45, 0, 1)); return s; };
+const gh = x => GY + 5*Math.sin(x*.006 + Z.ph[0]) + 3*Math.sin(x*.017 + Z.ph[1]) + 3.5*soft(x);
+const lairX = () => Z.trail.lairA ? Z.trail.a : Z.trail.b, poolX = () => Z.trail.lairA ? Z.trail.b : Z.trail.a;
+const LY = () => GY - 150;
+
+function gen(seed){
+  rnd = mulberry(seed); R2 = mulberry(seed ^ 0x9e37);
+  const used = [];
+  const pick = (w, lo, hi) => { let x = 0; for (let k = 0; k < 80; k++) { x = lo + rnd()*(hi - lo); if (used.every(u => Math.abs(u[0] - x) > (u[1] + w)/2 + 40)) break; } used.push([x, w]); return x; };
+  const tc = pick(520, 950, 2750), oc = pick(300, 800, 3000), vc = pick(120, 750, 3050), s1 = pick(300, 650, 3050), s2 = pick(280, 650, 3050);
+  Z = {wind: rnd() < .5 ? -1 : 1, ph: [rnd()*6, rnd()*6], trail: {a: tc - 260, b: tc + 260, lairA: rnd() < .5}, ox: oc, vx: vc, soft: [[s1, 300], [s2, 280]], scr: [], drop: [], stones: [], ripple: [], scrub: [], stars: [], peb: [], pr: []};
+  for (let k = 0; k < 26; k++) Z.scr.push([Z.trail.a + rnd()*520, rnd()*.6 + .2]);
+  for (let k = 0; k < 9; k++) Z.drop.push([Z.trail.a + rnd()*520, 2 + rnd()*3]);
+  for (let k = 0; k < 10; k++) Z.pr.push(Z.trail.a + 20 + k*50 + rnd()*12);
+  for (const [c, w] of Z.soft) for (let k = 0; k < 40; k++) Z.ripple.push([c + (rnd() - .5)*w*.9, 4 + (rnd()*14 | 0), 5 + rnd()*9]);
+  for (let k = 0; k < 130; k++) { const x = 380 + rnd()*2900; if (soft(x) < .3) Z.stones.push([x, 1 + rnd()*4, rnd()]); }
+  for (let k = 0; k < 9; k++) Z.scrub.push([vc + (rnd() - .5)*150, 8 + rnd()*14, rnd() - .5]);
+  for (let k = 0; k < 8; k++) Z.peb.push([oc - 110 + rnd()*200, 2 + rnd()*4]);
+  for (let k = 0; k < 80; k++) Z.stars.push([rnd()*W, rnd()*250, rnd()]);
+  M = ORDER.map((t, i) => ({id: i, t, w: TY[t].w, h: TY[t].h, pw: TY[t].pw, ph: TY[t].ph, wt: TY[t].wt, st: 'hold', x: 0, sL: 0, sR: 0, tilt: 0, prog: 0, gas: 0, heat: 0, fire: 0, burnt: 0, torn: 0, crush: 0, lamp: true, fl: false, on: false, drill: false, depth: 0, pw_: 0, buried: 0, deb: [], tw: 0}));
+  lines = []; rocks = []; fx = []; LS = [];
+  G = {phase: 'setup', t: 0, setT: 0, nt: 0, packT: 0, storm: WORLD + 500, pw: {draw: 0, n: 0}, over: 0, stress: 0, trickle: 0, tbank: 0, packDone: 0, ventBoost: 0, end: null, loaded: 0};
+  P = {x: HATCH + 80, face: 1, carry: null, line: null, up: null, sleep: null, daze: 0, leg: 0, arm: 0, down: 0, lamp: false, walk: 0, crane: null, gasS: 0, foot: [], fp: 0, said: 0};
+  B = {x: HATCH + 30, face: 1, mode: 'follow'};
+  Cr = {st: 'away', x: -999, tgt: null, atk: 0, cool: 0, patrolAt: 0, patrolled: 0, wait: 0, leg: 0};
+  cam = 0;
+}
+
+const heavy = m => m.wt*V.weight >= 2.5;
+const partner = () => V.bot && Math.abs(B.x - P.x) < 160;
+const active = m => m.st === 'deployed' && m.prog >= .999;
+const gap = (m, x) => Math.max(0, Math.abs(m.x - x) - (m.st === 'deployed' ? m.w : m.pw)/2);
+const nearest = (f, x, r) => { let b = null, bd = r; for (const m of M) { if (!f(m)) continue; const d = gap(m, x); if (d <= bd) { bd = d; b = m; } } return b; };
+function gasAt(x){
+  const d = (x - Z.vx)*Z.wind; if (d < -30) return 0;
+  const R = V.vent*(G.ventBoost ? 1.5 : 1);
+  return clamp(1 - Math.max(0, d)/R, 0, 1)*(d < 0 ? 1 + d/30 : 1);
+}
+
+/* ---------- commands ---------- */
+function wake(){ if (!P.sleep) return; const m = P.sleep; P.sleep = null; P.x = m.x; if (P.gasS > 25) { P.daze = 40; say('You wake with a thick head.'); } else say('You wake.'); P.gasS = 0; }
+function doCmd(e){
+  if (G.phase === 'done') return;
+  if (e.k === 'enter') {
+    if (G.phase === 'setup') { G.phase = 'night'; G.nt = 0; Cr.patrolAt = (.2 + rnd()*.5)*V.night; say('Dusk. The night is yours.'); }
+    else if (G.phase === 'morning') { G.phase = 'pack'; G.storm = WORLD + 500; G.packT = 0; say('Dust on the horizon. Pack up.'); }
+    return;
+  }
+  if (P.sleep) { if (e.k === 'e' || e.k === 't') wake(); return; }
+  if (P.down > 0) return;
+  const k = e.k;
+  if (P.up) { if (k === 'l') toggleLamp(); if (k === 't') use(); if (k === 'e') P.up = null; return; }
+  if (k === 'e') {
+    if (P.carry) {
+      const m = P.carry; P.carry = null; m.prog = 0;
+      if (P.x < HATCH + 110) { m.st = 'hold'; say('Stowed.'); } else { m.st = 'ground'; m.x = P.x + P.face*(m.pw/2 + 8); if (!P.said) { P.said = 1; say('Hold Space by the crate to unfold it.'); } }
+    } else {
+      const m = nearest(x => x.st === 'ground', P.x, 36); if (!m) return;
+      if (P.arm > 0) return say('Your arm will not take the weight.');
+      if (heavy(m) && !partner()) return say('Too heavy for one pair of hands. A second person, or the crane (K).');
+      m.st = 'carried'; m.prog = 0; P.carry = m;
+    }
+  } else if (k >= '1' && k <= '6') {
+    if (P.carry || P.x > HATCH + 110) return;
+    const pk = M[+k - 1]; if (!pk || pk.st !== 'hold') return;
+    if (heavy(pk) && !partner()) {
+      if (V.crane < 40) return say('Too heavy for one pair of hands, and no crane.');
+      pk.st = 'hang'; pk.x = HATCH + 40; P.crane = pk; return say('The crane takes the weight. Aim with the mouse, click to set down.');
+    }
+    if (P.arm > 0) return say('Your arm will not take the weight.');
+    pk.st = 'carried'; P.carry = pk;
+  } else if (k === 'k') {
+    const m = nearest(x => x.st === 'ground', HATCH, V.crane + 40); if (m && V.crane >= 40) { m.st = 'lift'; m.prog = 0; }
+  } else if (k === 'c' || k === 'v') {
+    if (P.carry) return say('Hands full.');
+    const m = nearest(active, P.x, 40);
+    if (P.line && (!m || m === P.line.a)) { P.line = null; return say('Reeled in.'); }
+    if (!m) return;
+    if (!P.line) { P.line = {a: m, k: k === 'c' ? 'c' : 'w', len: k === 'c' ? V.cable : V.walkway}; return; }
+    const L = P.line;
+    if (L.k !== (k === 'c' ? 'c' : 'w')) return;
+    if (Math.abs(L.a.x - m.x) - (L.a.w + m.w)/2 > L.len) return say('It will not reach.');
+    if (lines.some(l => l.k === L.k && ((l.a === L.a && l.b === m) || (l.b === L.a && l.a === m)))) { P.line = null; return; }
+    lines.push({a: L.a, b: m, k: L.k, len: L.len, cut: 0}); P.line = null; say(L.k === 'c' ? 'Plugged in.' : 'Walkway laid.');
+  } else if (k === 'x') {
+    if (P.line) { P.line = null; return say('Reeled in.'); }
+    let bi = -1, bd = 90;
+    lines.forEach((l, i) => { const d = Math.min(Math.abs(l.a.x - P.x) - l.a.w/2, Math.abs(l.b.x - P.x) - l.b.w/2); if (d < bd) { bd = d; bi = i; } });
+    if (bi >= 0) { lines.splice(bi, 1); say('Reeled in.'); }
+  } else if (k === 'l') toggleLamp();
+  else if (k === 't') use();
+  else if (k === 'f') P.lamp = !P.lamp;
+  else if (k === 'b') { B.mode = B.mode === 'follow' ? 'hold' : 'follow'; say(B.mode === 'hold' ? 'Helper stays put.' : 'Helper follows.'); }
+}
+function toggleLamp(){
+  const m = P.up || nearest(active, P.x, 40); if (!m) return;
+  if (m.t === 'frame') { if (P.up || Math.abs(P.x - m.x) < 60) m.fl = !m.fl; } else m.lamp = !m.lamp;
+}
+function use(){
+  const m = P.up || nearest(active, P.x, 40); if (!m) return;
+  if (m.t === 'gen') {
+    if (m.torn || m.burnt || m.fire) return;
+    if (Math.abs(m.tilt) > TILT_GEN) return say('It coughs and dies.');
+    m.on = !m.on; if (!m.on) say('Quiet.');
+  } else if (m.t === 'frame') { if (Math.abs(m.tilt) > TILT_DRILL || m.torn) return say('The drill will not bite.'); m.drill = !m.drill; }
+  else if (m.t === 'bunk' && !m.torn && !m.burnt) {
+    if (G.phase !== 'night') return say('Not tired yet.');
+    if (P.carry || P.line) return say('Hands full.');
+    P.sleep = m; P.gasS = 0; say('You lie down.');
+  }
+}
+
+/* ---------- simulation ---------- */
+function buildLights(){
+  LS = [];
+  for (const m of M) {
+    if (m.st !== 'deployed') continue;
+    const y = gh(m.x) - m.h*.6;
+    if (m.fire > 0) LS.push({x: m.x, y, R: 190});
+    if (!active(m) || m.torn || m.burnt || !m.pw_) continue;
+    if (m.lamp) LS.push({x: m.x, y: gh(m.x) - m.h + 10, R: 130});
+    if (m.fl) LS.push({x: m.x, y: gh(m.x) - m.h + 14, R: 440});
+  }
+  if (P.lamp && !P.sleep) LS.push({x: P.x, y: gh(P.x) - 30, R: 160});
+}
+function lit(x, y){ let v = 0; for (const s of LS) { const d = Math.hypot(x - s.x, y - s.y); if (d < s.R) v = Math.max(v, Math.pow(1 - d/s.R, 1.3)); } return v; }
+function power(){
+  const dep = M.filter(active); dep.forEach(m => m.pw_ = 0);
+  const gens = dep.filter(m => m.t === 'gen' && m.on && !m.torn && !m.burnt && !m.fire && Math.abs(m.tilt) <= TILT_GEN && m.crush < 1);
+  const q = gens.slice(); gens.forEach(g => g.pw_ = 1);
+  while (q.length) {
+    const a = q.pop();
+    for (const L of lines) {
+      if (L.k !== 'c' || L.cut) continue;
+      const o = L.a === a ? L.b : L.b === a ? L.a : null;
+      if (o && !o.pw_ && !o.torn && active(o)) { o.pw_ = 1; q.push(o); }
+    }
+  }
+  let draw = 0, n = 0;
+  dep.forEach(m => { if (m.pw_ && m.t !== 'gen' && !m.burnt) { n++; draw += TY[m.t].dr + (m.lamp ? 3 : 0) + (m.fl ? 8 : 0) + (m.drill ? 22 : 0); } });
+  G.pw = {draw, n, gens: gens.length};
+}
+function maul(m){
+  if (m.torn) return;
+  m.torn = 1; m.lamp = false; m.on = false; m.drill = false; m.fl = false; m.tilt += (R2() < .5 ? -1 : 1)*.22;
+  for (let k = 0; k < 9; k++) m.deb.push([(R2() - .5)*(m.w + 70), R2()*10, 3 + R2()*8, R2()*3]);
+  lines.forEach(l => { if (l.a === m || l.b === m) l.cut = 1; });
+  if (P.sleep === m) { wake(); P.arm = 160; P.down = 3; say('Something tore the bunks open.'); }
+  if (P.up === m) { P.up = null; P.down = 3; }
+}
+function ignite(m){ m.fire = 1; say('WHUMP.'); for (let k = 0; k < 14; k++) fx.push({k: 'puff', x: m.x + (R2() - .5)*40, y: gh(m.x) - 20, vx: (R2() - .5)*60, vy: -R2()*50, a: 1, s: 8 + R2()*10}); }
+function stepMods(dt){
+  power();
+  let draw = G.pw.draw; if (G.pw.gens) { if (draw > CAP) { G.over += dt*(draw - CAP)/CAP*3; if (G.over > 6) { M.forEach(m => { if (m.t === 'gen' && m.on) m.on = false; }); G.over = 0; say('The breaker clicks off.'); } } else G.over = Math.max(0, G.over - dt); }
+  G.ventBoost = M.some(m => m.drill && m.pw_ && Math.abs(m.x - Z.vx) < 260) ? 1 : 0;
+  for (const m of M) {
+    if (m.st === 'lift') { m.x += clamp(HATCH - m.x, -100*dt, 100*dt); if (Math.abs(m.x - HATCH) < 2) { m.st = 'hold'; say('Hoisted in.'); } }
+    if (m.st === 'hang') { const tx = clamp(mouse.x + cam, HATCH + 30, HATCH + Math.max(60, V.crane)); m.x += clamp(tx - m.x, -220*dt, 220*dt); }
+    if (m.st !== 'deployed') continue;
+    if (m.folding) { m.prog -= dt/(V.unfold*.8*(1 + m.depth/18 + m.torn*.5 + m.crush)); if (m.prog <= 0) { m.prog = 0; m.folding = 0; m.st = 'ground'; m.sL = m.sR = m.tilt = m.depth = 0; m.on = false; m.drill = false; P.lock = 1; } continue; }
+    const s0 = soft(m.x - m.w/2 + 10), s1 = soft(m.x + m.w/2 - 10), rate = V.sink*(.5 + m.wt*V.weight/2)*(m.on ? 1.4 : 1)*(m.drill ? 1.8 : 1);
+    m.sL = Math.min(m.h*.7, m.sL + rate*s0*dt); m.sR = Math.min(m.h*.7, m.sR + rate*s1*dt);
+    m.depth = (m.sL + m.sR)/2; m.tilt = Math.atan2(m.sR - m.sL, m.w) + (m.torn ? m.tilt - Math.atan2(m.sR - m.sL, m.w) : 0);
+    if (m.depth > PLUG) lines.forEach(l => { if (l.k === 'c' && (l.a === m || l.b === m)) l.cut = 1; });
+    if (m.t === 'gen' && Math.abs(m.tilt) > TILT_GEN && m.on) { m.on = false; say('The generator coughs and stalls.'); }
+    if (m.t === 'frame' && m.drill && Math.abs(m.tilt) > TILT_DRILL) m.drill = false;
+    const g = gasAt(m.x); m.gas += g*dt;
+    if (m.t === 'gen' && m.on && g > .1 && m.gas > IGN && !m.fire && !m.burnt) ignite(m);
+    if (m.drill && m.pw_) { const sf = soft(m.x); m.dig = (m.dig || 0) + 1.2*(1 - sf*.9)*dt; if (sf > .4) m.dig = Math.min(m.dig, 2.5); }
+    if (m.fire > 0) {
+      m.burnt += m.fire*dt*.04; m.on = m.on && m.fire <= 0;
+      if (m.burnt >= 1) { m.burnt = 1; m.fire = 0; m.on = false; m.drill = false; lines.forEach(l => { if (l.a === m || l.b === m) l.cut = 1; }); }
+      for (const o of M) if (o !== m && o.st === 'deployed' && !o.fire && !o.burnt) { const d = Math.abs(o.x - m.x) - (o.w + m.w)/2; if (d < V.fire) { o.heat += dt*(1 - Math.max(0, d)/V.fire)*m.fire; if (o.heat > 3) o.fire = 1; } }
+    }
+  }
+  M.forEach(m => { if (m.t === 'gen' && m.on && G.t % 1 < dt) fx.push({k: 'ring', x: m.x, y: gh(m.x) - 24, r: 6, a: .55}); });
+}
+function stepPlayer(dt){
+  const l = keys.KeyA || keys.ArrowLeft, r = keys.KeyD || keys.ArrowRight, dir = (r ? 1 : 0) - (l ? 1 : 0);
+  P.daze = Math.max(0, P.daze - dt); P.leg = Math.max(0, P.leg - dt); P.arm = Math.max(0, P.arm - dt);
+  if (P.sleep) { P.gasS += gasAt(P.sleep.x)*dt; return; }
+  if (P.down > 0) { P.down = Math.max(0, P.down - dt); return; }
+  if (P.up) { P.x = P.up.x; if (keys.KeyS || keys.ArrowDown) P.up = null; if (gasAt(P.x) > .2) P.daze = Math.max(P.daze, 5); return; }
+  if (P.crane && P.crane.st !== 'hang') P.crane = null;
+  const onWalk = lines.some(w => w.k === 'w' && !w.cut && P.x > Math.min(w.a.x, w.b.x) && P.x < Math.max(w.a.x, w.b.x));
+  let sp = 130*(1 - .35*(onWalk ? 0 : soft(P.x)));
+  if (P.leg > 0) sp *= .55; if (P.daze > 0) sp *= .8;
+  if (P.carry) sp *= Math.max(.15, 1 - V.carry*P.carry.wt*V.weight*(heavy(P.carry) ? .5 : 1));
+  if (dir) { P.face = dir; P.x += dir*sp*dt; P.walk += sp*dt; if (P.walk > 16) { P.walk = 0; P.foot.push([P.x, onWalk ? 0 : soft(P.x)]); if (P.foot.length > 140) P.foot.shift(); } }
+  if (P.line) { const a = P.line.a, lim = P.line.len + a.w/2 + 6; P.x = clamp(P.x, a.x - lim, a.x + lim); }
+  P.x = clamp(P.x, HATCH + 10, WORLD - 20);
+  if (gasAt(P.x) > .25 && M.every(m => m.st !== 'deployed' || Math.abs(m.x - P.x) > m.w/2 || true)) P.daze = Math.max(P.daze, 3*gasAt(P.x));
+  if ((keys.KeyW || keys.ArrowUp) && !P.carry) { const f = nearest(x => active(x) && x.t === 'frame' && !x.torn, P.x, 14); if (f && Math.abs(f.tilt) < .3) P.up = f; }
+  /* Space: work with hands */
+  if (!keys.Space) P.lock = 0;
+  if (keys.Space && !P.carry && !P.line && !P.lock) {
+    const bm = nearest(m => m.st === 'deployed' && m.fire > 0, P.x, 60);
+    if (bm) { bm.fire = Math.max(0, bm.fire - dt*.35); if (bm.fire <= 0) { bm.heat = 0; say('Out.'); } return; }
+    const cr = nearest(m => m.st === 'ground', P.x, 36);
+    if (cr) {
+      const clash = M.some(o => o !== cr && o.st === 'deployed' && Math.abs(o.x - cr.x) < (o.w + cr.w)/2 + 6);
+      if (clash) { if (G.t % 3 < dt) say('No room to unfold here.'); return; }
+      cr.prog += dt/V.unfold*(P.arm > 0 ? .5 : 1); if (cr.prog >= 1) { cr.prog = 1; cr.st = 'deployed'; cr.dig = 0; P.lock = 1; }
+      return;
+    }
+    const dm = nearest(m => m.st === 'deployed', P.x, 30);
+    if (dm) {
+      if (dm.folding) return;
+      if (dm.on || dm.drill) return say('Stop it first (T).');
+      if (lines.some(l => l.a === dm || l.b === dm)) return say('Unplug its lines first (X).');
+      if (dm.fire > 0) return;
+      dm.folding = 1; dm.prog = Math.min(dm.prog, 1);
+    }
+  }
+}
+function stepBot(dt){
+  if (!V.bot) return;
+  let tx; if (P.carry && heavy(P.carry) && partner()) tx = P.x + P.face*(P.carry.pw + 24); else if (B.mode === 'follow') tx = P.x - P.face*60; else tx = B.x;
+  const d = tx - B.x; if (Math.abs(d) > 3) { B.x += clamp(d, -130*dt, 130*dt); B.face = sgn(d); }
+  B.x = clamp(B.x, HATCH + 10, WORLD - 20);
+}
+function stepRocks(dt){
+  const ox = Z.ox; let st = 0;
+  for (const m of M) {
+    if (m.st !== 'deployed') continue;
+    const src = m.drill && m.pw_ ? 1 : m.t === 'gen' && m.on ? .18 : 0, d = Math.abs(m.x - ox);
+    if (src && d < 420) st += src*(1 - d/420);
+  }
+  G.stress += st*dt*.03;
+  if (G.trickle > 0) {
+    G.trickle -= dt; if (R2() < .5) fx.push({k: 'grit', x: ox - 110 + R2()*220, y: LY() + 28, vy: 40 + R2()*40, a: 1});
+    if (G.trickle <= 0) for (let k = 0, n = 3 + (rnd()*3 | 0); k < n; k++) rocks.push({x: ox - 110 + rnd()*210, y: LY() + 28, vy: 0, r: 8 + rnd()*10, landed: 0, rot: rnd()*3});
+  } else if (G.stress > .15 && G.t % 1 < dt && rnd() < V.rockc*G.stress) { G.trickle = 2.4; G.stress = 0; }
+  else if (R2() < dt*.12) fx.push({k: 'grit', x: ox - 110 + R2()*220, y: LY() + 28, vy: 30, a: .8});   /* idle trickle: a cue, not a fault */
+  for (const r of rocks) {
+    if (r.landed) continue;
+    r.vy += 700*dt; r.y += r.vy*dt;
+    const gy = gh(r.x) - r.r*.6; let top = gy;
+    for (const m of M) if ((m.st === 'deployed' || m.st === 'ground') && Math.abs(m.x - r.x) < (m.st === 'deployed' ? m.w : m.pw)/2 + r.r*.5) top = Math.min(top, gh(m.x) - (m.st === 'deployed' ? m.h : m.ph));
+    if (r.y >= top) {
+      r.y = top; r.landed = 1;
+      for (let k = 0; k < 8; k++) fx.push({k: 'puff', x: r.x, y: r.y, vx: (R2() - .5)*80, vy: -R2()*40, a: .8, s: 6 + R2()*8});
+      for (const m of M) if ((m.st === 'deployed' || m.st === 'ground') && Math.abs(m.x - r.x) < (m.st === 'deployed' ? m.w : m.pw)/2 + 6) {
+        m.crush++; if (m.st === 'deployed') { m.on = false; m.drill = false; m.tilt += (r.x > m.x ? 1 : -1)*.07; if (P.sleep === m) { wake(); P.down = 3; P.leg = 150; say('Rock came through the roof.'); } }
+      }
+      if (!P.up && !P.sleep && Math.abs(P.x - r.x) < r.r + 14 && gh(P.x) - 30 < r.y + 10) { P.down = 4; P.leg = 120; if (P.carry) { P.carry.st = 'ground'; P.carry.x = P.x; P.carry = null; } }
+    }
+  }
+}
+function attractors(){
+  const a = []; let tot = P.lamp ? V.lightA*.15 : 0;
+  for (const m of M) if (active(m) && !m.torn) {
+    let s = 0;
+    if (m.t === 'gen' && m.on) s += V.noiseA*(1 + .6*G.pw.draw/CAP);
+    if (m.drill && m.pw_) s += V.noiseA*1.8;
+    if (m.pw_ && m.lamp && !m.burnt) s += V.lightA*.25;
+    if (m.fl && m.pw_) s += V.lightA*.9;
+    if (m.fire > 0) s += V.lightA*.8;
+    if (s > 0) { a.push({m, s}); tot += s; }
+  }
+  return {a, tot};
+}
+function stepCreature(dt){
+  const night = G.phase === 'night', A = attractors(), lair = lairX(), pool = poolX(), sp = V.cspeed;
+  Cr.cool -= dt; Cr.leg += dt;
+  const go = (tx, v) => { const d = tx - Cr.x; Cr.x += clamp(d, -v*dt, v*dt); return Math.abs(d); };
+  const pick = (range) => { let b = null, bs = 0; for (const o of A.a) { const d = Math.abs(o.m.x - Cr.x); if (d > range) continue; const s = o.s/(1 + d/500); if (s > bs) { bs = s; b = o.m; } } return b; };
+  if (!night && Cr.st !== 'away' && Cr.st !== 'flee') Cr.st = 'flee';
+  switch (Cr.st) {
+    case 'away':
+      if (!night || G.nt < 8) break;
+      if (!Cr.patrolled && G.nt >= Cr.patrolAt) { Cr.patrolled = 1; Cr.st = 'patrol'; Cr.x = lair; Cr.wait = 0; Cr.back = 0; }
+      else if (Cr.cool <= 0 && rnd() < (.0012 + .006*A.tot)*dt) { const t = pick(1e9); if (t) { Cr.st = 'hunt'; Cr.x = lair; Cr.tgt = t; } }
+      break;
+    case 'patrol': {
+      if (!Cr.back) { if (go(pool, sp*.7) < 2) { Cr.wait += dt; if (Cr.wait > 4) Cr.back = 1; } }
+      else if (go(lair, sp*.7) < 2) { Cr.st = 'away'; Cr.cool = 20; }
+      if (A.tot > .8 && rnd() < dt*.5) { const t = pick(500 + 250*A.tot); if (t) { Cr.st = 'hunt'; Cr.tgt = t; } }
+      break; }
+    case 'hunt': {
+      const t = Cr.tgt; if (!t || t.torn || t.st !== 'deployed') { Cr.st = 'flee'; break; }
+      const d = go(t.x, sp*1.15);
+      if (lit(Cr.x, gh(Cr.x) - 12) > .72 && d > 70) { Cr.st = 'flee'; Cr.cool = 12; break; }
+      if (d < t.w/2 + 22) { Cr.st = 'attack'; Cr.atk = 3.5; }
+      break; }
+    case 'attack':
+      Cr.atk -= dt;
+      if (Cr.atk <= 0) { if (Cr.tgt && Cr.tgt.st === 'deployed') maul(Cr.tgt); Cr.st = 'flee'; Cr.cool = 18; }
+      break;
+    case 'flee': if (go(lair, sp*1.5) < 2) { Cr.st = 'away'; Cr.cool = Math.max(Cr.cool, 15); } break;
+  }
+  if (Cr.st === 'patrol' || Cr.st === 'hunt' || Cr.st === 'flee') {
+    for (const m of M) if (m.st === 'deployed' && !m.torn && m !== Cr.tgt && Math.abs(Cr.x - m.x) < m.w/2 + 10) maul(m);
+    if (!P.up && !P.sleep && !P.down && Math.abs(Cr.x - P.x) < 36) { P.down = 5; P.arm = 150; say('Something hit you out of the dark.'); if (P.carry) { P.carry.st = 'ground'; P.carry.x = P.x + 30; P.carry = null; } if (Cr.st !== 'flee') Cr.st = 'flee'; }
+  }
+}
+function stepStorm(dt){
+  if (G.phase !== 'pack') return;
+  G.storm -= (WORLD + 500 - HATCH)/V.pack*dt;
+  for (const m of M) if (m.st !== 'hold' && m.st !== 'lift' && !m.buried && m.x > G.storm) { m.buried = 1; if (P.carry === m) { P.carry = null; } if (P.crane === m) P.crane = null; m.st = 'ground'; }
+  if (P.x > G.storm && !P.down) { P.down = 2; P.x = Math.max(HATCH + 10, G.storm - 20); }
+  const aboard = M.filter(m => m.st === 'hold').length;
+  if (aboard === M.length || G.storm <= HATCH + 10) endRun(aboard);
+}
+function endRun(n){
+  G.phase = 'done'; G.end = n; if (P.sleep) wake();
+  $('banner').innerHTML = (n === M.length ? 'Hatch sealed, all crates aboard' : 'The dust got there first') + '<small>' + n + ' of ' + M.length + ' crates in the hold. Setup ' + G.setT.toFixed(0) + ' s, packing ' + G.packT.toFixed(0) + ' s. R to go again.</small>';
+  $('banner').classList.add('on');
+}
+function stepFx(dt){
+  if (R2() < dt*5) fx.push({k: 'gas', x: Z.vx + (R2() - .5)*20, y: gh(Z.vx) - 2, vx: Z.wind*(10 + R2()*20), vy: -8 - R2()*8, a: .5, s: 4 + R2()*4, t: 0});
+  for (const f of fx) {
+    if (f.k === 'ring') { f.r += 60*dt; f.a -= .5*dt; }
+    else if (f.k === 'grit') { f.y += f.vy*dt; f.a -= .7*dt; }
+    else if (f.k === 'gas') { f.t += dt; f.x += f.vx*dt; f.y += f.vy*dt; f.vy *= .98; f.s += 6*dt; f.a -= dt*.06; if (f.t > 3) f.vx *= 1.01; }
+    else { f.x += f.vx*dt; f.y += f.vy*dt; f.a -= dt*.7; f.s += 4*dt; }
+  }
+  fx = fx.filter(f => f.a > 0 && (f.k !== 'gas' || Math.abs(f.x - Z.vx) < V.vent*1.1)).slice(-260);
+}
+function step(){
+  const dt = STEP; G.t += dt;
+  if (G.phase === 'done') { stepFx(dt); return; }
+  if (G.phase === 'setup') G.setT += dt; if (G.phase === 'pack') G.packT += dt;
+  while (Q.length) doCmd(Q.shift());
+  if (G.phase === 'night') { G.nt += dt; if (G.nt >= V.night) { G.phase = 'morning'; if (P.sleep) wake(); say('Morning.'); } }
+  buildLights(); stepPlayer(dt); stepBot(dt); stepMods(dt); stepRocks(dt); stepCreature(dt); stepStorm(dt); stepFx(dt);
+}
+const darkness = () => G.phase !== 'night' ? 0 : G.nt < 10 ? G.nt/10 : G.nt > V.night - V.night*.12 ? Math.max(0, (V.night - G.nt)/(V.night*.12)) : 1;
+
+/* ---------- drawing ---------- */
+const cv = $('cv'), c = cv.getContext('2d'), dkc = document.createElement('canvas');
+dkc.width = W; dkc.height = H;
+const dc = dkc.getContext('2d');
+const mixc = (a, b, t) => 'rgb(' + a.map((v, i) => (v + (b[i] - v)*t) | 0).join(',') + ')';
+const Rc = (col, x, y, w, h) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+const Poly = (col, pts) => { c.fillStyle = col; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.closePath(); c.fill(); };
+
+function drawGround(){
+  const x0 = Math.floor(cam/8)*8 - 8, x1 = cam + W + 8, tr = Z.trail;
+  c.fillStyle = '#3d332b'; c.beginPath(); c.moveTo(x0, H); for (let x = x0; x <= x1; x += 8) c.lineTo(x, gh(x)); c.lineTo(x1, H); c.closePath(); c.fill();
+  for (let x = x0; x <= x1; x += 8) {
+    const g = gh(x), s = soft(x);
+    Rc('#5a4a3b', x, g, 8, 7);
+    if (s > .02) { c.fillStyle = 'rgba(170,146,104,' + (.85*s).toFixed(2) + ')'; c.fillRect(x, g, 8, 34); }
+    if (x > tr.a && x < tr.b) Rc('rgba(18,12,8,.25)', x, g, 8, 9);
+  }
+  for (const [x, o, w] of Z.ripple) if (x > cam - 20 && x < cam + W + 20) Rc('rgba(214,192,148,.5)', x, gh(x) + o, w, 1);
+  for (const [x, s, k] of Z.stones) if (x > cam - 20 && x < cam + W + 20) { Rc('#2a231e', x, gh(x) - s + 2, s*1.6, s); if (k > .6) Rc('#6a5a49', x, gh(x) - s + 2, s*1.6, 1); }
+  /* creature trail: scratches, droppings, prints, lair, dried pool */
+  c.strokeStyle = 'rgba(210,190,150,.5)'; c.lineWidth = 1;
+  for (const [x, k] of Z.scr) { const g = gh(x); for (let j = 0; j < 3; j++) { c.beginPath(); c.moveTo(x + j*4, g + 2); c.lineTo(x + j*4 + 7*k, g + 11); c.stroke(); } }
+  for (const [x, s] of Z.drop) { Rc('#1d1712', x, gh(x) - s, s*2.4, s + 1); Rc('#2d251d', x + 1, gh(x) - s - 1, s*1.4, 1); }
+  for (const x of Z.pr) { Rc('rgba(20,14,10,.5)', x, gh(x) + 1, 4, 2); Rc('rgba(20,14,10,.5)', x + 9, gh(x) + 3, 4, 2); }
+  const lx = lairX(), px = poolX();
+  Poly('#2b2622', [[lx - 46, gh(lx) + 2], [lx - 30, gh(lx) - 30], [lx, gh(lx) - 44], [lx + 30, gh(lx) - 28], [lx + 46, gh(lx) + 2]]);
+  c.fillStyle = '#050505'; c.beginPath(); c.ellipse(lx, gh(lx) - 8, 16, 14, 0, Math.PI, 0); c.fill(); Rc('#050505', lx - 16, gh(lx) - 8, 32, 10);
+  Rc('rgba(190,176,150,.55)', px - 36, gh(px) - 1, 72, 4); Rc('rgba(100,88,72,.8)', px - 26, gh(px) + 1, 50, 1);
+  Rc('#c8c0ac', px + 10, gh(px) - 4, 14, 2); Rc('#c8c0ac', px - 22, gh(px) - 3, 8, 2);
+  /* footprints */
+  for (const [x, s] of P.foot) Rc('rgba(15,10,6,' + (.25 + .3*s).toFixed(2) + ')', x - 3, gh(x) + 1 + s*2, 5, 2 + s*3);
+  /* vent: crack, sulphur crust, dead scrub */
+  const vx = Z.vx; Rc('rgba(214,196,70,.7)', vx - 24, gh(vx) - 1, 48, 3); Rc('#0b0908', vx - 7, gh(vx) - 1, 14, 3); Rc('rgba(214,196,70,.35)', vx - 40, gh(vx), 80, 2);
+  c.strokeStyle = '#6b5a43'; for (const [x, h, k] of Z.scrub) { c.beginPath(); c.moveTo(x, gh(x)); c.lineTo(x + k*10, gh(x) - h); c.lineTo(x + k*18, gh(x) - h*1.3); c.stroke(); }
+}
+function drawCliff(){
+  const ox = Z.ox;
+  Poly('#2a2724', [[ox + 40, GY + 6], [ox + 60, GY - 150], [ox + 100, GY - 270], [ox + 170, GY - 300], [ox + 250, GY - 250], [ox + 300, GY - 120], [ox + 330, GY + 6]]);
+  Rc('#352f2b', ox - 120, LY(), 232, 28); Rc('#4a423a', ox - 120, LY(), 232, 3); Rc('#1c1917', ox - 120, LY() + 28, 232, 6);
+  Rc('#3b3430', ox + 60, LY() - 60, 80, 62);
+  for (let k = 0; k < 5; k++) Rc('rgba(196,180,150,.35)', ox - 100 + k*45, LY() + 6 + (k % 2)*8, 22, 2);   /* fresh pale scars */
+  for (const [x, s] of Z.peb) { const g = gh(x); Poly('#4b433b', [[x, g], [x + s, g - s*1.6], [x + s*2, g - s*.6], [x + s*2.6, g]]); }
+}
+function drawCrawler(){
+  const cx = 60, gy = gh(200), tw = 280;
+  Rc('#1a1d1f', cx, gy - 34, tw, 34); Rc('#2c3236', cx + 4, gy - 30, tw - 8, 26);
+  for (let k = 0; k < 7; k++) { c.fillStyle = '#12151a'; c.beginPath(); c.arc(cx + 22 + k*38, gy - 17, 11, 0, 7); c.fill(); }
+  Rc('#c96a3b', cx + 8, gy - 112, 130, 78); Rc('#a6552d', cx + 8, gy - 112, 130, 6); Rc('#2a2f33', cx + 30, gy - 100, 40, 24); Rc('rgba(111,220,192,.5)', cx + 32, gy - 98, 36, 20);
+  Rc('#2a2f33', cx + 110, gy - 140, 10, 30);
+  Rc('#4b5559', cx + 138, gy - 112, 148, 78); Rc('#13171a', cx + 146, gy - 104, 132, 62);   /* hold cutaway */
+  Rc('#3a4247', cx + 138, gy - 116, 148, 6);
+  Rc('#262d32', cx + 286, gy - 32, 4, 4);
+  Poly('#5a5148', [[HATCH - 10, gy - 36], [HATCH + 38, gy - 2], [HATCH + 38, gy], [HATCH - 10, gy - 34]]);
+  let i = 0;
+  for (const m of M) { if (m.st === 'hold') { const sx = cx + 150 + (m.id % 3)*42, sy = gy - 42 - ((m.id/3) | 0)*34; crateAt(m, sx + 20, sy, .55); } i++; }
+  /* crane: boom over the hold, hook to the hanging or lifted crate */
+  c.strokeStyle = '#8e958f'; c.lineWidth = 3; c.beginPath(); c.moveTo(cx + 262, gy - 116); c.lineTo(cx + 262, gy - 170); c.lineTo(HATCH + (V.crane > 0 ? 40 : 0), gy - 170); c.stroke();
+  for (const m of M) if (m.st === 'hang' || m.st === 'lift') { c.lineWidth = 1; c.strokeStyle = '#d6c8a8'; c.beginPath(); c.moveTo(m.x, gy - 170); c.lineTo(m.x, gh(m.x) - 100 - m.ph); c.stroke(); }
+  if (V.crane > 0) { c.strokeStyle = 'rgba(142,149,143,.25)'; c.setLineDash([4, 6]); c.beginPath(); c.moveTo(HATCH + V.crane, gy - 6); c.lineTo(HATCH + V.crane, gy - 40); c.stroke(); c.setLineDash([]); }
+  if (G.t % 1.2 < .5 && M.some(m => m.on)) Rc('rgba(120,120,120,.3)', cx + 112, gy - 160, 6, 6);
+}
+function crateAt(m, x, y, s){
+  c.save(); c.translate(x, y); c.scale(s || 1, s || 1);
+  const w = m.pw, h = m.ph;
+  Rc('#6b5a3e', -w/2, -h, w, h); Rc('#4a3d29', -w/2, -h, w, 3); Rc('#4a3d29', -w/2, -3, w, 3);
+  Rc('#c96a3b', -w/2 + 8, -h, 5, h); Rc('#c96a3b', w/2 - 13, -h, 5, h);
+  c.fillStyle = '#e4ddcf'; c.font = '700 15px Caveat, cursive'; c.textAlign = 'center'; c.fillText(TY[m.t].n, 0, -h/2 + 5);
+  c.restore();
+}
+function flames(m, w, h){
+  for (let k = 0; k < 7; k++) {
+    const fx_ = -w/2 + (k + .5)*w/7, fh = (14 + 18*Math.random())*m.fire + 4;
+    Poly(k % 2 ? '#ffb046' : '#e2553f', [[fx_ - 6, -h + 6], [fx_, -h - fh], [fx_ + 6, -h + 6]]);
+  }
+}
+function drawMod(m){
+  if (m.st === 'hold') return;
+  if (m.buried) { const g = gh(m.x); Poly('#8a7658', [[m.x - 80, g + 2], [m.x - 30, g - 26], [m.x + 30, g - 30], [m.x + 80, g + 2]]); return; }
+  if (m.st === 'carried') return crateAt(m, P.x + P.face*(m.pw/2 + 8), gh(P.x) - 12);
+  if (m.st === 'ground') return crateAt(m, m.x, gh(m.x) + 1);
+  if (m.st === 'lift' || m.st === 'hang') return crateAt(m, m.x, gh(m.x) - 100);
+  const e = clamp(m.prog, 0, 1);
+  if (e < .25) { crateAt(m, m.x, gh(m.x) + 1); return; }
+  c.save(); c.translate(m.x, gh(m.x) + (m.sL + m.sR)/2); c.rotate(m.tilt); c.scale(1, .3 + .7*e);
+  const w = m.w, h = m.h, on = m.pw_ && m.lamp && !m.torn && !m.burnt, win = on ? '#ffe2a8' : '#232a2e';
+  switch (m.t) {
+    case 'gen': Rc('#4b5559', -w/2, -h, w, h - 6); Rc('#c96a3b', -w/2, -h + 8, w, 6); Rc('#252b2e', -w/2 + 8, -h + 22, 34, 22); Rc('#33393c', w/2 - 26, -h - 16, 9, 18); Rc('#222', -w/2 + 4, -6, w - 8, 6);
+      if (m.on) Rc('rgba(150,150,150,.4)', w/2 - 28, -h - 26 - (G.t*20 % 14), 12, 8); break;
+    case 'work': Rc('#5a5148', -w/2, -h, w, h - 4); Poly('#3b342d', [[-w/2 - 6, -h], [0, -h - 14], [w/2 + 6, -h]]); Rc(win, -w/2 + 14, -h + 16, 34, 22); Rc('#2a2f33', w/2 - 28, -h - 26, 8, 16); Rc('#8e958f', w/2 - 40, -26, 24, 5); break;
+    case 'bunk': Rc('#4e5a4e', -w/2, -h, w, h - 4); Poly('#3a453a', [[-w/2 - 5, -h], [-w/2 + 14, -h - 12], [w/2 - 14, -h - 12], [w/2 + 5, -h]]); Rc(win, -w/2 + 12, -h + 12, 26, 14); Rc('#2a332a', w/2 - 44, -h + 8, 34, 4); Rc('#2a332a', w/2 - 44, -h + 28, 34, 4); Rc('#6b5a3e', w/2 - 44, -h + 12, 34, 3); break;
+    case 'lab': Rc('#4a5a60', -w/2, -h + 16, w, h - 20); c.fillStyle = on ? 'rgba(111,220,192,.55)' : 'rgba(60,80,88,.8)'; c.beginPath(); c.ellipse(0, -h + 16, w/2 - 6, 18, 0, Math.PI, 0); c.fill(); Rc(win, -w/2 + 12, -h + 28, 24, 16); Rc('#2a3a3f', w/2 - 36, -h + 28, 20, 24); break;
+    case 'store': for (let k = 0; k < 3; k++) { Rc('#6b5a3e', -w/2 + k*34, -26, 32, 22); Rc('#c96a3b', -w/2 + k*34 + 4, -26, 3, 22); } Rc('#6b5a3e', -w/2 + 18, -52, 32, 24); Rc('#6b5a3e', -w/2 + 52, -50, 30, 22); Rc('#2a251f', -w/2, -4, w, 4); break;
+    case 'frame': { Rc('#2a2f33', -w/2, -10, 10, 10); Rc('#2a2f33', w/2 - 10, -10, 10, 10); c.strokeStyle = '#8e958f'; c.lineWidth = 4; c.beginPath(); c.moveTo(-w/2 + 5, -6); c.lineTo(-8, -h + 20); c.moveTo(w/2 - 5, -6); c.lineTo(8, -h + 20); c.moveTo(-w/2 + 16, -70); c.lineTo(w/2 - 16, -70); c.stroke();
+      Rc('#c96a3b', -22, -h + 6, 44, 18); Rc('#2a2f33', -26, -h + 22, 52, 5);
+      c.strokeStyle = '#d6c8a8'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, -h + 28); c.lineTo(0, 4 + (m.dig || 0)*3); c.stroke();
+      if (m.drill && m.pw_) { Rc('#8e958f', -3, -60, 6, 60); Rc('rgba(170,150,110,.6)', -14 + Math.sin(G.t*40)*3, -2, 28, 4); }
+      if (m.fl) Rc(m.pw_ ? '#fff6d8' : '#4a4338', -8, -h + 2, 16, 5);
+      Rc('#4a423a', -w/2 + 4, -h + 26, w - 8, 3); break; }
+  }
+  if (m.gas > IGN*.5) Rc('rgba(200,190,70,' + Math.min(.22, m.gas/300).toFixed(2) + ')', -w/2, -m.h*.4, w, m.h*.4);
+  if (m.burnt) Rc('rgba(0,0,0,' + (.35 + .45*m.burnt).toFixed(2) + ')', -w/2, -h, w, h);
+  if (m.torn) { c.strokeStyle = '#0a0a0a'; c.lineWidth = 3; for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(-w/2 + k*w/4 + 6, -h + 4); c.lineTo(-w/2 + k*w/4 + 22, -h*.5); c.lineTo(-w/2 + k*w/4 + 10, -6); c.stroke(); } }
+  if (m.fire > 0) flames(m, w, h);
+  c.restore();
+  for (const [dx, dy, s, k] of m.deb) { c.save(); c.translate(m.x + dx, gh(m.x + dx) - dy*.3); c.rotate(k); Rc(k > 1.5 ? '#6b5a3e' : '#2f3538', -s/2, -s/2, s, s*.6); c.restore(); }
+  if (m.crush) { const g = gh(m.x); Poly('#5a534b', [[m.x - 30, g - m.h + 2], [m.x - 14, g - m.h - 18], [m.x + 16, g - m.h - 14], [m.x + 32, g - m.h + 4]]); }
+}
+function lineY(a){ return gh(a.x) - 12; }
+function drawLines(){
+  for (const L of lines) {
+    const sx = L.a.x + sgn(L.b.x - L.a.x)*L.a.w/2, ex = L.b.x + sgn(L.a.x - L.b.x)*L.b.w/2;
+    if (L.k === 'w') { const x0 = Math.min(sx, ex), x1 = Math.max(sx, ex); for (let x = x0; x < x1; x += 10) Rc('#8a6f4a', x, gh(x) - 3, 9, 3); continue; }
+    cable(sx, lineY(L.a), ex, lineY(L.b), L.len - Math.abs(ex - sx), L.cut);
+  }
+  if (P.line) { const L = P.line, sx = L.a.x + sgn(P.x - L.a.x)*L.a.w/2; cable(sx, lineY(L.a), P.x, gh(P.x) - 14, L.len - Math.abs(P.x - sx), 0); }
+}
+function cable(x0, y0, x1, y1, slack, cut){
+  c.strokeStyle = cut ? '#7a3b26' : '#1a1d1f'; c.lineWidth = 3; c.beginPath(); c.moveTo(x0, y0);
+  const droop = Math.min(70, Math.sqrt(Math.max(0, slack)*Math.abs(x1 - x0)*.5) + 4), n = 12;
+  for (let k = 1; k <= n; k++) { const t = k/n, x = x0 + (x1 - x0)*t, y = y0 + (y1 - y0)*t + droop*4*t*(1 - t); c.lineTo(x, Math.min(y, gh(x) - 1)); }
+  c.stroke(); c.strokeStyle = cut ? '#c96a3b' : '#c96a3b'; c.lineWidth = 1; c.stroke();
+}
+function drawFigure(x, y, face, o){
+  c.save(); c.translate(x, y); if (o.down) { c.rotate(face*1.45); c.translate(0, -6); }
+  const sw = o.walking ? Math.sin(G.t*10)*4 : 0;
+  Rc(o.leg ? '#e3a33f' : o.c2, -5 + sw, -14, 5, 14); Rc(o.leg ? '#e3a33f' : o.c2, 1 - sw, -14, 5, 14);
+  Rc(o.c1, -6, -32, 12, 19); Rc('#cfc6b4', -4, -41, 8, 9); Rc(o.c1, -5, -43, 10, 3);
+  Rc(o.arm ? '#e3a33f' : o.c2, face > 0 ? 2 : -7, -30, 5, 14);
+  if (o.lamp) Rc('#ffe2a8', face > 0 ? 3 : -6, -39, 3, 3);
+  c.restore();
+}
+function drawCreature(){
+  if (Cr.st === 'away') return;
+  const g = gh(Cr.x), l = lit(Cr.x, g - 12), a = clamp((l - .3)/.4, 0, 1); if (a <= 0) return;
+  c.save(); c.globalAlpha = a; c.translate(Cr.x, g); const f = Cr.st === 'flee' ? 1 : (Cr.tgt && Cr.tgt.x < Cr.x ? -1 : 1); c.scale(f, 1);
+  const ph = Math.sin(Cr.leg*8)*3;
+  Rc('#17130f', -30, -22, 60, 16); Rc('#17130f', 22, -26, 18, 12); Rc('#17130f', -36, -20, 10, 10);
+  for (let k = 0; k < 3; k++) { Rc('#17130f', -22 + k*18 + ph, -8, 4, 8); Rc('#17130f', -18 + k*18 - ph, -8, 4, 8); }
+  c.restore();
+}
+function drawGlints(){
+  if (Cr.st === 'away') return;
+  const g = gh(Cr.x), l = lit(Cr.x, g - 12), watch = P.up && Math.abs(P.x - Cr.x) < 700;
+  let a = l > .02 && l < .6 ? Math.min(1, l*10) : 0; if (watch && a < .45) a = .45;
+  if (a <= 0 || (Cr.st === 'attack' && l > .6)) return;
+  const f = Cr.st === 'flee' ? 1 : (Cr.tgt && Cr.tgt.x < Cr.x ? -1 : 1), blink = Math.sin(G.t*2.3 + Cr.x) > .93 ? 0 : 1;
+  c.globalAlpha = a*blink; Rc('#ff9a5a', Cr.x + f*34 - 1, g - 22, 3, 2); Rc('#ff9a5a', Cr.x + f*40 - 1, g - 22, 3, 2); c.globalAlpha = 1;
+}
+function drawFx(){
+  for (const f of fx) {
+    if (f.k === 'ring') { c.strokeStyle = 'rgba(228,221,207,' + f.a.toFixed(2) + ')'; c.lineWidth = 1; c.beginPath(); c.arc(f.x, f.y, f.r, 0, 7); c.stroke(); }
+    else if (f.k === 'grit') Rc('rgba(150,136,112,' + f.a.toFixed(2) + ')', f.x, f.y, 2, 2);
+    else if (f.k === 'gas') Rc('rgba(214,204,110,' + (f.a*.28).toFixed(2) + ')', f.x, f.y, f.s*2.5, f.s*.8);
+    else { c.fillStyle = 'rgba(120,110,100,' + (f.a*.5).toFixed(2) + ')'; c.beginPath(); c.arc(f.x, f.y, f.s, 0, 7); c.fill(); }
+  }
+  for (const r of rocks) { c.save(); c.translate(r.x, r.y); c.rotate(r.rot); Rc('#5a534b', -r.r, -r.r*.7, r.r*2, r.r*1.4); Rc('#6b645a', -r.r, -r.r*.7, r.r*2, 2); c.restore(); }
+}
+function draw(){
+  const dk = darkness(), tgt = clamp((P.up ? P.up.x : P.x) - W/2, 0, WORLD - W); cam += (tgt - cam)*.12;
+  const sky = c.createLinearGradient(0, 0, 0, GY);
+  sky.addColorStop(0, mixc([112, 128, 134], [6, 8, 13], dk)); sky.addColorStop(1, mixc([208, 166, 114], [16, 22, 28], dk));
+  c.fillStyle = sky; c.fillRect(0, 0, W, H);
+  if (dk > .2) for (const [x, y, k] of Z.stars) Rc('rgba(228,221,207,' + (dk*(.3 + .5*k)).toFixed(2) + ')', x, y, 1 + (k > .9 ? 1 : 0), 1);
+  c.fillStyle = mixc([128, 112, 96], [14, 18, 22], dk); c.beginPath(); c.moveTo(0, H);
+  for (let x = 0; x <= W; x += 20) c.lineTo(x, GY - 60 - 40*Math.sin((x + cam*.35)*.004 + Z.ph[0]) - 20*Math.sin((x + cam*.35)*.013)); c.lineTo(W, H); c.fill();
+  c.save(); c.translate(-Math.round(cam), 0);
+  drawCliff(); drawGround(); drawCrawler();
+  c.save(); c.beginPath(); c.moveTo(cam - 10, 0); c.lineTo(cam + W + 10, 0); for (let x = cam + W + 10; x >= cam - 10; x -= 8) c.lineTo(x, gh(x) + 1); c.closePath(); c.clip();
+  M.forEach(drawMod); c.restore();
+  drawLines(); drawFx(); drawCreature();
+  if (V.bot) drawFigure(B.x, gh(B.x) + 1, B.face, {c1: '#6b8a9a', c2: '#3d4a52', walking: Math.abs(B.x - P.x) > 62 || (P.carry && heavy(P.carry))});
+  if (!P.sleep) {
+    const py = P.up ? gh(P.x) - P.up.h + 28 : gh(P.x) + 1 + soft(P.x)*2;
+    drawFigure(P.x, py, P.face, {c1: '#c96a3b', c2: '#4a5358', walking: !!(keys.KeyA || keys.KeyD || keys.ArrowLeft || keys.ArrowRight) && !P.down, down: P.down > 0, leg: P.leg > 0, arm: P.arm > 0, lamp: P.lamp});
+  }
+  if (G.phase === 'pack' || G.phase === 'done') {
+    const g = c.createLinearGradient(G.storm, 0, G.storm + 420, 0); g.addColorStop(0, 'rgba(150,112,72,0)'); g.addColorStop(.35, 'rgba(150,112,72,.85)'); g.addColorStop(1, 'rgba(120,88,58,.95)');
+    c.fillStyle = g; c.fillRect(G.storm, 0, 600, H);
+    for (let k = 0; k < 40; k++) Rc('rgba(210,170,120,.35)', G.storm + 30 + ((k*97 + G.t*160) % 380), 40 + (k*53) % 360, 18 + k % 12, 2);
+  }
+  c.restore();
+  /* darkness layer, punched by lights */
+  if (dk > 0) {
+    dc.globalCompositeOperation = 'source-over'; dc.clearRect(0, 0, W, H); dc.fillStyle = 'rgba(5,7,12,' + (dk*.94).toFixed(3) + ')'; dc.fillRect(0, 0, W, H);
+    dc.globalCompositeOperation = 'destination-out';
+    for (const s of LS) { const x = s.x - Math.round(cam), g = dc.createRadialGradient(x, s.y, s.R*.08, x, s.y, s.R); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(.55, 'rgba(0,0,0,.6)'); g.addColorStop(1, 'rgba(0,0,0,0)'); dc.fillStyle = g; dc.fillRect(x - s.R, s.y - s.R, s.R*2, s.R*2); }
+    c.drawImage(dkc, 0, 0);
+    c.save(); c.translate(-Math.round(cam), 0); drawGlints(); c.restore();
+  }
+  const haze = (G.phase === 'pack' || G.phase === 'done') ? clamp(1 - (G.storm - (cam + W))/900, 0, 1)*.5 : 0;
+  if (haze > 0) Rc('rgba(150,112,72,' + haze.toFixed(2) + ')', 0, 0, W, H);
+  if (P.daze > 0) { c.save(); c.globalAlpha = Math.min(.55, P.daze/8); c.filter = 'blur(2px)'; c.drawImage(cv, 3, 0); c.restore(); Rc('rgba(10,12,14,' + Math.min(.5, P.daze/12).toFixed(2) + ')', 0, 0, W, H); }
+  if (P.down > 0) Rc('rgba(10,12,14,.45)', 0, 0, W, H);
+  if (P.sleep) { Rc('rgba(4,5,8,.93)', 0, 0, W, H); c.fillStyle = '#8e958f'; c.font = '700 26px Caveat, cursive'; c.textAlign = 'center'; c.fillText('z z z', W/2, H/2); }
+}
+
+/* ---------- hud ---------- */
+function hud(){
+  const ph = G.phase, nt = ph === 'night' ? ' ' + Math.floor(G.nt) + '/' + V.night + ' s' : '';
+  $('r-phase').textContent = ph + nt;
+  $('r-set').textContent = G.setT.toFixed(0) + ' s';
+  $('r-pack').textContent = ph === 'pack' || ph === 'done' ? G.packT.toFixed(0) + ' s' : '-';
+  const dep = M.filter(active).length;
+  $('r-mods').textContent = G.pw.n + ' powered / ' + dep + ' up / ' + lines.filter(l => !l.cut).length + ' lines';
+  const pw = $('r-power'); pw.textContent = G.pw.draw + ' / ' + CAP + ' u'; pw.className = G.pw.draw > CAP ? 'c' : G.pw.draw > CAP*.8 ? 'w' : '';
+  const fr = M.find(m => m.t === 'frame' && active(m)); $('r-shaft').textContent = fr ? ((fr.dig || 0).toFixed(1) + ' m') : '-';
+  $('r-hands').textContent = P.sleep ? 'asleep' : P.up ? 'on the frame' : P.carry ? TY[P.carry.t].n : P.line ? (P.line.k === 'c' ? 'cable' : 'walkway') : P.crane ? 'crane' : 'empty';
+  $('r-seed').textContent = V.seed;
+}
+
+/* ---------- control flow ---------- */
+function restart(){ gen(V.seed); Q.length = 0; logq = []; $('log').innerHTML = ''; $('banner').classList.remove('on'); acc = 0; say('Arrived. Pick a spot, then pull crates from the hold (1-6).'); }
+function setPause(p){ paused = p; $('pausemsg').classList.toggle('on', p); lastT = performance.now(); }
+function frame(now){
+  const dt = Math.min(.1, (now - lastT)/1000); lastT = now;
+  if (!paused) { acc += dt; let n = 0; const mult = P.sleep ? V.sleep : 1; while (acc >= STEP && n < 5) { for (let k = 0; k < mult; k++) step(); acc -= STEP; n++; } if (n === 5) acc = 0; }
+  draw(); hud();
+  requestAnimationFrame(frame);
+}
+function buildTune(){
+  const box = $('tune'); box.innerHTML = '';
+  TUNE.forEach(([k, label, mn, mx, st]) => {
+    const l = document.createElement('label'), o = document.createElement('output'), inp = document.createElement('input');
+    inp.type = 'range'; inp.min = mn; inp.max = mx; inp.step = st; inp.value = V[k]; o.textContent = V[k];
+    inp.addEventListener('input', () => { V[k] = +inp.value; o.textContent = V[k]; writeHash(); if (k === 'seed') restart(); });
+    inp.addEventListener('change', () => inp.blur());
+    l.append(label, inp, o); box.append(l);
+  });
+}
+const CMD = {KeyE: 'e', KeyC: 'c', KeyV: 'v', KeyX: 'x', KeyT: 't', KeyL: 'l', KeyF: 'f', KeyK: 'k', KeyB: 'b', Enter: 'enter'};
+addEventListener('keydown', e => {
+  const c_ = e.code;
+  if (e.target.tagName === 'INPUT' && (c_ === 'Space' || c_.startsWith('Arrow'))) return;
+  if (c_ === 'Space' || c_.startsWith('Arrow') || c_ === 'Enter') e.preventDefault();
+  if (e.repeat) return;
+  keys[c_] = 1;
+  if (CMD[c_]) Q.push({k: CMD[c_]});
+  else if (/^Digit[1-6]$/.test(c_)) Q.push({k: c_.slice(5)});
+  else if (c_ === 'KeyR') restart();
+  else if (c_ === 'KeyN') { V.seed = 1 + (Math.random()*9999 | 0); writeHash(); buildTune(); restart(); }
+  else if (c_ === 'KeyP') setPause(!paused);
+});
+addEventListener('keyup', e => { delete keys[e.code]; });
+addEventListener('blur', () => { for (const k in keys) delete keys[k]; });
+cv.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); mouse.x = (e.clientX - r.left)*W/r.width; mouse.y = (e.clientY - r.top)*H/r.height; });
+cv.addEventListener('mousedown', e => {
+  const m = P.crane; if (!m || m.st !== 'hang') return;
+  const r = cv.getBoundingClientRect(); mouse.x = (e.clientX - r.left)*W/r.width;
+  m.x = clamp(mouse.x + cam, HATCH + 30, HATCH + Math.max(60, V.crane)); m.st = 'ground'; m.prog = 0; P.crane = null;
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+addEventListener('hashchange', () => { readHash(); buildTune(); restart(); });
+$('reset').addEventListener('click', e => { TUNE.forEach(t => V[t[0]] = t[5]); writeHash(); buildTune(); restart(); e.target.blur(); });
+
+readHash(); buildTune(); restart();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

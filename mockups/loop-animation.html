@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STRATA Loop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0c0f11; --panel: #13171a; --line: #262d32; --ink: #e4ddcf; --muted: #8e958f;
+  --rust: #c96a3b; --glow: #6fdcc0; --warn: #e3a33f;
+  --f-display: "Big Shoulders Stencil Display", Impact, sans-serif;
+  --f-body: "Barlow", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 28px 16px 40px; display: grid; gap: 14px; }
+h1 { font-family: var(--f-display); font-size: clamp(40px, 8vw, 72px); line-height: .9; margin: 0; letter-spacing: .02em; }
+h1 span { color: var(--rust); }
+.sub { margin: 0; color: var(--muted); max-width: 64ch; }
+.stage { position: relative; border: 1px solid var(--line); background: #000; }
+canvas { display: block; width: 100%; height: auto; image-rendering: auto; }
+.caption { position: absolute; left: 16px; bottom: 14px; right: 16px; font-family: var(--f-mono); font-size: 13px; color: var(--ink); text-shadow: 0 1px 3px #000; pointer-events: none; }
+.caption b { color: var(--glow); font-weight: 600; margin-right: 8px; }
+.steps { display: flex; flex-wrap: wrap; gap: 6px; }
+.steps button { font: 500 13px var(--f-mono); color: var(--muted); background: var(--panel); border: 1px solid var(--line); padding: 6px 10px; cursor: pointer; }
+.steps button.on { color: var(--bg); background: var(--glow); border-color: var(--glow); }
+.bar { height: 3px; background: var(--line); }
+.bar i { display: block; height: 100%; width: 0; background: var(--rust); }
+.ctl { display: flex; gap: 8px; align-items: center; font: 13px var(--f-mono); color: var(--muted); }
+.ctl button { font: 500 13px var(--f-mono); color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 6px 12px; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>STRATA <span>/</span> one loop</h1>
+  <p class="sub">Scout, move the base, set it up, go below, fetch tech from far away, build with it, then go deeper or move on. Click a step to jump to it.</p>
+  <div class="stage">
+    <canvas id="cv" width="960" height="440" aria-label="Animated side view of one STRATA game loop"></canvas>
+    <div class="caption" id="cap"></div>
+  </div>
+  <div class="bar"><i id="prog"></i></div>
+  <div class="steps" id="steps"></div>
+  <div class="ctl"><button id="pp">Pause</button><button id="sp">Speed 1×</button><span id="clock"></span></div>
+</div>
+<script>
+(() => {
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+const BEATS = [
+  { name: 'Scout',    dur: 7, cap: 'The runner goes out alone, fast and fragile, and pings the ground near a dead outpost.' },
+  { name: 'Move base',dur: 6, cap: 'The Crawler hauls the packed base to the dig site. Slow, loud, and it draws attention.' },
+  { name: 'Set up',   dur: 6, cap: 'Modules are carried out and unfolded by hand. Where you put them matters tonight.' },
+  { name: 'Delve',    dur: 8, cap: 'One goes down the winch line into the dark. Everything below is simulated matter.' },
+  { name: 'Haul tech',dur: 8, cap: 'The hauler fetches a heavy pump from the outpost. Something follows the noise.' },
+  { name: 'Build',    dur: 6, cap: 'At the workshop: craft from what you dug up, install the pump you dragged home.' },
+  { name: 'Go deeper',dur: 6, cap: 'With the pump, the flooded shaft drains. Go deeper here, or pack up and move on.' },
+];
+const START = []; let T_TOTAL = 0;
+for (const b of BEATS) { START.push(T_TOTAL); T_TOTAL += b.dur; }
+
+// world
+const BASE_X = 1300, RUIN_X = 2750, GROUND = 300;
+const gy = x => {
+  if (Math.abs(x - BASE_X) < 520) return GROUND;
+  const k = Math.min(1, (Math.abs(x - BASE_X) - 520) / 200);
+  return GROUND - k * (10 * Math.sin(x * 0.011) + 7 * Math.sin(x * 0.027 + 1.3) + 4);
+};
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const STARS = Array.from({length: 90}, () => [rnd() * W, rnd() * 180, rnd() * 1.4 + 0.3]);
+
+// cave below the base: a small cell grid drawn once
+const CS = 5, CW = 120, CH = 70, CAVE_X = BASE_X - 300, CAVE_Y = GROUND + 4;
+const caveCells = new Uint8Array(CW * CH); // 0 open 1 rock 2 sand 3 water 4 moss
+(function genCave(){
+  for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++) {
+    const n = Math.sin(x * .19) * Math.cos(y * .23) + Math.sin(x * .07 + y * .11) * .8 + (rnd() - .5) * .35;
+    caveCells[y * CW + x] = n > .35 ? 0 : 1;
+  }
+  const shaft = 60; // cell column under the winch
+  for (let y = 0; y < 34; y++) for (let x = shaft - 2; x <= shaft + 2; x++) caveCells[y * CW + x] = 0;
+  for (let y = 30; y < 58; y++) for (let x = 30; x < 95; x++) {
+    const d = ((x - 62) / 34) ** 2 + ((y - 44) / 13) ** 2;
+    if (d < 1) caveCells[y * CW + x] = 0;
+  }
+  for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++) {
+    const i = y * CW + x; if (caveCells[i]) continue;
+    const below = y + 1 < CH ? caveCells[i + CW] : 1;
+    if (below === 1 && y > 50 && x > 70 && x < 90) caveCells[i] = 3;
+    else if (below === 1 && x < 46 && y > 46 && rnd() < .6) caveCells[i] = 2;
+    else if (below === 1 && rnd() < .08) caveCells[i] = 4;
+  }
+})();
+const caveCanvas = document.createElement('canvas'); caveCanvas.width = CW * CS; caveCanvas.height = CH * CS;
+(function paintCave(){
+  const c = caveCanvas.getContext('2d');
+  const COL = { 0: '#0d0c0c', 1: null, 2: '#98804f', 3: '#26587c', 4: '#4fbf9e' };
+  for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++) {
+    const m = caveCells[y * CW + x], s = (Math.sin(x * 12.9 + y * 78.2) * 43758.5) % 1;
+    if (m === 1) { const v = 38 + Math.abs(s) * 16; c.fillStyle = `rgb(${v + 4},${v},${v - 4})`; }
+    else c.fillStyle = COL[m];
+    c.fillRect(x * CS, y * CS, CS, CS);
+  }
+})();
+const SAND = Array.from({length: 40}, () => ({ x: 10 + rnd() * 30, y: rnd() * 40, v: 0 }));
+
+// drawing helpers
+function rect(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
+function glow(x, y, r, color, a) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, color.replace('A', a)); g.addColorStop(1, color.replace('A', 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+}
+function person(x, y, suit) {
+  rect(x - 3, y - 15, 6, 9, suit); rect(x - 3, y - 6, 2, 6, '#3a3f44'); rect(x + 1, y - 6, 2, 6, '#3a3f44');
+  rect(x - 3, y - 20, 6, 5, '#d9d2c2'); rect(x - 1, y - 19, 4, 2, '#6fdcc0');
+}
+function tracks(x, y, w, t) {
+  rect(x, y, w, 16, '#1e2226');
+  for (let i = 0; i < w / 18; i++) { ctx.fillStyle = '#2c3237'; ctx.beginPath(); ctx.arc(x + 9 + i * 18, y + 8, 6, 0, 7); ctx.fill(); }
+  ctx.strokeStyle = '#3d454b'; ctx.lineWidth = 1;
+  for (let i = 0; i < w; i += 6) { const xx = x + ((i + t * 30) % w); ctx.beginPath(); ctx.moveTo(xx, y); ctx.lineTo(xx, y + 2); ctx.stroke(); }
+}
+function crawler(x, t, packed, lightOn) {
+  const y = gy(x) - 70;
+  rect(x, y + 6, 190, 48, '#c96a3b'); rect(x + 6, y + 12, 34, 16, '#3c5c62');
+  rect(x + 150, y - 24, 6, 30, '#7c8388');
+  if (packed > 0) for (let i = 0; i < Math.ceil(packed * 6); i++) rect(x + 52 + (i % 3) * 30, y + 12 + Math.floor(i / 3) * 18, 26, 14, '#7a5a3c');
+  tracks(x - 4, y + 54, 198, t);
+  if (lightOn) glow(x + 190, y + 20, 160, 'rgba(255,230,170,A)', .25);
+}
+function runner(x, t) {
+  const y = gy(x) - 18 + Math.sin(t * 22) * 1.2;
+  rect(x, y, 44, 10, '#9aa3a8'); rect(x + 14, y - 8, 14, 8, '#5d6a70');
+  ctx.fillStyle = '#1b1f22'; ctx.beginPath(); ctx.arc(x + 8, y + 12, 6, 0, 7); ctx.arc(x + 36, y + 12, 6, 0, 7); ctx.fill();
+  glow(x + 46, y + 4, 120, 'rgba(255,240,200,A)', .3);
+}
+function hauler(x, t, cargo, dir) {
+  const y = gy(x) - 34;
+  ctx.save(); ctx.translate(x + 40, 0); ctx.scale(dir, 1); ctx.translate(-x - 40, 0);
+  rect(x, y + 8, 56, 18, '#5f6b58'); rect(x + 56, y - 4, 26, 30, '#6d7a64'); rect(x + 62, y + 2, 14, 10, '#2f4448');
+  if (cargo) { rect(x + 8, y - 10, 34, 18, '#8a8f93'); rect(x + 14, y - 16, 8, 6, '#6c7175'); ctx.strokeStyle = '#e3a33f'; ctx.beginPath(); ctx.moveTo(x + 4, y + 8); ctx.lineTo(x + 25, y - 10); ctx.lineTo(x + 46, y + 8); ctx.stroke(); }
+  ctx.fillStyle = '#1b1f22'; [12, 44, 72].forEach(o => { ctx.beginPath(); ctx.arc(x + o, y + 28, 8, 0, 7); ctx.fill(); });
+  glow(x + 84, y + 10, 140, 'rgba(255,235,190,A)', .22);
+  ctx.restore();
+}
+function ruin(x) {
+  const y = gy(x);
+  rect(x, y - 60, 70, 60, '#2d3236'); rect(x + 10, y - 50, 14, 16, '#151719'); rect(x + 40, y - 76, 8, 16, '#2d3236');
+  rect(x + 90, y - 34, 50, 34, '#272b2f');
+  ctx.strokeStyle = '#41484d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 150, y); ctx.lineTo(x + 205, y - 70); ctx.stroke();
+}
+const MODULES = [
+  { dx: -170, w: 40, h: 26, c: '#8c6a3c', name: 'gen' },
+  { dx: -110, w: 54, h: 32, c: '#6a7076', name: 'shop' },
+  { dx: -40,  w: 46, h: 30, c: '#5b6a74', name: 'bunks' },
+  { dx: 140,  w: 44, h: 28, c: '#56707a', name: 'lab' },
+];
+const WINCH_X = BASE_X + 6;
+function base(t, appear, fold) {
+  const y = GROUND;
+  MODULES.forEach((m, i) => {
+    let a = Math.min(1, Math.max(0, appear * 5 - i)); a *= 1 - Math.min(1, Math.max(0, fold * 5 - (3 - i)));
+    if (a <= 0) return;
+    const h = m.h * a; rect(BASE_X + m.dx, y - h, m.w, h, m.c);
+    if (a > .9) { rect(BASE_X + m.dx + 6, y - h + 6, 8, 6, '#f0c87a'); glow(BASE_X + m.dx + 10, y - h + 9, 50, 'rgba(255,210,140,A)', .25); }
+  });
+  let wa = Math.min(1, Math.max(0, appear * 5 - 4)) * (1 - Math.min(1, fold * 5));
+  if (wa > 0) {
+    ctx.strokeStyle = '#9aa3a8'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(WINCH_X - 24, y); ctx.lineTo(WINCH_X, y - 70 * wa); ctx.lineTo(WINCH_X + 24, y); ctx.stroke();
+    rect(WINCH_X - 8, y - 70 * wa - 6, 16, 10, '#c96a3b');
+    if (appear > .95) { ctx.strokeStyle = '#3c4246'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(BASE_X - 150, y - 24); ctx.quadraticCurveTo(BASE_X - 60, y - 2, WINCH_X, y - 20); ctx.stroke(); }
+  }
+}
+
+// state
+let t = 0, speed = 1, paused = false, last = performance.now();
+const stepsEl = document.getElementById('steps');
+BEATS.forEach((b, i) => {
+  const el = document.createElement('button'); el.textContent = `${i + 1} ${b.name}`;
+  el.onclick = () => { t = START[i] + .01; }; stepsEl.appendChild(el);
+});
+document.getElementById('pp').onclick = e => { paused = !paused; e.target.textContent = paused ? 'Play' : 'Pause'; };
+document.getElementById('sp').onclick = e => { speed = speed === 1 ? 2 : speed === 2 ? .5 : 1; e.target.textContent = `Speed ${speed}×`; };
+document.addEventListener('visibilitychange', () => { last = performance.now(); });
+
+const lerp = (a, b, k) => a + (b - a) * k;
+const ease = k => k < 0 ? 0 : k > 1 ? 1 : k * k * (3 - 2 * k);
+const seg = (k, a, b) => ease((k - a) / (b - a));
+
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (!paused && !document.hidden) t = (t + dt * speed) % T_TOTAL;
+  let bi = 0; while (bi < BEATS.length - 1 && t >= START[bi + 1]) bi++;
+  const k = (t - START[bi]) / BEATS[bi].dur;
+
+  // per-beat world state
+  let camX = BASE_X, camY = 0, night = .55;
+  let crawlerX = BASE_X - 430, packed = 0, appear = 1, fold = 0, crawlerLight = false;
+  let runnerX = null, haulerX = null, cargo = false, hdir = 1, ping = -1, glint = 0;
+  let delverY = -1, pumpOn = false, sparks = false, water = 1, sampleGot = false;
+  if (bi === 0) { runnerX = lerp(BASE_X + 120, RUIN_X - 140, ease(k / .75)); camX = runnerX + 60; night = .35; appear = 0; crawlerX = -999; ping = k > .75 ? (k - .75) / .25 : -1; }
+  if (bi === 1) { crawlerX = lerp(BASE_X - 1100, BASE_X - 430, ease(k)); camX = crawlerX + 160; packed = 1; appear = 0; night = .45; crawlerLight = true; }
+  if (bi === 2) { packed = 1 - k; appear = k; night = lerp(.45, .6, k); camX = BASE_X - 160; }
+  if (bi === 3) { camY = lerp(0, 230, seg(k, 0, .25)); delverY = lerp(0, 205, seg(k, .1, .7)); sampleGot = k > .78; if (k > .85) delverY = lerp(205, 120, seg(k, .85, 1)); night = .6; }
+  if (bi === 4) {
+    night = .62;
+    if (k < .35) { haulerX = lerp(BASE_X + 80, RUIN_X - 100, ease(k / .35)); hdir = 1; }
+    else if (k < .5) { haulerX = RUIN_X - 100; cargo = k > .45; }
+    else { haulerX = lerp(RUIN_X - 100, BASE_X + 80, ease((k - .5) / .5)); hdir = -1; cargo = true; glint = k; }
+    camX = haulerX + 40;
+  }
+  if (bi === 5) { sparks = true; pumpOn = k > .6; camX = BASE_X - 60; night = .6; }
+  if (bi === 6) { pumpOn = true; water = 1 - seg(k, 0, .5); camY = lerp(230, 0, seg(k, .55, .8)); fold = seg(k, .7, .95); packed = fold; crawlerX = lerp(BASE_X - 430, BASE_X - 120, seg(k, .9, 1)); night = .6; }
+
+  // camera
+  const ox = Math.round(W / 2 - camX), oy = -camY;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // sky
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, `rgb(${lerp(70, 14, night)},${lerp(80, 18, night)},${lerp(92, 26, night)})`);
+  sky.addColorStop(1, `rgb(${lerp(170, 40, night)},${lerp(140, 34, night)},${lerp(110, 34, night)})`);
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = night; for (const s of STARS) rect(s[0], s[1] + oy * .2, s[2], s[2], '#e4ddcf'); ctx.globalAlpha = 1;
+  // far hills
+  ctx.fillStyle = `rgba(30,32,34,${.6 + night * .3})`; ctx.beginPath(); ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 8) ctx.lineTo(x, GROUND - 40 + oy + Math.sin((x - ox * .3) * .006) * 22); ctx.lineTo(W, H); ctx.fill();
+
+  ctx.setTransform(1, 0, 0, 1, ox, oy);
+  // underground
+  const left = -ox - 20, right = -ox + W + 20;
+  rect(left, GROUND, right - left, 900, '#2b2622');
+  if (camY > 1) { ctx.globalAlpha = Math.min(1, camY / 120); ctx.drawImage(caveCanvas, CAVE_X, CAVE_Y); ctx.globalAlpha = 1; }
+  // water in cave lake level for "go deeper"
+  if (bi === 6 && water < 1) { ctx.globalAlpha = .9; rect(CAVE_X + 70 * CS, CAVE_Y + 50 * CS, 20 * CS, 8 * CS * (1 - water), '#0d0c0c'); ctx.globalAlpha = 1; }
+  // falling sand in the cave
+  if (bi === 3 || bi === 6) for (const p of SAND) {
+    p.v += .15; p.y += p.v * .3; if (p.y > 46) { p.y = rnd() * 6; p.v = 0; }
+    rect(CAVE_X + p.x * CS, CAVE_Y + p.y * CS, CS - 1, CS - 1, '#b49660');
+  }
+  // ground surface
+  ctx.fillStyle = '#3a332c'; ctx.beginPath(); ctx.moveTo(left, GROUND + 30);
+  for (let x = left; x <= right; x += 6) ctx.lineTo(x, gy(x)); ctx.lineTo(right, GROUND + 6); ctx.lineTo(left, GROUND + 6); ctx.fill();
+  rect(left, GROUND, right - left, 6, '#3a332c');
+  // shaft opening
+  if (appear > .9 && fold < .9) rect(WINCH_X - 12, GROUND, 24, 6, '#0d0c0c');
+
+  ruin(RUIN_X);
+  if (bi === 4 && k < .45) rect(RUIN_X + 6, gy(RUIN_X) - 14, 26, 14, '#8a8f93');
+  base(t, appear, fold);
+  if (crawlerX > -900) crawler(crawlerX, t, packed, crawlerLight || bi === 6);
+  if (runnerX !== null) runner(runnerX, t);
+  if (haulerX !== null) hauler(haulerX, t, cargo, hdir);
+
+  // people on the surface
+  if (bi >= 2 && bi <= 5 && appear > .3) {
+    const walk = bi === 2 ? Math.sin(t * 3) * 60 : 0;
+    person(BASE_X - 70 + walk, GROUND, '#c96a3b');
+    if (bi !== 3 || true) person(WINCH_X + 30, GROUND, '#5d7f8a');
+  }
+  if (bi === 2) { const ck = (k * 4) % 1; rect(BASE_X - 70 + Math.sin(t * 3) * 60 - 8, GROUND - 30, 16, 10, '#7a5a3c'); }
+
+  // delve
+  if (delverY >= 0) {
+    ctx.strokeStyle = '#cfc6b3'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(WINCH_X, GROUND - 64); ctx.lineTo(WINCH_X, GROUND + delverY); ctx.stroke();
+    person(WINCH_X, GROUND + delverY + 20, '#c96a3b');
+    if (sampleGot) { rect(WINCH_X + 4, GROUND + delverY + 6, 5, 5, '#6fdcc0'); }
+    else rect(WINCH_X + 30, GROUND + 208, 6, 6, '#6fdcc0');
+  }
+  // pump on the winch frame
+  if (pumpOn) { rect(WINCH_X + 14, GROUND - 22, 22, 16, '#8a8f93'); ctx.strokeStyle = '#3d454b'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(WINCH_X + 25, GROUND - 6); ctx.lineTo(WINCH_X + 4, GROUND + 160); ctx.stroke(); }
+  // sparks at the workshop
+  if (sparks) for (let i = 0; i < 10; i++) {
+    const a = (t * 7 + i * 1.7) % 1; rect(BASE_X - 83 + Math.sin(i * 9 + t * 11) * 12 * a, GROUND - 34 - a * 26, 2, 2, '#ffb046');
+  }
+
+  // darkness, then lights
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = `rgba(4,6,8,${night * .75})`; ctx.fillRect(0, 0, W, H);
+  ctx.setTransform(1, 0, 0, 1, ox, oy);
+  ctx.globalCompositeOperation = 'lighter';
+  if (runnerX !== null) glow(runnerX + 46, gy(runnerX) - 14, 110, 'rgba(255,240,200,A)', .22);
+  if (haulerX !== null) glow(haulerX + (hdir > 0 ? 84 : -4), gy(haulerX) - 24, 120, 'rgba(255,235,190,A)', .2);
+  if (appear > .9 && fold < .5) { glow(BASE_X - 150, GROUND - 20, 120, 'rgba(255,200,130,A)', .18); glow(WINCH_X, GROUND - 60, 150, 'rgba(255,220,160,A)', .16); }
+  if (delverY >= 0) glow(WINCH_X + 10, GROUND + delverY + 14, 90, 'rgba(255,230,180,A)', .35);
+  if (bi === 3 || bi === 6) for (let y = 0; y < CH; y += 3) for (let x = 0; x < CW; x += 3) if (caveCells[y * CW + x] === 4) glow(CAVE_X + x * CS, CAVE_Y + y * CS, 26, 'rgba(111,220,192,A)', .25);
+  if (sparks) glow(BASE_X - 83, GROUND - 30, 70, 'rgba(255,140,60,A)', .35);
+  ctx.globalCompositeOperation = 'source-over';
+  // creature glints behind the hauler
+  if (glint > .55 && haulerX !== null) {
+    const gx = haulerX + 150 + Math.sin(t * 3) * 10, gyy = gy(haulerX + 150) - 16;
+    const a = Math.min(1, (glint - .55) * 5) * (0.6 + .4 * Math.sin(t * 9));
+    rect(gx, gyy, 3, 2, `rgba(255,120,90,${a})`); rect(gx + 7, gyy, 3, 2, `rgba(255,120,90,${a})`);
+  }
+  // survey ping
+  if (ping >= 0) {
+    ctx.strokeStyle = `rgba(111,220,192,${1 - ping})`; ctx.lineWidth = 2;
+    for (let r = 0; r < 3; r++) { ctx.beginPath(); ctx.arc(RUIN_X - 80, GROUND + 40, (ping * 140 + r * 30) % 180, 0, 7); ctx.stroke(); }
+  }
+
+  // UI
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  document.getElementById('cap').innerHTML = `<b>${bi + 1}/${BEATS.length} ${BEATS[bi].name.toUpperCase()}</b>${BEATS[bi].cap}`;
+  document.getElementById('prog').style.width = (t / T_TOTAL * 100) + '%';
+  [...stepsEl.children].forEach((el, i) => el.classList.toggle('on', i === bi));
+  document.getElementById('clock').textContent = `${t.toFixed(1)} / ${T_TOTAL}s`;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

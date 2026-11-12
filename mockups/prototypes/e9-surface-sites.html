@@ -107,6 +107,7 @@ kbd{font:600 12px var(--f-mono);border:1px solid var(--line);background:var(--pa
   <div><kbd>W</kbd><kbd>Space</kbd>jump</div>
   <div><kbd>E</kbd>hold to reach, pry or read. Cold fingers fumble</div>
   <div><kbd>F</kbd>helmet lamp</div>
+  <div><kbd>G</kbd>put down a heavy load (it slows you and needs both hands)</div>
   <div><kbd>T</kbd>key the radio (clearer the closer you are)</div>
   <div><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>outpost / salt flat / bloom</div>
   <div><kbd>R</kbd>restart, same seed</div>
@@ -146,7 +147,8 @@ const TUNE = [
   ['pry', 'Pry time (s)', .5, 10, .5, 3],
   ['lampR', 'Lamp range (cells)', 20, 90, 1, 55],
   ['cone', 'Lamp cone (deg)', 15, 160, 5, 70],
-  ['safe', 'Safe fall speed (c/s)', 20, 100, 1, 36]
+  ['safe', 'Safe fall speed (c/s)', 20, 100, 1, 36],
+  ['heavy', 'Speed while hauling tech', .2, 1, .05, .5]
 ];
 const V = {};
 TUNE.forEach(t => { V[t[0]] = t[5]; });
@@ -287,6 +289,7 @@ function gen(){
     find('log', Math.round(.40*WW) + 24, BASE - 4);
     room(Math.round(.58*WW), 30, {left: 'ramp', right: 'jam'});
     find('case', Math.round(.58*WW) + 18, BASE - 3);
+    find('pump', Math.round(.70*WW), onGround(.70*WW) + 1, {need: 1.4, heavy: true});
     G.mast = Math.round(.75*WW); G.veh = Math.round(.86*WW); mound(G.veh, 18, 9);
   } else if (V.site === 2) {
     const sx = WW - 70;
@@ -374,7 +377,7 @@ function injure(v){
 }
 function resetFigure(){
   Object.assign(F, {sc: 's', x: 66, y: BASE, vx: 0, vy: 0, ground: true, face: 1, legs: [0, 0], downed: false, w: 100, minW: 100, filter: 0, lamp: false, cough: 0, coughT: 4,
-    carried: [], hold: 0, holdT: 0, fumble: 0, tgt: null, walk: 0, camX: 0, farthest: 0, t: 0, end: null, wasGround: true, cellar: false});
+    carried: [], heavyRef: null, hold: 0, holdT: 0, fumble: 0, tgt: null, walk: 0, camX: 0, farthest: 0, t: 0, end: null, wasGround: true, cellar: false});
 }
 const isRoofed = () => F.sc === 'c' || G.rects.some(r => r.t === 'roof' && F.x >= r.x && F.x < r.x + r.w && r.y + r.h <= F.y - 5.5);
 const dist = () => Math.max(0, (F.x - HATCH)*CELL);
@@ -398,7 +401,7 @@ function interactables(){
 function interact(dt){
   const o = interactables();
   if (o !== F.tgt) { F.tgt = o; F.hold = 0; F.holdT = 0; }
-  if (!o || !keys.KeyE || F.downed) { F.hold = Math.max(0, F.hold - dt*2); return; }
+  if (!o || !keys.KeyE || F.downed || F.heavyRef) { F.hold = Math.max(0, F.hold - dt*2); return; }
   F.hold += dt / o.need; F.holdT += dt;
   if (F.w < 25 && F.holdT >= .4) {
     F.holdT = 0;
@@ -407,7 +410,7 @@ function interact(dt){
   if (F.hold >= 1) {
     F.hold = 0; F.tgt = null;
     if (o.door) { o.door.on = false; dust(o.door.x + 1, o.door.y + 6, 14); say('It gives.'); }
-    else { o.taken = true; F.carried.push(o.k); if (o.k === 'log') openPage(); }
+    else { o.taken = true; F.carried.push(o.k); if (o.heavy) F.heavyRef = o; if (o.k === 'log') openPage(); }
   }
 }
 function openPage(){ reading = true; $('page').innerHTML = LOGTEXT + '<small>E to put it away</small>'; $('page').classList.add('on'); }
@@ -467,7 +470,7 @@ function stepGame(){
   const dt = STEP; S.t += dt; F.t += dt;
   S.tod = (V.hour/24 + S.t/V.day) % 1;
   S.sun = clamp(.5 + .9*Math.sin(2*Math.PI*(S.tod - .25)), 0, 1);
-  while (Q.length) { const e = Q.shift(); if (e === 'f') F.lamp = !F.lamp; else if (e === 't') radio(); }
+  while (Q.length) { const e = Q.shift(); if (e === 'f') F.lamp = !F.lamp; else if (e === 't') radio(); else if (e === 'g' && F.heavyRef) { const h = F.heavyRef; h.taken = false; h.x = F.x; h.y = F.y - 1; F.heavyRef = null; F.carried.splice(F.carried.indexOf(h.k), 1); } }
   updateWhite(dt); updateWind(dt);
   if (F.end) return;
   const surf = F.sc === 's', roofed = isRoofed();
@@ -478,8 +481,8 @@ function stepGame(){
   const dir = F.downed || F.cough > 0 ? 0 : (right ? 1 : 0) - (left ? 1 : 0), legHurt = F.legs[0] || F.legs[1];
   if (dir) F.face = dir;
   const sf = F.w < 35 ? .55 + .45*F.w/35 : 1, wet = F.sc === 'c' && T[Math.floor(clamp(F.y - 3, 0, CH - 1))*CW + Math.floor(clamp(F.x, 0, CW - 1))] === WATER;
-  const walk = 16*sf*(legHurt ? .55 : 1)*(wet ? .6 : 1);
-  if (F.ground) { F.vx += (dir*walk - F.vx)*.4; if (up && !legHurt && !F.downed) { F.vy = -32*Math.max(.75, sf); F.ground = false; } else if (up && !F.downed) { F.vy = -22; F.ground = false; } }
+  const hv = F.heavyRef ? V.heavy : 1, walk = 16*sf*hv*(legHurt ? .55 : 1)*(wet ? .6 : 1);
+  if (F.ground) { F.vx += (dir*walk - F.vx)*.4; if (up && !legHurt && !F.downed) { F.vy = -32*Math.max(.75, sf)*(F.heavyRef ? .7 : 1); F.ground = false; } else if (up && !F.downed) { F.vy = -22; F.ground = false; } }
   else F.vx = clamp(F.vx + dir*60*dt, -walk*1.3, walk*1.3);
   F.vy = Math.min(130, F.vy + 70*dt);
   if (wet) { F.vx *= .92; F.vy *= .9; }
@@ -523,6 +526,7 @@ const ICON = {
   part: '<circle cx="15" cy="15" r="9" fill="#8a6a4a"/><circle cx="15" cy="15" r="3.5" fill="#1b1612"/>',
   case: '<rect x="4" y="9" width="22" height="13" fill="#4d5a43"/><rect x="13" y="13" width="4" height="6" fill="#e3a33f"/>',
   spec: '<path d="M15 26V13" stroke="#6fdcc0" stroke-width="2"/><circle cx="15" cy="10" r="6" fill="#6fdcc0"/>',
+  pump: '<rect x="5" y="8" width="18" height="15" fill="#5b625f"/><rect x="5" y="6" width="18" height="3" fill="#c96a3b"/><rect x="23" y="14" width="5" height="4" fill="#2a2f31"/>',
   beacon: '<rect x="11" y="7" width="8" height="17" fill="#9a5a3a"/><rect x="13" y="4" width="4" height="4" fill="#e2553f"/>',
   crystal: '<path d="M6 25l5-16 5 16zM14 25l6-12 6 12z" fill="#e8e4da"/>',
   lump: '<ellipse cx="15" cy="17" rx="10" ry="7" fill="#cfe8c0"/>'
@@ -583,6 +587,7 @@ function drawFind(f, cx, t){
   else if (f.k === 'part') { ctx.fillStyle = '#8a6a4a'; ctx.fillRect(x - 2, y - 2, 5, 4); ctx.fillStyle = '#1b1612'; ctx.fillRect(x, y - 1, 1, 2); }
   else if (f.k === 'case') { ctx.fillStyle = '#4d5a43'; ctx.fillRect(x - 3, y - 2, 7, 5); ctx.fillStyle = '#e3a33f'; ctx.fillRect(x, y - 1, 1, 2); }
   else if (f.k === 'spec') { ctx.fillStyle = '#2f6f60'; ctx.fillRect(x, y - 7, 1, 8); ctx.fillStyle = '#6fdcc0'; ctx.fillRect(x - 2, y - 10, 5, 4); ctx.fillRect(x - 1, y - 11, 3, 1); }
+  else if (f.k === 'pump') { ctx.fillStyle = '#5b625f'; ctx.fillRect(x - 4, y - 5, 9, 7); ctx.fillStyle = '#c96a3b'; ctx.fillRect(x - 4, y - 6, 9, 1); ctx.fillStyle = '#2a2f31'; ctx.fillRect(x + 5, y - 3, 3, 2); ctx.fillRect(x - 2, y - 3, 3, 3); }
   else if (f.k === 'beacon') { ctx.fillStyle = '#9a5a3a'; ctx.fillRect(x - 1, y - 4, 3, 6); if (t % 1.6 < .15) { ctx.fillStyle = '#e2553f'; ctx.fillRect(x, y - 6, 1, 2); } }
   else if (f.k === 'crystal') { ctx.fillStyle = '#e8e4da'; ctx.fillRect(x - 2, y - 2, 2, 4); ctx.fillRect(x, y - 4, 2, 6); ctx.fillRect(x + 2, y - 1, 1, 3); }
   else if (f.k === 'lump') { ctx.fillStyle = '#cfe8c0'; ctx.fillRect(x - 2, y - 2, 5, 3); ctx.fillRect(x - 1, y - 3, 3, 1); }
@@ -780,7 +785,7 @@ addEventListener('keydown', e => {
   if (e.repeat) return;
   if (reading && (c === 'KeyE' || c === 'Escape')) { closePage(); return; }
   keys[c] = 1;
-  if (c === 'KeyF') Q.push('f'); else if (c === 'KeyT') Q.push('t');
+  if (c === 'KeyG') Q.push('g'); else if (c === 'KeyF') Q.push('f'); else if (c === 'KeyT') Q.push('t');
   else if (c === 'KeyR') restart();
   else if (c === 'KeyN') { V.seed = 1 + (Math.random()*9999 | 0); writeHash(); buildTune(); restart(); }
   else if (c === 'KeyP') setPause(!paused);

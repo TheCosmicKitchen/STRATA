@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STRATA E3 · Driving blind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@500;700&display=swap">
+<style>
+:root{color-scheme:dark;--bg:#0c0f11;--panel:#13171a;--line:#262d32;--ink:#e4ddcf;--muted:#8e958f;--rust:#c96a3b;--glow:#6fdcc0;--warn:#e3a33f;--crit:#e2553f;
+--f-title:"Big Shoulders Stencil Display",Impact,sans-serif;--f-body:"Barlow","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body)}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
+h1{font:800 34px/1 var(--f-title);letter-spacing:.04em;margin:0;text-transform:uppercase}
+h1 small{color:var(--rust);font-size:.55em;letter-spacing:.12em;margin-right:.6em}
+.q{color:var(--muted);margin:6px 0 14px;max-width:80ch}
+.play{display:grid;grid-template-columns:minmax(0,960px) 190px;gap:14px;align-items:start}
+.stage{position:relative;border:1px solid var(--line);background:#000;aspect-ratio:16/9}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:rgba(8,10,12,.72);font:800 30px/1.2 var(--f-title);letter-spacing:.06em;text-transform:uppercase;padding:20px}
+.msg small{display:block;font:400 14px var(--f-mono);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:8px;max-width:60ch}
+.msg.on{display:flex}
+.side{background:var(--panel);border:1px solid var(--line);padding:12px}
+.side .cap{font:400 11px var(--f-mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.side .row{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font:400 12px var(--f-mono);padding:5px 0;border-top:1px solid var(--line)}
+.side .row b{font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.side .row i{font-style:normal;color:var(--muted);grid-column:1/3}
+.side .row.on i{color:var(--glow)}
+#sil{display:block;margin:4px auto 0;width:110px;height:170px;image-rendering:pixelated}
+.strip{display:flex;flex-wrap:wrap;gap:6px 22px;background:var(--panel);border:1px solid var(--line);border-top:0;padding:10px 14px;font:400 13px var(--f-mono);max-width:960px}
+.strip div span{color:var(--muted);margin-right:6px;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+.strip b{font-weight:600}.strip .w{color:var(--warn)}.strip .c{color:var(--crit)}.strip .g{color:var(--glow)}
+.bar{display:inline-block;width:54px;height:5px;background:var(--line);vertical-align:middle;margin-left:6px}
+.bar i{display:block;height:100%;background:var(--muted)}
+#log{max-width:960px;min-height:22px;font:400 13px var(--f-mono);color:var(--rust);padding:6px 2px}
+h2{font:600 18px var(--f-title);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+.tune{background:var(--panel);border:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 28px;max-width:1180px}
+.tune label{display:grid;grid-template-columns:150px 1fr 48px;gap:8px;align-items:center;font-size:13px}
+.tune output{font:400 12px var(--f-mono);color:var(--glow);text-align:right}
+input[type=range]{accent-color:var(--rust);width:100%}
+input:focus-visible,button:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+button{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:6px 14px;font:500 13px var(--f-body);cursor:pointer;margin-top:6px}
+button:hover{border-color:var(--rust)}
+.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:4px 24px;font-size:13px;color:var(--muted)}
+kbd{font:600 12px var(--f-mono);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:1px 6px;margin-right:6px}
+@media(max-width:900px){.play{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1><small>E3</small>Driving blind</h1>
+<p class="q">When nothing breaks on a timer, do the crew's own choices (how fast the pilot drives, whether anyone is watching) create enough trouble and tension?</p>
+
+<div class="play">
+  <div class="stage">
+    <canvas id="cv" width="960" height="540"></canvas>
+    <div class="msg" id="banner"></div>
+    <div class="msg" id="pausemsg">Paused<small>press P to resume</small></div>
+  </div>
+  <aside class="side">
+    <div class="cap">stations</div><div id="roster"></div>
+    <div class="cap" style="margin-top:12px">you</div><canvas id="sil" width="55" height="85"></canvas>
+  </aside>
+</div>
+<div class="strip">
+  <div><span>to go</span><b id="r-dist"></b></div>
+  <div><span>speed</span><b id="r-spd"></b></div>
+  <div><span>noise</span><b id="r-noise"></b><span class="bar"><i id="a-noise"></i></span></div>
+  <div><span>lights</span><b id="r-light"></b></div>
+  <div><span>watching</span><b id="r-watch"></b></div>
+  <div><span>walking</span><b id="r-walk"></b></div>
+  <div><span>at helm</span><b id="r-helm"></b></div>
+  <div><span>time</span><b id="r-time"></b></div>
+  <div><span>seed</span><b id="r-seed"></b></div>
+</div>
+<div id="log"></div>
+
+<h2>Tuning</h2>
+<div class="tune" id="tune"></div>
+<button id="reset">Reset to defaults</button>
+
+<h2>Controls</h2>
+<div class="keys">
+  <div><kbd>A</kbd><kbd>D</kbd>walk (arrows too)</div>
+  <div><kbd>W</kbd><kbd>S</kbd>climb a ladder up / down, stand at it</div>
+  <div><kbd>E</kbd>use the station you stand at; at no station: strap or unstrap the nearest object</div>
+  <div><b>Helm:</b> <kbd>D</kbd>/<kbd>A</kbd> throttle up / down, <kbd>W</kbd>/<kbd>S</kbd> high / low track, <kbd>L</kbd> floodlight</div>
+  <div><b>Engine:</b> <kbd>K</kbd> kill / restart engine</div>
+  <div><b>Lookout hatch / rear window:</b> <kbd>F</kbd> swing the floodlight on what you see</div>
+  <div><b>Rack:</b> <kbd>E</kbd> takes / puts back the track tool. <b>Outer hatch:</b> <kbd>E</kbd> goes out / in (not while moving). Outside, at a bent track, <kbd>E</kbd> works on it</div>
+  <div><kbd>1</kbd>-<kbd>5</kbd>send a bot to helm / engine / winch / lookout / rear window; again releases it. <kbd>0</kbd> all to bunks</div>
+  <div><kbd>R</kbd>restart, same seed &nbsp; <kbd>N</kbd>new seed &nbsp; <kbd>P</kbd>pause</div>
+  <div>Goal: reach the marker with the winch load and crew intact. A station only works while someone stands at it; a lookout inset shows only while someone is there, and nobody will tell you what they see.</div>
+</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const STEP = 1 / 60, CW = 960, CH = 540;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ---------- tunables (stored in URL hash) ---------- */
+const TUNE = [
+  ['walk', 'Walk speed (tiles/s)', 3, 14, .5, 7],
+  ['ladder', 'Ladder speed (tiles/s)', 2, 10, .5, 5],
+  ['length', 'Crawler length (m)', 40, 90, 2, 60],
+  ['bots', 'Bot crewmates', 0, 3, 1, 2],
+  ['route', 'Route length (m)', 150, 1500, 50, 450],
+  ['speed', 'Crawler top speed (m/s)', 2, 14, .5, 8],
+  ['rough', 'Ground roughness x', .3, 2, .05, 1],
+  ['rattle', 'Rattle threshold (speed x rough)', 2, 12, .25, 4.5],
+  ['grip', 'Ladder grip (rattle excess)', .05, 1, .05, .25],
+  ['boulders', 'Boulders per 100 m', 0, 12, .5, 5],
+  ['soft', 'Soft patches per 100 m', 0, 10, .5, 3],
+  ['slopes', 'Slopes per 100 m', 0, 6, .5, 2],
+  ['lookAhead', 'Lookout sees ahead (m)', 15, 100, 5, 45],
+  ['helmSee', 'Helm window sees (m)', 5, 40, 1, 15],
+  ['aN', 'Creature draw: noise', 0, 12, .5, 5],
+  ['aL', 'Creature draw: light', 0, 12, .5, 3],
+  ['interest', 'Interest to appear', 20, 300, 5, 100],
+  ['crSpeed', 'Creature speed (m/s)', 1, 10, .5, 4.5],
+  ['loseT', 'Lights+engine off to lose it (s)', 3, 60, 1, 15],
+  ['flinchT', 'Floodlight flinch (s)', 2, 40, 1, 12],
+  ['chewT', 'Creature chew time (s)', 3, 40, 1, 12],
+  ['repair', 'Track repair time (s)', 2, 30, .5, 8],
+  ['tipT', 'Tip threshold (rad x speed)', .02, .4, .01, .1],
+  ['rock', 'Rocking out of a bog (s)', 2, 20, .5, 8],
+  ['softV', 'Bog speed (m/s)', 1, 6, .1, 2.2],
+  ['hitV', 'Boulder bends track above (m/s)', 1, 8, .1, 3],
+  ['loadMax', 'Mast strikes the load survives', 1, 6, 1, 3],
+  ['strapped', 'Start with all strapped (0/1)', 0, 1, 1, 0],
+  ['seed', 'Seed', 1, 9999, 1, 5]
+];
+const RESTART = ['length', 'bots', 'route', 'seed', 'rough', 'boulders', 'soft', 'slopes', 'strapped'];
+const V = {};
+function readHash(){
+  TUNE.forEach(t => V[t[0]] = t[5]);
+  location.hash.slice(1).split('&').forEach(p => {
+    const [k, v] = p.split('='), t = TUNE.find(x => x[0] === k), n = parseFloat(v);
+    if (t && isFinite(n)) V[k] = Math.min(t[3], Math.max(t[2], n));
+  });
+}
+function writeHash(){
+  const s = TUNE.filter(t => V[t[0]] !== t[5]).map(t => t[0] + '=' + V[t[0]]).join('&');
+  try { history.replaceState(null, '', s ? '#' + s : location.pathname + location.search); } catch (e) { /* file:// quirks */ }
+}
+
+/* =====================================================================
+   CRAWLER INTERIOR: pure data, reused later by E7. Coordinates are tiles.
+   Three decks of DECK_H tiles; deck d has its floor (feet line) at FY(d).
+   Fractions are of the Crawler length L. Rooms, doors, ladders, stations,
+   loose items and decor are all rows here; nothing below assumes a layout.
+   ===================================================================== */
+const DECK_H = 7;
+const FY = d => DECK_H * (d + 1);
+const LAYOUT_DATA = {
+  /* id, label, deck, x0, x1 (fractions), tint */
+  rooms: [
+    ['bridge', 'BRIDGE · HELM + LOOKOUT', 0, 0, .55, '#141c21'],
+    ['bunks', 'BUNKS + GALLEY', 0, .55, 1, '#1a1a1d'],
+    ['workshop', 'WORKSHOP', 1, 0, .5, '#1b1a17'],
+    ['lab', 'LAB + GROW ROOM', 1, .5, 1, '#131d1b'],
+    ['engine', 'ENGINE + HATCH', 2, 0, .5, '#1d1714'],
+    ['winch', 'WINCH + DRILL MAST', 2, .5, 1, '#151a1f']
+  ],
+  /* x fraction, upper deck, lower deck. Ladder joins deck a (above) and b (below); a hole in the floor of a */
+  ladders: [[.36, 0, 1], [.62, 1, 2]],
+  /* walk-through openings between rooms (visual only) */
+  doors: [[0, .55], [1, .5], [2, .5]],
+  /* id, name, deck, x fraction. use=true stations work only while manned */
+  stations: [['helm', 'Helm', 0, .12, 1], ['lookout', 'Lookout hatch', 0, .46, 1], ['bunk', 'Bunk', 0, .80, 0],
+    ['rear', 'Rear window', 1, .04, 1], ['engine', 'Engine', 2, .15, 1], ['winch', 'Winch', 2, .85, 1],
+    ['hatch', 'Outer hatch', 2, .03, 0], ['rack', 'Tool rack', 2, .27, 0]],
+  /* loose objects: kind, deck, x fraction */
+  items: [['crate', 1, .12], ['crate', 1, .20], ['crate', 1, .31], ['jar', 1, .58], ['jar', 1, .66], ['jar', 1, .76], ['crate', 2, .38]],
+  /* decor boxes: deck, x fraction, width, height (tiles), colour, label */
+  decor: [[0, .66, 3.2, 1.4, '#3a3026', 'GALLEY'], [1, .62, 3.4, 1.3, '#26343a', 'LAB'], [1, .90, 4.4, .9, '#27422f', 'GROW']]
+};
+function buildLayout(L){
+  return {
+    L,
+    rooms: LAYOUT_DATA.rooms.map(r => ({id: r[0], name: r[1], deck: r[2], x0: r[3]*L, x1: r[4]*L, tint: r[5]})),
+    ladders: LAYOUT_DATA.ladders.map(l => ({x: l[0]*L, a: l[1], b: l[2]})),
+    doors: LAYOUT_DATA.doors.map(d => ({deck: d[0], x: d[1]*L})),
+    stations: LAYOUT_DATA.stations.map(s => ({id: s[0], name: s[1], deck: s[2], x: s[3]*L, use: !!s[4]})),
+    items: LAYOUT_DATA.items.map(i => ({kind: i[0], deck: i[1], x: i[2]*L})),
+    decor: LAYOUT_DATA.decor.map(d => ({deck: d[0], x: d[1]*L, w: d[2], h: d[3], col: d[4], label: d[5]}))
+  };
+}
+/* ===================== end of interior data ===================== */
+
+/* ---------- state ---------- */
+let Lay = buildLayout(60), STN = {}, F = [], NZ = [];
+let rnd = mulberry(1), G = {}, P = {}, log = [], paused = false, acc = 0, lastT = performance.now();
+const keys = {}, Q = [], ZONE = 1.6, PARTS = ['head', 'torso', 'armL', 'armR', 'legL', 'legR'];
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const say = s => { log.unshift(s); log = log.slice(0, 3); $('log').innerHTML = log.map((l, i) => '<div style="opacity:' + (1 - i*.3) + '">' + l + '</div>').join(''); };
+const held = k => keys[k] ? 1 : 0;
+
+function genTerrain(){
+  NZ = []; for (let i = 0; i < 512; i++) NZ.push(rnd());
+  F = [];
+  const add = (k, n) => { for (let i = 0; i < n; i++) F.push({k, x: 45 + rnd()*Math.max(10, V.route - 80), lane: rnd() < .5 ? 0 : 1, ang: (rnd() < .5 ? -1 : 1)*(.12 + rnd()*.16), len: 40, done: 0, t: 0, armed: 0}); };
+  add('boulder', Math.round(V.boulders*V.route/100)); add('soft', Math.round(V.soft*V.route/100));
+  add('slope', Math.round(V.slopes*V.route/100)); add('ravine', Math.round(V.route/300)); add('rockfall', Math.round(V.route/250));
+  F.sort((a, b) => a.x - b.x);
+  for (let i = 1; i < F.length; i++) { const p = F[i - 1], gap = p.k === 'slope' ? 42 : 16; if (F[i].x < p.x + gap) F[i].x = p.x + gap; }
+}
+function noise(t){ const i = Math.floor(t), f = t - i, s = f*f*(3 - 2*f), a = NZ[((i % 512) + 512) % 512], b = NZ[(((i + 1) % 512) + 512) % 512]; return a + (b - a)*s; }
+const rough = (x, lane) => (.25 + .9*noise(x/10 + lane*37))*V.rough;
+
+function restart(){
+  Lay = buildLayout(V.length); STN = {}; Lay.stations.forEach(s => STN[s.id] = s);
+  rnd = mulberry(V.seed); genTerrain();
+  G = {t: 0, p: 0, v: 0, thr: 0, lane: 0, engine: true, lights: true, noise: 0, light: 1, tilt: 0, mid: V.length/2, front: V.length, end: null,
+    bend: 0, bendX: V.length - 4, bog: null, th: 0, om: 0, dmg: 0, shk: 0, mag: 0, shT: 0, int: 0, cr: null, tread: 0,
+    watchT: 0, walkT: 0, helmT: 0, use: {}, bots: [], flip: 1, hint: 0};
+  G.items = Lay.items.map(i => ({kind: i.kind, deck: i.deck, x: i.x, y: FY(i.deck), vx: 0, vy: 0, strap: V.strapped === 1, broken: 0, hit: 0}));
+  for (let i = 0; i < V.bots; i++) G.bots.push({i, x: STN.bunk.x + i*1.5, deck: 0, y: FY(0), lad: null, dir: 0, asg: 'bunk', arr: false, face: 1, ph: 0, stun: 0, down: 0});
+  P = {x: STN.helm.x + 3, deck: 0, y: FY(0), lad: null, use: null, face: 1, moving: false, ph: 0, out: false, ox: 2, work: 0, tool: false, stun: 0, down: false, hitT: 0,
+    body: {head: 0, torso: 0, armL: 0, armR: 0, legL: 0, legR: 0}};
+  Q.length = 0; log = []; $('log').innerHTML = ''; $('banner').classList.remove('on'); acc = 0;
+  say('Crawler idling, engine and lights on. Stand at the helm and press E. Nobody tells you what is out there: go and look.');
+}
+
+/* ---------- body ---------- */
+function hurt(part, n){ const b = P.body; b[part] = Math.min(2, b[part] + (n || 1)); checkDown(); }
+function checkDown(){ const b = P.body, u = PARTS.filter(k => b[k] === 2).length; if (!P.down && (b.torso === 2 || b.head === 2 || u >= 3)) { P.down = true; P.use = null; P.work = 0; say('You are downed. You can only crawl.'); } }
+function pick(list){ return list[(rnd()*list.length) | 0]; }
+function roll(h){
+  const r = rnd(), side = () => rnd() < .5 ? 'L' : 'R';
+  const part = r < .4 ? 'leg' + side() : r < .7 ? 'arm' + side() : r < .9 ? 'torso' : 'head';
+  hurt(part); if (h > 5) hurt(pick(['legL', 'legR', 'armL', 'armR']));
+}
+const walkMul = () => P.down ? .15 : [1, .7, .45, .3, .2][P.body.legL + P.body.legR];
+const climbMul = () => P.down ? 0 : [1, .6, .35, .15, 0][P.body.armL + P.body.armR];
+
+/* ---------- movement (shared by player and bots) ---------- */
+function moveTo(e, tx, sp, dt){
+  const d = tx - e.x;
+  if (Math.abs(d) <= sp*dt) { e.x = tx; return true; }
+  e.x += Math.sign(d)*sp*dt; e.face = Math.sign(d); e.ph += sp*dt; return false;
+}
+function climb(e, dir, sp, dt){
+  const l = e.lad, lo = FY(l.a), hi = FY(l.b);
+  e.y += dir*sp*dt; e.ph += Math.abs(dir)*sp*dt;
+  if (e.y <= lo) { e.y = lo; e.deck = l.a; e.lad = null; }
+  else if (e.y >= hi) { e.y = hi; e.deck = l.b; e.lad = null; }
+}
+function thrown(e, isP){
+  const l = e.lad, h = FY(l.b) - e.y; e.lad = null; e.y = FY(l.b); e.deck = l.b; e.stun = isP ? 1.6 : 3;
+  if (isP) { roll(h); say('The machine bucks and you are thrown off the ladder.'); }
+}
+function station(){ return Lay.stations.find(s => s.deck === P.deck && Math.abs(s.x - P.x) <= ZONE); }
+function playerStep(dt){
+  if (P.stun > 0) { P.stun -= dt; P.moving = false; Q.length = 0; return; }
+  while (Q.length) {
+    const q = Q.shift();
+    if (q === 'e') {
+      if (P.out) {
+        const bendNear = G.bend > 0 && Math.abs(P.ox - G.bendX) < 2.2;
+        if (P.ox < 3) { P.out = false; P.work = 0; P.x = STN.hatch.x + 1.5; P.deck = 2; P.y = FY(2); say('Back inside.'); }
+        else if (bendNear && P.tool) { P.work = P.work ? 0 : 1; say(P.work ? 'Working on the bent track by hand.' : 'Stopped work on the track.'); }
+        else if (bendNear) say('You have no tool.');
+        else say('Nothing to do here.');
+      } else if (P.use) { say('Stopped using ' + STN[P.use].name + '.'); P.use = null; }
+      else if (!P.lad && !P.down) {
+        const s = station();
+        if (s) {
+          if (s.id === 'hatch') { if (G.v > .5) say('Not while the Crawler is moving.'); else { P.out = true; P.ox = 2.5; P.work = 0; say(P.tool ? 'Outside, with the tool. Exposed.' : 'Outside, no tool in hand. Exposed.'); } }
+          else if (s.id === 'rack') { P.tool = !P.tool; say(P.tool ? 'Took the track tool.' : 'Put the tool back.'); }
+          else if (s.use) { P.use = s.id; say('At ' + s.name + '. Walk off and it stops.'); } else say('Nothing to do here.');
+        } else {
+          const it = G.items.filter(i => !i.broken && i.deck === P.deck && Math.abs(i.x - P.x) < 1.6).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x))[0];
+          if (it) { it.strap = !it.strap; it.vx = 0; say(it.strap ? 'Strapped down.' : 'Strap undone.'); } else say('Nothing here to use or strap.');
+        }
+      }
+    } else if (q === 'k') { if (P.use === 'engine') { G.engine = !G.engine; say(G.engine ? 'Engine started.' : 'Engine off.'); } }
+    else if (q === 'l') { if (P.use === 'helm') { G.lights = !G.lights; say(G.lights ? 'Floodlight on.' : 'Floodlight off.'); } }
+    else if (q === 'f') { if (P.use === 'lookout' || P.use === 'rear') flood(P.use); }
+    else if (q[0] === '#') assign(q.slice(1));
+  }
+  const up = held('KeyW') || held('ArrowUp'), down = held('KeyS') || held('ArrowDown');
+  const dir = (held('KeyD') || held('ArrowRight')) - (held('KeyA') || held('ArrowLeft'));
+  P.moving = false;
+  if (P.out) {
+    if (dir) { P.ox = clamp(P.ox + dir*V.walk*.8*walkMul()*dt, -6, Lay.L + 6); P.face = dir; P.ph += V.walk*dt; P.moving = true; P.work = 0; }
+    return;
+  }
+  if (P.use === 'helm') {
+    G.thr = clamp(G.thr + dir*.5*dt, 0, 1);
+    if (up) G.lane = 1; else if (down) G.lane = 0;
+  } else if (P.lad) { if (up !== down && climbMul() > 0) { climb(P, down - up, V.ladder*climbMul(), dt); P.moving = true; } }
+  else {
+    if (dir) { P.x = clamp(P.x + dir*V.walk*walkMul()*dt, 1.2, Lay.L - 1.2); P.face = dir; P.ph += V.walk*dt; P.moving = true; }
+    if (up !== down && climbMul() > 0) {
+      const l = Lay.ladders.find(l => Math.abs(l.x - P.x) < 1.3 && (up ? l.b === P.deck : l.a === P.deck));
+      if (l) { P.lad = l; P.x = l.x; P.use = null; }
+    }
+  }
+  if (P.use) { const s = STN[P.use]; if (P.lad || s.deck !== P.deck || Math.abs(s.x - P.x) > ZONE || P.down) { say(s.name + ' left unattended.'); P.use = null; } }
+}
+function botStep(b, dt){
+  b.arr = false;
+  if (b.stun > 0) { b.stun -= dt; return; }
+  if (b.down > 0) { b.down -= dt; return; }
+  const tg = STN[b.asg], tx = tg.x - .8 + (tg.id === 'bunk' ? b.i*1.5 : 0), sp = V.walk*.9;
+  if (b.lad) climb(b, b.dir, V.ladder, dt);
+  else if (b.deck === tg.deck) b.arr = moveTo(b, tx, sp, dt);
+  else {
+    const dn = tg.deck > b.deck, l = Lay.ladders.find(l => dn ? l.a === b.deck : l.b === b.deck);
+    if (moveTo(b, l.x, sp, dt)) { b.lad = l; b.dir = dn ? 1 : -1; }
+  }
+}
+function assign(id){
+  if (!G.bots.length) return say('No bots aboard. Raise "Bot crewmates" in tuning.');
+  if (id === 'all') { G.bots.forEach(b => b.asg = 'bunk'); return say('All bots to the bunks.'); }
+  const here = G.bots.find(b => b.asg === id);
+  if (here) { here.asg = 'bunk'; return say('Bot ' + (here.i + 1) + ' released from ' + STN[id].name + '.'); }
+  const b = G.bots.find(b => b.asg === 'bunk');
+  if (!b) return say('All bots are busy. Press a station number to release its bot.');
+  b.asg = id; say('Bot ' + (b.i + 1) + ' to ' + STN[id].name + '. It only stands there.');
+}
+
+/* ---------- consequences ---------- */
+function shake(m){
+  G.shk = Math.max(G.shk, m); G.mag = Math.max(G.mag, m);
+  G.items.forEach(it => { if (!it.strap && !it.broken && it.vy === 0) { it.vy = -(1.5 + m*3); it.vx += (rnd() - .5)*m*6; } });
+  G.om += G.flip*m*1.5; G.flip = -G.flip;
+  const grip = V.grip*(P.body.torso ? .6 : 1);
+  if (m > grip && P.lad) thrown(P, true);
+  G.bots.forEach(b => { if (m > V.grip && b.lad) thrown(b, false); });
+}
+function bend(x){ G.bend = Math.min(2, G.bend + 1); G.bendX = x; say(G.bend > 1 ? 'The track is bent badly. The Crawler lurches and drags.' : 'A track bends with a bang. The Crawler pulls to one side.'); }
+function flood(id){
+  const c = G.cr;
+  if (!G.lights) return say('The floodlight is off.');
+  if (c && vis(id)) { c.st = 'back'; c.fl = V.flinchT; c.chew = 0; c.lose = 0; say('The light catches something. It flinches away.'); }
+  else say('The beam finds nothing.');
+}
+function vis(id){
+  const c = G.cr; if (!c) return false;
+  const L = Lay.L, R = V.lookAhead*(id === 'rear' ? .7 : 1)*(G.light ? 1 : .15), dh = Math.max(0, Math.abs(c.u) - L/2);
+  if (id === 'rear' && c.u > -L/2 + 8) return false;
+  return Math.hypot(dh, c.w) <= R;
+}
+function spawn(){
+  const L = Lay.L, r = rnd(), dir = r < .3 ? 'rear' : r < .45 ? 'ahead' : 'side', D = 55, c = {st: 'stalk', lose: 0, fl: 0, chew: 0, hitT: 0, w: 0, u: 0, tx: 0, kind: 'track'};
+  if (dir === 'rear') { c.u = -L/2 - D; c.tx = -L/2 + 3; }
+  else if (dir === 'ahead') { c.u = L/2 + D; c.tx = L/2 - 3; }
+  else { c.u = (rnd() - .5)*L; c.w = D; c.kind = rnd() < .5 ? 'line' : 'roof'; c.tx = (c.kind === 'line' ? STN.winch.x : STN.lookout.x) - L/2; }
+  G.cr = c; G.int = 0;
+}
+function creatureStep(dt){
+  const L = Lay.L, c = G.cr;
+  if (!c) {
+    const quiet = G.noise < .05 && G.light === 0;
+    G.int = Math.max(0, G.int + (V.aN*G.noise + V.aL*G.light - (quiet ? 2 : .3))*dt);
+    if (G.int >= V.interest) spawn();
+    return;
+  }
+  const att = G.noise > .05 || G.light > 0, sp = V.crSpeed*(att ? 1 : .3);
+  if (c.st !== 'latch') {
+    c.u -= G.v*dt;
+    if (c.st === 'back') {
+      if (c.w > 0.1 || Math.abs(c.u) < L/2 - 1) c.w += sp*1.3*dt; else c.u += Math.sign(c.u - c.tx || 1)*sp*1.3*dt;
+      c.fl -= dt; if (c.fl <= 0) { c.st = att ? 'stalk' : 'gone'; }
+    } else {
+      const dx = c.tx - c.u, dy = -c.w, d = Math.hypot(dx, dy);
+      if (d < 1.5) { c.st = 'latch'; c.u = c.tx; c.w = 0; c.chew = 0; c.hitT = 0; }
+      else { c.u += dx/d*sp*dt; c.w += dy/d*sp*dt; }
+      if (!att) { c.lose += dt; if (c.lose >= V.loseT) c.st = 'gone'; } else c.lose = Math.max(0, c.lose - dt*.5);
+    }
+    const dist = Math.hypot(Math.max(0, Math.abs(c.u) - L/2), c.w);
+    if (c.st === 'gone' || dist > 85) { G.cr = null; return; }
+    return;
+  }
+  /* latched on */
+  if (G.mag > .6) { c.st = 'back'; c.fl = 6; c.chew = 0; return; }   /* shaken off by fast rough driving */
+  const hx = c.tx + L/2;
+  if (c.kind === 'track') { c.chew += dt; if (c.chew >= V.chewT) { c.chew = 0; bend(hx); } }
+  else if (c.kind === 'line') { c.chew += dt; if (c.chew >= V.chewT) endRun('line'); }
+  else {
+    c.hitT += dt;
+    if (c.hitT >= 3) {
+      const mp = P.use === 'lookout' && !P.out, bot = G.bots.find(b => b.arr && b.asg === 'lookout');
+      if (mp) { c.hitT = 0; hurt(rnd() < .5 ? 'head' : pick(['armL', 'armR'])); say('Something drops on you through the hatch.'); }
+      else if (bot) { c.hitT = 0; bot.down = 14; }
+    }
+  }
+  if (P.out && c.kind !== 'roof' && Math.abs(P.ox - hx) < 4) {
+    P.hitT += dt; if (P.hitT >= 2.5) { P.hitT = 0; hurt(pick(['armL', 'armR', 'legL', 'legR', 'torso'])); say('It lunges at you on the ground.'); P.work = 0; }
+  }
+}
+
+/* ---------- simulation step ---------- */
+function stepSim(){
+  const dt = STEP, L = Lay.L; G.t += dt; G.mag = 0;
+  playerStep(dt); G.bots.forEach(b => botStep(b, dt));
+  const use = {helm: 0, engine: 0, winch: 0, lookout: 0, rear: 0};
+  if (P.use && !P.out) use[P.use] = 1;
+  G.bots.forEach(b => { if (b.arr && b.asg !== 'bunk' && !b.down && !b.stun) use[b.asg] = (use[b.asg] || 0) + 1; });
+  G.use = use;
+  if (P.use === 'lookout' || P.use === 'rear') G.watchT += dt; else if (P.moving) G.walkT += dt; else if (P.use === 'helm') G.helmT += dt;
+  /* speed */
+  const cap = G.engine && use.helm && !G.bog ? V.speed*G.thr*[1, .55, .25][G.bend] : 0;
+  G.v += clamp(cap - G.v, -(cap > 0 ? 2.5 : 1.2)*dt, 1.6*dt);
+  if (G.bog) { G.v = 0; if (use.helm && use.engine && G.engine) { G.bog.prog += dt/V.rock; G.shT += dt; if (G.shT > .6) { G.shT = 0; shake(.12); } if (G.bog.prog >= 1) { G.bog = null; say('Rocked free.'); } } }
+  G.p += G.v*dt; G.front = G.p + L; G.mid = G.p + L/2; G.tread += G.v*dt;
+  /* terrain: tilt target from slopes at the nose */
+  let tt = 0;
+  F.forEach(f => { if (f.k === 'slope' && G.front > f.x && G.front < f.x + f.len) tt += f.ang*Math.sin(2*Math.PI*(G.front - f.x)/f.len); });
+  G.tilt += (tt - G.tilt)*Math.min(1, dt*2);
+  /* feature events */
+  F.forEach(f => {
+    if (f.k === 'rockfall') {
+      if (!f.armed && G.front >= f.x - 14 && !f.done) { f.armed = 1; f.t = 2.5; }
+      if (f.armed && !f.done) { f.t -= dt; if (f.t <= 0) {
+        f.done = 1; const inz = G.p < f.x + 6 && G.front > f.x - 6;
+        if (inz) { shake(1.4); say('Rocks hammer the roof.'); if (G.v > 2.5) bend(clamp(f.x - G.p, 3, L - 3)); } }
+      }
+      return;
+    }
+    if (f.done || G.front < f.x || f.k === 'slope') return;
+    f.done = 1;
+    if (f.k === 'ravine') {
+      if (G.v > 3.5) { shake(G.v/3.5*.8); say('The nose slams down over a ravine edge.'); if (G.v > 6.5) bend(L - 4); } else say('Crept over a ravine edge.');
+    } else if (f.lane === G.lane) {
+      if (f.k === 'boulder') {
+        if (G.v > V.hitV) { shake(1.5); bend(L - 4); G.v *= .3; say('Hit a boulder at speed.'); } else if (G.v > .3) { shake(.4); G.v *= .5; say('Nudged a boulder.'); }
+      } else if (f.k === 'soft') {
+        if (G.v > V.softV) { G.bog = {prog: 0}; G.v = 0; say('Soft ground at speed. The tracks sink and bog down.'); }
+      }
+    }
+  });
+  /* rattle from speed over rough ground */
+  const R = G.v*rough(G.mid, G.lane) + G.bend*.15*G.v;
+  if (R > V.rattle) { G.shT += dt; if (G.shT >= .45) { G.shT = 0; shake((R - V.rattle)/V.rattle); } }
+  G.shk = Math.max(0, G.shk - dt*1.5);
+  /* load swing: tipping pushes it, the manned winch hauls it tight */
+  const risk = Math.abs(G.tilt)*(1 + G.v*.15), push = risk > V.tipT ? Math.sign(G.tilt)*(risk - V.tipT)*14*(use.winch ? .3 : 1) : 0;
+  G.om += (push - 3*G.th - (use.winch ? 4 : .6)*G.om)*dt; G.th += G.om*dt;
+  if (Math.abs(G.th) > .8) {
+    G.dmg++; G.om = 0; G.th = -Math.sign(G.th)*.5; say('The load slams into the mast.');
+    if (G.dmg >= V.loadMax) endRun('load');
+  }
+  /* noise and light, then the thing that follows them */
+  G.noise = G.engine ? .12 + G.v/V.speed*.75 + (G.bog ? .5 : 0) + G.bend*.1 : 0; G.light = G.lights ? 1 : 0;
+  creatureStep(dt);
+  /* loose items */
+  G.items.forEach(it => itemStep(it, dt));
+  /* working on the track by hand */
+  if (P.out && P.work) {
+    if (G.v > .3) P.work = 0;
+    else { const am = [1, .5, 0][Math.max(P.body.armL, P.body.armR)]*([1, .5, 0][Math.min(P.body.armL, P.body.armR)] || .3) ; G.repP = (G.repP || 0) + dt/V.repair*Math.max(.25, am);
+      if (G.repP >= 1) { G.repP = 0; G.bend--; P.work = 0; say(G.bend ? 'Straightened it a little. Still bent.' : 'The track is straight again.'); } }
+  } else if (!P.work) G.repP = 0;
+  if (G.front >= V.route && !G.end) endRun('win');
+}
+function itemStep(it, dt){
+  if (it.broken || it.strap) return;
+  const hole = Lay.ladders.some(l => l.a === it.deck && Math.abs(it.x - l.x) < .8);
+  it.vy += 22*dt; it.y += it.vy*dt; it.x += it.vx*dt;
+  if (it.x < .8 || it.x > Lay.L - .8) { it.x = clamp(it.x, .8, Lay.L - .8); it.vx = 0; }
+  if (it.y >= FY(it.deck)) {
+    if (hole && it.deck < 2) it.deck++;
+    else {
+      if (it.vy > 3 && !it.hit) { it.hit = 1; const vic = [P].concat(G.bots).filter(e => !e.lad && !e.out && e.deck === it.deck && Math.abs(e.x - it.x) < .9)[0];
+        if (vic === P) { hurt(rnd() < .5 ? 'head' : pick(['armL', 'armR'])); say('Something heavy lands on you.'); } else if (vic) vic.down = 5; }
+      if (it.vy > 5.5 && it.kind === 'jar') { it.broken = 1; say('A jar shatters on the deck.'); }
+      it.y = FY(it.deck); it.vy = it.vy > 2.5 ? -it.vy*.2 : 0; if (it.vy === 0) it.hit = 0;
+      it.vx *= 1 - Math.min(1, 3*dt);
+      if (Math.abs(G.tilt) > .04) it.vx += -G.tilt*22*dt;
+    }
+  }
+}
+function endRun(k){
+  if (G.end) return;
+  G.end = k; P.use = null; const b = P.body, n = PARTS.filter(p => b[p] > 0).length;
+  const msg = {
+    win: 'Arrived<small>Load intact, ' + (n ? 'crew bruised (' + n + ' parts hurt)' : 'crew unhurt') + ', in ' + G.t.toFixed(0) + ' s. Watching ' + G.watchT.toFixed(0) + ' s, walking ' + G.walkT.toFixed(0) + ' s. R to go again.</small>',
+    load: 'Load lost<small>The mast broke the load free after ' + G.dmg + ' strikes. R to try again.</small>',
+    line: 'Line cut<small>Something tore the winch line and the load fell away. R to try again.</small>'
+  }[k];
+  $('banner').innerHTML = msg; $('banner').classList.add('on');
+}
+
+/* ---------- rendering ---------- */
+const cx = $('cv').getContext('2d'), sx = $('sil').getContext('2d');
+let K = 15, OX = 20, OY = 56;
+function txt(s, x, y, px, col, al){
+  cx.save(); cx.setTransform(1, 0, 0, 1, 0, 0); cx.font = '600 ' + px + 'px "JetBrains Mono",Consolas,monospace';
+  cx.fillStyle = col || '#8e958f'; cx.textAlign = al || 'left'; cx.fillText(s, OX + x*K, OY + y*K); cx.restore();
+}
+function man(e, col, label, active){
+  const lad = !!e.lad, sw = lad ? Math.sin(e.ph*1.4)*.4 : Math.sin(e.ph*1.6)*.5, sprawl = e.stun > 0 || e.down > 0;
+  cx.save(); cx.translate(e.x, e.y); if (sprawl) { cx.rotate(-1.45*e.face); cx.translate(0, -.2); }
+  cx.fillStyle = col; cx.fillRect(-.5 + sw*.5, -1.1, .45, 1.1); cx.fillRect(.05 - sw*.5, -1.1, .45, 1.1);
+  cx.fillRect(-.6, -2.3, 1.2, 1.3); cx.fillRect(-.45, -3.1, .9, .8);
+  cx.fillStyle = '#0c0f11'; cx.fillRect(e.face > 0 ? .02 : -.45, -2.85, .43, .35);
+  if (e.tool) { cx.fillStyle = '#9aa0a3'; cx.fillRect(e.face > 0 ? .5 : -1.1, -1.9, .6, .15); }
+  if (active) { cx.strokeStyle = '#6fdcc0'; cx.lineWidth = .08; cx.strokeRect(-.85, -3.3, 1.7, 3.4); }
+  cx.restore();
+  if (label) txt(label, e.x, e.y - 3.5, 11, col, 'center');
+}
+function drawInterior(){
+  const L = Lay.L;
+  cx.setTransform(K, 0, 0, K, OX, OY);
+  cx.translate(L/2, 12); cx.rotate(-G.tilt*.6); cx.translate(-L/2 + Math.sin(G.t*70)*G.shk*.1, -12 + Math.cos(G.t*53)*G.shk*.1);
+  cx.fillStyle = '#1d2327'; cx.fillRect(.6, 21.4, L - 1.2, 3.1);
+  cx.fillStyle = '#0c0f11';
+  for (let x = .6; x < L - .6; x += 1) cx.fillRect(x + ((G.tread % 1) + 1) % 1 - .35 + .4, 24.2, .45, .45);
+  for (let x = 3; x < L - 2; x += 4.5) {
+    cx.fillStyle = '#2b3237'; cx.beginPath(); cx.arc(x, 23, 1.25, 0, 7); cx.fill();
+    cx.strokeStyle = '#0c0f11'; cx.lineWidth = .12; const a = G.tread*1.5 + x; cx.beginPath(); cx.moveTo(x + Math.cos(a)*1.1, 23 + Math.sin(a)*1.1); cx.lineTo(x - Math.cos(a)*1.1, 23 - Math.sin(a)*1.1); cx.stroke();
+  }
+  if (G.bend) { const bx = G.bendX; cx.fillStyle = '#c96a3b'; cx.beginPath(); cx.moveTo(bx - 2.2, 24.5); cx.lineTo(bx - .8, 22.6); cx.lineTo(bx + .8, 25.4); cx.lineTo(bx + 2.2, 24.5); cx.fill(); }
+  Lay.rooms.forEach(r => {
+    cx.fillStyle = r.tint; cx.fillRect(r.x0, FY(r.deck) - DECK_H, r.x1 - r.x0, DECK_H);
+    cx.fillStyle = '#262d32'; for (let x = r.x0 + 3; x < r.x1; x += 6) cx.fillRect(x, FY(r.deck) - DECK_H + .4, .08, DECK_H - .8);
+    txt(r.name, r.x0 + .6, FY(r.deck) - DECK_H + 1, 10, '#6a726c');
+  });
+  Lay.decor.forEach(d => { cx.fillStyle = d.col; cx.fillRect(d.x - d.w/2, FY(d.deck) - d.h, d.w, d.h); txt(d.label, d.x, FY(d.deck) - d.h - .3, 9, '#59605b', 'center'); });
+  for (let d = 0; d < 3; d++) {
+    const gaps = Lay.ladders.filter(l => l.a === d).map(l => l.x); let x0 = 0;
+    gaps.concat([L + 1]).forEach(g => { const e = Math.min(L, g - .9); cx.fillStyle = '#3a4248'; cx.fillRect(x0, FY(d), Math.max(0, e - x0), .4); x0 = g + .9; });
+  }
+  cx.fillStyle = '#3a4248'; cx.fillRect(0, -.4, L, .4); cx.fillRect(-.4, -.4, .4, 21.8); cx.fillRect(L, -.4, .4, 21.8);
+  Lay.doors.forEach(d => { cx.fillStyle = '#3a4248'; cx.fillRect(d.x - .15, FY(d.deck) - DECK_H, .3, DECK_H - 4.4); cx.fillStyle = '#c96a3b'; cx.fillRect(d.x - .3, FY(d.deck) - 4.5, .6, .2); });
+  Lay.ladders.forEach(l => { cx.fillStyle = '#5d6469'; cx.fillRect(l.x - .5, FY(l.a), .1, FY(l.b) - FY(l.a)); cx.fillRect(l.x + .4, FY(l.a), .1, FY(l.b) - FY(l.a)); for (let y = FY(l.a) + .5; y < FY(l.b); y += .9) cx.fillRect(l.x - .5, y, 1, .1); });
+  drawStations();
+  G.items.forEach(it => {
+    if (it.broken) { cx.fillStyle = '#4a7c74'; cx.fillRect(it.x - .5, it.y - .15, .3, .15); cx.fillRect(it.x, it.y - .1, .4, .1); return; }
+    if (it.kind === 'crate') { cx.fillStyle = '#6a5a3c'; cx.fillRect(it.x - .65, it.y - 1.2, 1.3, 1.2); cx.fillStyle = '#4a3f2a'; cx.fillRect(it.x - .65, it.y - .65, 1.3, .1); }
+    else { cx.fillStyle = 'rgba(111,220,192,.55)'; cx.fillRect(it.x - .3, it.y - .9, .6, .9); cx.fillStyle = '#1a2a27'; cx.fillRect(it.x - .35, it.y - 1, .7, .15); }
+    if (it.strap) { cx.fillStyle = '#e3a33f'; cx.fillRect(it.x - .7, it.y - .55, 1.4, .12); }
+  });
+  G.bots.forEach(b => man(b, '#c96a3b', String(b.i + 1) + (b.asg === 'bunk' ? '' : ' ' + b.asg), false));
+  if (!P.out) man(P, '#6fdcc0', null, !!P.use);
+  if (!P.out && !P.lad && !G.end && !P.use) {
+    const s = station();
+    if (s) txt('[E] ' + (s.id === 'hatch' ? 'go outside' : s.id === 'rack' ? 'take / return tool' : s.use ? 'use ' + s.name.toLowerCase() : s.name.toLowerCase()), P.x, P.y - 4.2, 11, '#e4ddcf', 'center');
+  }
+  if (P.use === 'helm') txt('thr ' + (G.thr*100 | 0) + '%  ' + (G.lane ? 'HIGH' : 'LOW') + ' track', P.x, P.y - 4.2, 11, '#e4ddcf', 'center');
+}
+function drawStations(){
+  const H = STN.helm, E = STN.engine, W = STN.winch, LK = STN.lookout, RW = STN.rear, HT = STN.hatch, RK = STN.rack, B = STN.bunk, u = G.use;
+  cx.fillStyle = '#2c3a40'; cx.fillRect(H.x - 1.6, FY(0) - 1.3, 3.2, 1.3); cx.fillStyle = u.helm ? '#6fdcc0' : '#33474d'; cx.fillRect(H.x - 1.3, FY(0) - 2.4, 2.6, 1.1); txt('HELM', H.x, FY(0) - 2.8, 10, '#8e958f', 'center');
+  cx.fillStyle = '#3a3a40'; cx.fillRect(B.x - 3, FY(0) - 1.3, 6, 1.3); cx.fillStyle = '#4b4f58'; cx.fillRect(B.x - 3, FY(0) - 1.9, 2, .6);
+  cx.fillStyle = '#2a3036'; cx.fillRect(LK.x - 1.2, -1.2, 2.4, 1.2); cx.fillStyle = u.lookout ? '#6fdcc0' : '#33474d'; cx.fillRect(LK.x - .9, -.9, 1.8, .5);
+  cx.fillStyle = '#2a3036'; cx.fillRect(LK.x - .15, 0, .3, FY(0) - 3.2); txt('LOOKOUT', LK.x, FY(0) - 3.5, 10, '#8e958f', 'center');
+  cx.fillStyle = u.rear ? '#3a5a5a' : '#0c0f11'; cx.fillRect(0, FY(1) - 4.2, .3, 2.2); cx.fillStyle = '#3a4248'; cx.fillRect(.3, FY(1) - 4.4, .3, 2.6); txt('REAR WINDOW', RW.x + 3, FY(1) - 3.6, 9, '#8e958f', 'center');
+  const hot = G.engine ? .35 + G.v/V.speed*.65 : 0; cx.fillStyle = '#2b2522'; cx.fillRect(E.x - 3, FY(2) - 4.4, 6, 4.4);
+  cx.fillStyle = 'rgb(' + (60 + hot*190 | 0) + ',' + (35 + hot*80 | 0) + ',30)'; cx.fillRect(E.x - 2.4, FY(2) - 3.4, 4.8, 2.4); txt('ENGINE ' + (G.engine ? 'on' : 'OFF'), E.x, FY(2) - 4.9, 10, G.engine ? '#8e958f' : '#e3a33f', 'center');
+  cx.fillStyle = '#1a1612'; cx.fillRect(0, FY(2) - 3.2, .5, 3.2); cx.fillStyle = '#c96a3b'; cx.fillRect(HT.x - .2, FY(2) - 3.4, .5, .2); txt('HATCH', HT.x + .5, FY(2) - 3.8, 9, '#8e958f', 'left');
+  cx.fillStyle = '#2a3036'; cx.fillRect(RK.x - 1, FY(2) - 3, 2, .2); if (!P.tool) { cx.fillStyle = '#9aa0a3'; cx.fillRect(RK.x - .6, FY(2) - 2.8, 1.2, .2); cx.fillRect(RK.x - .6, FY(2) - 2.8, .2, .8); } txt('TOOLS', RK.x, FY(2) - 3.4, 9, '#59605b', 'center');
+  /* winch: drum, cable, pendulum load that swings with tilt; mast wall on the right */
+  const px = W.x, py = FY(2) - 5.5, len = 3.4, lx = px + Math.sin(G.th)*len*1.3, ly = py + Math.cos(G.th)*len;
+  cx.fillStyle = '#2a3036'; cx.fillRect(px - 3, py - .9, 6, .7); cx.fillStyle = u.winch ? '#6fdcc0' : '#c96a3b'; cx.beginPath(); cx.arc(px, py, 1, 0, 7); cx.fill();
+  cx.strokeStyle = '#7d7b73'; cx.lineWidth = .1; cx.beginPath(); cx.moveTo(px, py); cx.lineTo(lx, ly); cx.stroke();
+  cx.fillStyle = G.dmg ? '#c9863b' : '#7d8a86'; cx.fillRect(lx - 1, ly, 2, 1.3); cx.fillStyle = '#0c0f11'; for (let i = 0; i < G.dmg; i++) cx.fillRect(lx - .8 + i*.7, ly + .2, .1, .9);
+  cx.fillStyle = '#26343a'; cx.fillRect(px + 4, FY(2) - 7, .7, 7); cx.fillRect(px - 4.7, FY(2) - 7, .7, 7); txt('WINCH', px, FY(2) - 6.7, 10, '#8e958f', 'center');
+}
+function drawOutside(){
+  const L = Lay.L, gy = OY + 25*K;
+  cx.setTransform(1, 0, 0, 1, 0, 0);
+  cx.fillStyle = '#100d0a'; cx.fillRect(0, gy, CW, CH - gy);
+  cx.fillStyle = '#241d16'; for (let i = 0; i < 50; i++) { const px = (((i*97 - G.tread*16) % 1000) + 1000) % 1000 - 20; cx.fillRect(px, gy + 2 + (i*37 % 8), 10 + i % 5*4, 2); }
+  if (G.lights) { const g = cx.createLinearGradient(OX + L*K, 0, OX + L*K + 70, 0); g.addColorStop(0, 'rgba(255,230,160,.18)'); g.addColorStop(1, 'rgba(255,230,160,0)'); cx.fillStyle = g; cx.fillRect(OX + L*K, gy - 80, 70, 80); }
+  if (P.out) {
+    const px = OX + P.ox*K, py = gy - 2;
+    const g = cx.createRadialGradient(px, py - 30, 4, px, py - 30, 80); g.addColorStop(0, 'rgba(255,230,160,.25)'); g.addColorStop(1, 'rgba(255,230,160,0)'); cx.fillStyle = g; cx.fillRect(px - 90, py - 120, 180, 130);
+    cx.save(); cx.setTransform(K, 0, 0, K, px, py); cx.scale(1, 1); man({x: 0, y: 0, face: P.face, ph: P.ph, lad: null, stun: P.stun, down: 0, tool: P.tool}, '#6fdcc0', null, !!P.work); cx.restore();
+    if (P.work) { cx.fillStyle = '#e3a33f'; cx.fillRect(px - 20, py - 62, 40*clamp(G.repP || 0, 0, 1), 4); }
+    const c = G.cr;
+    if (c && c.st === 'latch' && c.kind !== 'roof' && Math.abs(P.ox - (c.tx + L/2)) < 9) {
+      const cxp = OX + (c.tx + L/2)*K; cx.fillStyle = '#050607'; cx.beginPath(); cx.ellipse(cxp, gy - 14, 34, 16, 0, 0, 7); cx.fill();
+      cx.fillStyle = '#d9e86a'; cx.fillRect(cxp - 8, gy - 20, 4, 3); cx.fillRect(cxp + 4, gy - 20, 4, 3);
+    }
+    if (G.bend && Math.abs(P.ox - G.bendX) < 2.2) txt(P.tool ? '[E] work on the track' : 'bent track: you need the tool', P.ox, 26.4, 11, '#e4ddcf', 'center');
+    else if (P.ox < 3) txt('[E] back inside', P.ox, 26.4, 11, '#e4ddcf', 'center');
+  }
+}
+function inset(title, x, y, w, h, a, b, range, ahead, id){
+  const L = Lay.L, X = u => x + (u - a)/(b - a)*w, gb = y + h - 7, ly = [gb - 6, gb - 28];
+  cx.setTransform(1, 0, 0, 1, 0, 0); cx.fillStyle = '#07090a'; cx.fillRect(x, y, w, h); cx.strokeStyle = '#262d32'; cx.strokeRect(x + .5, y + .5, w - 1, h - 1);
+  cx.font = '600 10px "JetBrains Mono",monospace'; cx.fillStyle = '#8e958f'; cx.textAlign = 'left'; cx.fillText(title, x + 5, y + 10);
+  cx.save(); cx.beginPath(); cx.rect(x + 1, y + 13, w - 2, h - 14); cx.clip();
+  cx.fillStyle = '#17130f'; cx.fillRect(x, gb, w, 8); cx.fillStyle = '#1b2024'; cx.fillRect(x, ly[0] + 2, w, 1); cx.fillRect(x, ly[1] + 2, w, 1);
+  cx.fillStyle = '#1d2327'; cx.fillRect(X(-L/2), gb - 16, X(L/2) - X(-L/2), 10);
+  if (ahead) F.forEach(f => {
+    const fu = f.x - G.mid + (f.k === 'rockfall' ? 0 : 0), d = fu - L/2; if (d < -3 || d > range) return;
+    const al = clamp(1 - d/range*.55, .3, 1), px = X(fu), pw = Math.max(3, X(fu + 7) - X(fu)); cx.globalAlpha = al;
+    if (f.k === 'boulder') { cx.fillStyle = '#6a7074'; cx.beginPath(); cx.arc(px, ly[f.lane] - 2, 6, Math.PI, 0); cx.fill(); }
+    else if (f.k === 'soft') { cx.fillStyle = '#4a3a28'; cx.fillRect(px, ly[f.lane] - 3, pw, 6); cx.fillStyle = '#7a6244'; for (let i = 0; i < 5; i++) cx.fillRect(px + i*pw/5, ly[f.lane] - 1 + (i % 2)*2, 2, 2); }
+    else if (f.k === 'ravine') { cx.fillStyle = '#000'; cx.fillRect(px, ly[1] - 6, pw*.8, 36); cx.fillStyle = '#c96a3b'; cx.fillRect(px, ly[1] - 6, 2, 36); }
+    else if (f.k === 'slope') { cx.strokeStyle = '#3a4248'; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(px, gb); cx.quadraticCurveTo(X(fu + f.len/2), gb - 20*Math.sign(f.ang), X(fu + f.len), gb); cx.stroke(); }
+    else if (f.k === 'rockfall') { cx.fillStyle = f.done ? '#5a5f63' : '#8a7a62'; if (f.done) { cx.fillRect(px - 8, gb - 5, 7, 5); cx.fillRect(px + 2, gb - 4, 6, 4); } else for (let i = 0; i < 7; i++) cx.fillRect(px - 8 + i*3, y + 16 + ((G.t*40 + i*23) % 40), 1.5, 4); }
+    cx.globalAlpha = 1;
+  });
+  const c = G.cr;
+  if (c && id && vis(id)) {
+    const dh = Math.max(0, Math.abs(c.u) - L/2), dist = Math.hypot(dh, c.w), R = range, gx = X(c.u), gyy = c.kind === 'roof' && c.st === 'latch' ? gb - 22 : gb - 10 - Math.min(18, c.w*.2);
+    const blink = Math.sin(G.t*7 + c.u) > -.85, al = .35 + .65*clamp(dist/R, 0, 1), sz = 1.5 + 2.5*(1 - dist/R);
+    if (blink) { cx.globalAlpha = al; cx.fillStyle = '#d9e86a'; cx.fillRect(gx - 3, gyy, sz, sz); cx.fillRect(gx + 2, gyy, sz, sz); cx.globalAlpha = 1; }
+    if (c.st !== 'latch' || G.mag) { cx.globalAlpha = .25; cx.fillStyle = '#d9e86a'; const dir = c.st === 'back' ? 1 : -1; cx.fillRect(gx, gyy + 3, dir*Math.sign(c.u || 1)*10, 1); cx.globalAlpha = 1; }
+    if (c.st === 'latch') { cx.globalAlpha = .5; cx.fillStyle = '#000'; cx.fillRect(gx - 7, gyy - 2, 15, 12); cx.globalAlpha = al; cx.fillStyle = '#d9e86a'; cx.fillRect(gx - 3, gyy + 1, 2.5, 2.5); cx.fillRect(gx + 2, gyy + 1, 2.5, 2.5); cx.globalAlpha = 1; }
+  }
+  cx.restore();
+}
+function manned(id){ return G.use[id] > 0; }
+function draw(){
+  const L = Lay.L;
+  K = Math.min((CW - 40)/L, (CH - 96)/25); OX = (CW - L*K)/2; OY = 56;
+  cx.setTransform(1, 0, 0, 1, 0, 0);
+  cx.fillStyle = '#0a0d0f'; cx.fillRect(0, 0, CW, CH);
+  const prog = clamp(G.front/V.route, 0, 1), dist = Math.max(0, V.route - G.front);
+  cx.fillStyle = '#13171a'; cx.fillRect(130, 18, 700, 8); cx.fillStyle = '#c96a3b'; cx.fillRect(130, 18, 700*prog, 8);
+  cx.font = '600 11px "JetBrains Mono",monospace'; cx.fillStyle = '#8e958f'; cx.textAlign = 'left'; cx.fillText('ROUTE', 70, 27);
+  cx.textAlign = 'right'; cx.fillText(dist.toFixed(0) + ' m to go', 930, 27); cx.fillStyle = '#6fdcc0'; cx.fillRect(828, 12, 3, 20);
+  drawInterior(); drawOutside();
+  /* insets only while someone is there; bots never speak, so this is the only way to know */
+  const gy = OY + 25*K, ih = CH - gy - 6, iy = gy + 3, iw = 300, Rl = V.lookAhead*(G.light ? 1 : .15), Rh = V.helmSee*(G.light ? 1 : .3);
+  if (manned('helm')) inset('HELM WINDOW', 8, iy, iw, ih, L/2 - 3, L/2 + Rh, Rh, true, null);
+  if (manned('lookout')) inset('LOOKOUT HATCH', 326, iy, iw, ih, -L/2 - 25, L/2 + Rl, Rl, true, 'lookout');
+  if (manned('rear')) inset('REAR WINDOW', 644, iy, iw, ih, -L/2 - V.lookAhead*.7*(G.light ? 1 : .15), -L/2 + 8, V.lookAhead*.7*(G.light ? 1 : .15), false, 'rear');
+  /* head injury: vision narrows and blurs */
+  const hd = P.body.head;
+  if (hd) { cx.setTransform(1, 0, 0, 1, 0, 0); const px = P.out ? OX + P.ox*K : OX + P.x*K, py = P.out ? gy - 40 : OY + (P.y - 1.8)*K, g = cx.createRadialGradient(px, py, hd === 2 ? 30 : 120, px, py, hd === 2 ? 110 : 330); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.93)'); cx.fillStyle = g; cx.fillRect(0, 0, CW, CH); }
+  $('cv').style.filter = hd ? 'blur(' + hd*.8 + 'px)' : '';
+  if (G.v > .3 || G.tilt) { /* nothing: motion is shown by treads and hull tilt */ }
+}
+function silhouette(){
+  const b = P.body, col = s => s === 2 ? '#e2553f' : s === 1 ? '#e3a33f' : '#4a5258';
+  sx.setTransform(1, 0, 0, 1, 0, 0); sx.clearRect(0, 0, 55, 85);
+  const R = (c, x, y, w, h) => { sx.fillStyle = col(c); sx.fillRect(x, y, w, h); };
+  sx.fillStyle = col(b.head); sx.beginPath(); sx.arc(27, 9, 7, 0, 7); sx.fill();
+  R(b.torso, 19, 18, 17, 26); R(b.armL, 11, 18, 7, 26); R(b.armR, 37, 18, 7, 26); R(b.legL, 19, 46, 8, 34); R(b.legR, 28, 46, 8, 34);
+  if (P.down) { sx.fillStyle = 'rgba(12,15,17,.55)'; sx.fillRect(0, 0, 55, 85); }
+}
+
+/* ---------- hud ---------- */
+const ROS = [['helm', 'Helm'], ['engine', 'Engine'], ['winch', 'Winch'], ['lookout', 'Lookout'], ['rear', 'Rear window']].map(([id, n]) => {
+  const r = document.createElement('div'); r.className = 'row'; r.innerHTML = '<b>' + n + '</b><span></span><i></i>'; $('roster').append(r); return {id, el: r, sp: r.children[1], i: r.children[2]};
+});
+function hud(){
+  const num = (id, s, c) => { const e = $(id); if (e.textContent !== s) e.textContent = s; if (c !== undefined) e.className = c; };
+  num('r-dist', Math.max(0, V.route - G.front).toFixed(0) + ' m'); num('r-spd', G.v.toFixed(1) + ' m/s', G.v > V.speed*.8 ? 'w' : '');
+  num('r-noise', G.noise.toFixed(2), G.noise > .6 ? 'c' : G.noise > .3 ? 'w' : ''); $('a-noise').style.width = clamp(G.noise*100, 0, 100) + '%';
+  num('r-light', G.lights ? 'ON' : 'off', G.lights ? 'w' : 'g');
+  num('r-watch', G.watchT.toFixed(0) + ' s'); num('r-walk', G.walkT.toFixed(0) + ' s'); num('r-helm', G.helmT.toFixed(0) + ' s');
+  num('r-time', G.t.toFixed(0) + ' s'); num('r-seed', V.seed + '');
+  ROS.forEach(r => {
+    const who = [P.use === r.id && !P.out ? 'you' : null].concat(G.bots.filter(b => b.arr && b.asg === r.id && !b.down && !b.stun).map(b => 'bot ' + (b.i + 1))).filter(Boolean);
+    r.el.className = 'row' + (G.use[r.id] ? ' on' : ''); r.sp.textContent = G.use[r.id] ? 'manned' : 'empty'; r.i.textContent = who.join(', ') || 'nobody';
+  });
+  silhouette();
+}
+
+/* ---------- control flow ---------- */
+function setPause(p){ paused = p; $('pausemsg').classList.toggle('on', p); lastT = performance.now(); }
+function frame(now){
+  const dt = Math.min(.1, (now - lastT)/1000); lastT = now;
+  if (!paused) { acc += dt; let n = 0; while (acc >= STEP && n < 5) { if (!G.end) stepSim(); acc -= STEP; n++; } if (n === 5) acc = 0; }
+  draw(); hud();
+  requestAnimationFrame(frame);
+}
+function buildTune(){
+  const box = $('tune'); box.innerHTML = '';
+  TUNE.forEach(([k, label, mn, mx, st]) => {
+    const l = document.createElement('label'), o = document.createElement('output'), inp = document.createElement('input');
+    inp.type = 'range'; inp.min = mn; inp.max = mx; inp.step = st; inp.value = V[k]; o.textContent = V[k];
+    inp.addEventListener('input', () => { V[k] = +inp.value; o.textContent = V[k]; writeHash(); if (RESTART.includes(k)) restart(); });
+    inp.addEventListener('change', () => inp.blur());
+    l.append(label, inp, o); box.append(l);
+  });
+}
+const NUMS = ['helm', 'engine', 'winch', 'lookout', 'rear'];
+addEventListener('keydown', e => {
+  const c = e.code;
+  if (e.target.tagName === 'INPUT' && c.startsWith('Arrow')) return;
+  if (c.startsWith('Arrow') || c === 'Space') e.preventDefault();
+  if (e.repeat) return;
+  keys[c] = 1;
+  if (c === 'KeyE') Q.push('e'); else if (c === 'KeyK') Q.push('k'); else if (c === 'KeyL') Q.push('l'); else if (c === 'KeyF') Q.push('f');
+  else if (/^Digit[1-5]$/.test(c)) Q.push('#' + NUMS[+c[5] - 1]);
+  else if (c === 'Digit0') Q.push('#all');
+  else if (c === 'KeyR') restart();
+  else if (c === 'KeyN') { V.seed = 1 + (Math.random()*9999 | 0); writeHash(); buildTune(); restart(); }
+  else if (c === 'KeyP') setPause(!paused);
+});
+addEventListener('keyup', e => { delete keys[e.code]; });
+addEventListener('blur', () => { for (const k in keys) delete keys[k]; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+addEventListener('hashchange', () => { readHash(); buildTune(); restart(); });
+$('reset').addEventListener('click', e => { TUNE.forEach(t => V[t[0]] = t[5]); writeHash(); buildTune(); restart(); e.target.blur(); });
+
+readHash(); buildTune(); restart();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
