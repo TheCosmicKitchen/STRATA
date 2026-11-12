@@ -377,3 +377,45 @@ public class UndergroundGenTests
         Assert.True(Count(w, Mat.Mycelium) < lace0 * 3 + 500, "grey lace is running away");
     }
 }
+
+public class BubbleTests
+{
+    static (World w, Player p) Drop(bool bubble, float vy)
+    {
+        var w = new World(4, 4, 1);
+        for (int x = 0; x < w.Width; x++) for (int y = 200; y < w.Height; y++) w.Set(x, y, Mat.Rock);
+        var p = new Player(w, 0, 0) { X = 60, Y = 150, VY = vy, Bubble = bubble };
+        return (w, p);
+    }
+
+    static bool Hurt(Player p) => p.Body.Parts.Any(h => h != Strata.Rules.Hurt.Fine) || p.Body.Downed;
+
+    [Fact]
+    public void A_terminal_speed_landing_in_the_bubble_bounces_and_hurts_nothing()
+    {
+        var (_, p) = Drop(true, 150);
+        bool bounced = false;
+        for (int i = 0; i < 40; i++) { p.Update(new PlayerInput(), 1 / 60f); bounced |= p.Bounced; }
+        Assert.True(bounced, "no bounce");
+        Assert.False(Hurt(p), "hurt in the bubble");
+    }
+
+    [Fact]
+    public void The_same_landing_without_the_bubble_hurts()
+    {
+        var (_, p) = Drop(false, 150);
+        for (int i = 0; i < 40; i++) p.Update(new PlayerInput(), 1 / 60f);
+        Assert.True(Hurt(p));
+    }
+
+    [Fact]
+    public void The_bubble_keeps_your_momentum_in_the_air()
+    {
+        var w = new World(4, 4, 1);
+        var a = new Player(w, 0, 0) { X = 60, Y = 50, VX = 90, Bubble = true };
+        var b = new Player(w, 0, 0) { X = 60, Y = 50, VX = 90 };
+        for (int i = 0; i < 20; i++) { a.Update(new PlayerInput(), 1 / 60f); b.Update(new PlayerInput(), 1 / 60f); }
+        Assert.True(a.VX > 85, $"bubble lost momentum: {a.VX}");
+        Assert.True(b.VX < 60, $"no bubble kept momentum: {b.VX}");
+    }
+}

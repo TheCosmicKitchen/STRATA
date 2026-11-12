@@ -17,7 +17,7 @@ namespace Strata.Game;
 /// </summary>
 public partial class Game : Node2D
 {
-	const int CellPx = 4;                       // screen pixels per cell
+	const int CellPx = 8;                       // screen pixels per cell: close in, at the delver's level
 	int _vw, _vh;                              // view size in cells
 	World _world = null!;
 	Player _p = null!;
@@ -41,6 +41,7 @@ public partial class Game : Node2D
 
 	/// <summary>Everything drawn fully lit while we work on caving; L toggles the real lighting back on.</summary>
 	bool _fullBright = true;
+	bool _showHelp;
 	bool _mapOpen;
 	TextureRect _map = null!;
 	ImageTexture? _mapTex;
@@ -56,6 +57,7 @@ public partial class Game : Node2D
 	int _camX, _camY;
 	float _camFX, _camFY, _look, _shake, _shX, _shY;
 	readonly ActorLayer _actors = new() { Size = CellPx };
+	ShaderMaterial _worldShader = null!;
 	// Interpolated draw positions, and the positions at the start of the current physics tick.
 	float _playerX, _playerY, _truckX, _truckRearY, _truckFrontY;
 	float _prevPX, _prevPY, _prevTX, _prevTRY, _prevTFY;
@@ -106,7 +108,7 @@ public partial class Game : Node2D
 	struct Controls
 	{
 		public float MoveX, MoveY;
-		public bool Jump, JumpHeld, Clip, Use, Dig, Flare, Lamp, NextItem, Spray, SprayNext, SprayPrev, Grapple, Beacon;
+		public bool Jump, JumpHeld, Clip, Use, Dig, Flare, Lamp, NextItem, Spray, SprayNext, SprayPrev, Grapple, Beacon, Bubble, SlotNext, SlotPrev;
 		public Vector2? Aim;     // world cells; null means use mouse or stick
 	}
 	Controls _ctl;
@@ -115,6 +117,9 @@ public partial class Game : Node2D
 	SprayDemo? _sprayDemo;
 	WalkDemo? _walkDemo;
 	GrappleDemo? _grappleDemo;
+	BubbleDemo? _bubbleDemo;
+	ToolsDemo? _toolsDemo;
+	TipsDemo? _tipsDemo;
 
 	Controls ReadControls() => new()
 	{
@@ -124,10 +129,13 @@ public partial class Game : Node2D
 		Dig = DigHeld, Flare = Pressed(Key.Q, JoyButton.RightStick), Lamp = Pressed(Key.F, JoyButton.Y),
 		NextItem = Pressed(Key.Tab),
 		Spray = Input.IsMouseButtonPressed(MouseButton.Right) || Input.GetJoyAxis(Pad, JoyAxis.TriggerLeft) > .5f,
-		SprayNext = Pressed(Key.X, JoyButton.DpadRight) || TakeWheel(+1),
-		SprayPrev = Pressed(Key.Z, JoyButton.DpadLeft) || TakeWheel(-1),
+		SprayNext = Pressed(Key.X, JoyButton.DpadRight),
+		SprayPrev = Pressed(Key.Z, JoyButton.DpadLeft),
+		SlotNext = TakeWheel(-1) || Pressed(Key.None, JoyButton.DpadUp),
+		SlotPrev = TakeWheel(+1),
 		Grapple = Pressed(Key.G, JoyButton.LeftShoulder) || Input.IsMouseButtonPressed(MouseButton.Middle) && !_midWasDown,
 		Beacon = Held(Key.H, JoyButton.DpadDown),
+		Bubble = Pressed(Key.V, JoyButton.RightShoulder),
 	};
 	bool _midWasDown;
 
@@ -192,19 +200,7 @@ public partial class Game : Node2D
 		while (_sprayAcc >= 1)
 		{
 			_sprayAcc -= 1;
-			float a = MathF.Atan2(dy, dx) + (_rng.Float() - .5f) * .35f;
-			if (MaterialTable.Gas[m])
-			{
-				// Gas and flame: a short cone, placed straight into open cells.
-				float dist = 2 + _rng.Float() * 9;
-				int cx = (int)MathF.Floor(nx + MathF.Cos(a) * dist), cy = (int)MathF.Floor(ny + MathF.Sin(a) * dist);
-				if (ClearLine(nx, ny, cx, cy) && _world.Get(cx, cy) == Mat.Empty) _world.Set(cx, cy, m, World.DefaultLife(m));
-			}
-			else
-			{
-				float v = 55 + _rng.Float() * 15;
-				_spray.Add(new Drop { X = nx, Y = ny, VX = MathF.Cos(a) * v + _p.VX * .5f, VY = MathF.Sin(a) * v + _p.VY * .3f, Life = 2.5f, M = m });
-			}
+			EmitUnit(m, nx, ny, dx, dy);
 		}
 		if (_rng.Chance(.25f)) Dust(nx, ny, MaterialTable.Color[m], 1, 4, 2);
 	}
@@ -271,6 +267,41 @@ public partial class Game : Node2D
 	{
 		int px = (int)MathF.Floor(_p.X), py = (int)MathF.Floor(_p.Y);
 		return !_inTruck && x >= px - Player.HalfW && x <= px + Player.HalfW && y >= py - Player.Height && y < py;
+	}
+
+	// ---------- Bubble ----------
+	//
+	// A triggered ability on its own battery: switch it on and it drains while it's up; it pops when you switch it
+	// off or the battery runs dry. Switching it on costs a chunk up front, so it can't be flickered for free.
+	// The generator and the cot recharge it.
+	const float BubbleBatteryMax = 12, BubbleStartCost = 1, BubbleRecharge = 3;
+	float _bubbleBattery = BubbleBatteryMax;
+	bool _bubbleOn;
+
+	void UpdateBubble(float dt)
+	{
+		if (_ctl.Bubble && !_inTruck)
+		{
+			if (_bubbleOn) PopBubble("You drop the bubble.");
+			else if (_p.Body.Downed) Say("You can't reach the trigger.");
+			else if (_bubbleBattery < BubbleStartCost + .5f) Say("The bubble battery is flat. Charge it at the generator.");
+			else { _bubbleOn = true; _bubbleBattery -= BubbleStartCost; Say("Bubble up."); Dust(_p.X, _p.Y - 3.5f, 0x8FE8FF, 8, 18, 6); }
+		}
+		if (_bubbleOn)
+		{
+			_bubbleBattery -= dt;
+			if (_bubbleBattery <= 0) { _bubbleBattery = 0; PopBubble("The bubble battery runs out. Pop."); }
+		}
+		_p.Bubble = _bubbleOn;
+		if (_p.Bounced) { _shake = MathF.Max(_shake, MathF.Min(.6f, MathF.Abs(_p.LandingImpact) / 200)); Dust(_p.X, _p.Y - 3.5f, 0x8FE8FF, 5, 20, 6); }
+	}
+
+	void PopBubble(string why)
+	{
+		if (!_bubbleOn) return;
+		_bubbleOn = false; _p.Bubble = false;
+		Dust(_p.X, _p.Y - 3.5f, 0x8FE8FF, 14, 30, 10);
+		Say(why);
 	}
 
 	// ---------- Grappling hook ----------
@@ -352,6 +383,9 @@ public partial class Game : Node2D
 			else if (a.StartsWith("--demo-spray=")) _sprayDemo = new SprayDemo(a[13..]);
 			else if (a == "--demo-walk") _walkDemo = new WalkDemo();
 			else if (a == "--demo-grapple") _grappleDemo = new GrappleDemo();
+			else if (a == "--demo-bubble") _bubbleDemo = new BubbleDemo();
+			else if (a == "--demo-tools") _toolsDemo = new ToolsDemo();
+			else if (a == "--demo-tips") _tipsDemo = new TipsDemo();
 			else if (a.StartsWith("--demo-out=")) _walkDemo = new WalkDemo { Out = float.Parse(a[11..]) };
 			else if (a == "--demo-craft") _demoCraft = true;
 			else if (a.StartsWith("--map=")) _mapPath = a[6..];
@@ -366,6 +400,10 @@ public partial class Game : Node2D
 		_img = Image.CreateEmpty(_vw, _vh, false, Image.Format.Rgba8);
 		_tex = ImageTexture.CreateFromImage(_img);
 		_sprite = new Sprite2D { Texture = _tex, Centered = false, Scale = new Vector2(CellPx, CellPx), TextureFilter = TextureFilterEnum.Nearest };
+		_worldShader = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/world.gdshader") };
+		_worldShader.SetShaderParameter("cell_px", (float)CellPx);
+		_worldShader.SetShaderParameter("cells", _tex);
+		_sprite.Material = _worldShader;
 		AddChild(_sprite);
 		AddChild(_actors);
 
@@ -382,6 +420,8 @@ public partial class Game : Node2D
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = TextureFilterEnum.Nearest,
 		};
 		ui.AddChild(_map);
+		_hotbar = new HotbarPanel { Position = new Vector2(vp.X / 2 - (5 * 64 - 8) / 2f, vp.Y - 148), Size = new Vector2(5 * 64, 76), Paint = DrawHotbar, MouseFilter = Control.MouseFilterEnum.Ignore };
+		ui.AddChild(_hotbar);
 		_bodyPanel = new BodyPanel { Position = new Vector2(vp.X - 90, 12) };
 		ui.AddChild(_bodyPanel);
 
@@ -407,7 +447,7 @@ public partial class Game : Node2D
 		_world = new World(32, 10, _seed);               // 2048 × 640 cells
 		_site = Underground.Generate(_world, _seed);
 		_p = new Player(_world, _site.ShaftX, CaveGen.Surface - 14) { X = _site.BaseX + 30, Y = BaseY };
-		_p.Message = "You're in the base, deep underground. Explore. Right mouse sprays materials; the wheel picks which.";
+		_p.Message = "You're in the base, deep underground. Explore. 1-5 or the wheel picks a tool; left and right mouse use it.";
 		_truck = new Truck(_world, _site.ShaftX + Truck.HalfLength + Truck.BoomReach);   // parked up top, winch over the shaft
 		Array.Clear(_pack.Count); _pack.Add(Item.Flare, 2);
 		_bench = new Bench(); _forge = new Forge();
@@ -415,6 +455,8 @@ public partial class Game : Node2D
 		_seen = new bool[_world.Width * _world.Height];
 		_flares.Clear(); _bits.Clear(); _spray.Clear();
 		_hookFlying = _grappled = false; _beacon = 0;
+		_bubbleOn = false; _bubbleBattery = BubbleBatteryMax;
+		ResetTools();
 		_mapOpen = false; if (_map != null) _map.Visible = false;
 		_bodyPanel.Body = _p.Body;
 		SnapshotPositions();
@@ -454,7 +496,16 @@ public partial class Game : Node2D
 				float dx = px - w.X, dy = py - w.Y, len = MathF.Max(.5f, MathF.Sqrt(dx * dx + dy * dy));
 				_p.VX += dx / len * 70 * k; _p.VY += dy / len * 70 * k - 20 * k;
 				_p.Clinging = false;
+				if (_p.Bubble)
+				{
+					// The bubble takes the blast: you get all of the push and none of the hurt.
+					_p.VX += dx / len * 100 * k; _p.VY += dy / len * 100 * k - 40 * k;
+					_p.Grounded = false;
+					Say(k > .5f ? "The blast hurls your bubble across the cave." : "The blast shoves your bubble.");
+					return;
+				}
 				var b = _p.Body;
+				JarBlast(k);
 				b.Injure(Part.Torso, k > .6f ? Hurt.Useless : Hurt.Hurt);
 				if (k > .4f) b.Injure(_rng.Chance(.5f) ? Part.LeftArm : Part.RightArm, Hurt.Hurt);
 				if (k > .7f) { b.Injure(Part.Head, Hurt.Hurt); b.Downed = true; }
@@ -468,6 +519,7 @@ public partial class Game : Node2D
 		if (Pressed(Key.R, JoyButton.Back)) NewRun();
 		if (Pressed(Key.N)) { _seed = (ulong)Random.Shared.NextInt64(1, int.MaxValue); NewRun(); }
 		if (Pressed(Key.P, JoyButton.Start)) _paused = !_paused;
+		if (Pressed(Key.F1)) _showHelp = !_showHelp;
 		if (Pressed(Key.L)) { _fullBright = !_fullBright; Say(_fullBright ? "Lights: everything lit." : "Lights: real lighting (lamp, flares, glowing things)."); }
 		bool shot = Pressed(Key.F12);
 		SnapshotPositions();
@@ -480,7 +532,12 @@ public partial class Game : Node2D
 		if (_sprayDemo != null) _ctl = _sprayDemo.Think(this, dt);
 		if (_walkDemo != null) _ctl = _walkDemo.Think(this, dt);
 		if (_grappleDemo != null) _ctl = _grappleDemo.Think(this, dt);
-		for (int k = 0; k < Selectable.Length; k++) if (Pressed(Key.Key1 + k)) _held = Selectable[k];
+		if (_bubbleDemo != null) _ctl = _bubbleDemo.Think(this, dt);
+		if (_toolsDemo != null) _ctl = _toolsDemo.Think(this, dt);
+		if (_tipsDemo != null) _ctl = _tipsDemo.Think(this, dt);
+		for (int k = 0; k < Hotbar.Length; k++) if (Pressed(Key.Key1 + k)) SelectSlot(k);
+		if (_ctl.SlotNext) SelectSlot(Array.IndexOf(Hotbar, _slot) + 1);
+		if (_ctl.SlotPrev) SelectSlot(Array.IndexOf(Hotbar, _slot) - 1);
 		if (_ctl.NextItem) _held = Selectable[(Array.IndexOf(Selectable, _held) + 1) % Selectable.Length];
 		if (_ctl.Lamp && _p.Battery > 0) _p.LampOn = !_p.LampOn;
 
@@ -501,7 +558,11 @@ public partial class Game : Node2D
 		_hammerFlash = MathF.Max(0, _hammerFlash - dt);
 
 		// Home comforts: the generator charges the lamp, and the pump refuels a parked truck.
-		if (MathF.Abs(_p.X - GenX) < 24) _p.Battery = MathF.Min(_p.BatteryMax, _p.Battery + 25 * dt);
+		if (MathF.Abs(_p.X - GenX) < 24)
+		{
+			_p.Battery = MathF.Min(_p.BatteryMax, _p.Battery + 25 * dt);
+			if (!_bubbleOn) _bubbleBattery = MathF.Min(BubbleBatteryMax, _bubbleBattery + BubbleRecharge * dt);
+		}
 		if (MathF.Abs(_truck.X - _site.BaseX - 60) < 50 && MathF.Abs(_truck.Speed) < 1) _truck.Fuel = MathF.Min(_truck.FuelMax, _truck.Fuel + 15 * dt);
 
 		// The base keeps you alive: its scrubbers refill your air, and resting there mends injuries.
@@ -566,12 +627,14 @@ public partial class Game : Node2D
 
 		_digCooldown -= dt; _hammerCooldown -= dt;
 		bool lmb = _ctl.Dig && !_p.Body.Downed;
-		if (lmb && atBench && _bench.On.Count > 0) Hammer();
-		else if (lmb && _digCooldown <= 0 && reach < 12) Dig(mx, my);
+		bool fireHook = false;
+		if (lmb && atBench && _bench.On.Count > 0) { Hammer(); _primaryWas = true; }
+		else fireHook = UseTools(dt, hx, hy, mx, my, reach);
+		UpdateJar(dt);
+		UpdateTip(dt);
 
 		if (_ctl.SprayNext) _sprayIndex = (_sprayIndex + 1) % SprayList.Length;
 		if (_ctl.SprayPrev) _sprayIndex = (_sprayIndex - 1 + SprayList.Length) % SprayList.Length;
-		if (_ctl.Spray && !_p.Body.Downed) Spray(hx, hy, mx, my);
 
 		if (_ctl.Flare && !_p.Body.Downed && _pack.Take(Item.Flare))
 		{
@@ -581,7 +644,7 @@ public partial class Game : Node2D
 		if (use && !_p.Body.Downed) Interact();
 
 		// Grappling hook: fire at the aim; it bites the first solid thing it hits and you're on a line to it.
-		if (_ctl.Grapple && !_p.Body.Downed)
+		if ((_ctl.Grapple || fireHook) && !_p.Body.Downed)
 		{
 			if (_grappled) { _grappled = false; _p.Clipped = false; Say("Hook released."); }
 			else if (!_hookFlying)
@@ -609,7 +672,10 @@ public partial class Game : Node2D
 		else _beacon = 0;
 
 		_p.Unstick();
+		_p.Bubble = _bubbleOn;
 		_p.Update(inp, dt);
+		UpdateBubble(dt);
+		if (!_p.Bubble && _p.LandingImpact > 95) JarImpact(_p.LandingImpact);
 		if (_p.LandingImpact > 30) _shake = MathF.Max(_shake, MathF.Min(1, (_p.LandingImpact - 30) / 60));
 		if (_p.LandingImpact > 25) Dust(_p.X, _p.Y - .5f, 0x8A8076, (int)MathF.Min(10, _p.LandingImpact / 8), 22, 8);
 		if (_p.Mantled) Dust(_p.X, _p.Y - .5f, 0x8A8076, 4, 10, 6);
@@ -625,7 +691,7 @@ public partial class Game : Node2D
 		int r = pick ? 2 : 1;
 		_digCooldown = (pick ? .06f : .12f) * (_p.Body[Part.RightArm] >= Hurt.Hurt ? 2.5f : 1);
 		bool full = false;
-		float power = pick ? 2 : 1;
+		float power = (pick ? 2 : 1) * TipPower();
 		for (int dy = -r; dy <= r; dy++) for (int dx = -r; dx <= r; dx++)
 		{
 			if (dx * dx + dy * dy > r * r + 1) continue;
@@ -708,6 +774,7 @@ public partial class Game : Node2D
 			int got = Math.Max(0, 5 - _pack[Item.Flare]);
 			_pack.Add(Item.Flare, got);
 			bool rope = _pack[Item.Rope] == 0; if (rope) _pack.Add(Item.Rope, 1);
+			if (!_hasJar) { _hasJar = true; _jarCracks = 0; _jarTemp = 20; Say("You strap a fresh glass tank on your back."); return; }
 			Say(got > 0 || rope ? $"From the locker: {(got > 0 ? $"{got} flare{(got > 1 ? "s" : "")}" : "")}{(got > 0 && rope ? " and " : "")}{(rope ? "a rope" : "")}." : "You're already stocked up.");
 			return;
 		}
@@ -715,8 +782,8 @@ public partial class Game : Node2D
 		// The cot: lie down and get patched up properly.
 		if (NearSurface(CotX, 8))
 		{
-			Array.Clear(_p.Body.Parts); _p.Body.Downed = false; _p.Battery = _p.BatteryMax;
-			Say("You lie down for a while. Patched up, lamp charged.");
+			Array.Clear(_p.Body.Parts); _p.Body.Downed = false; _p.Battery = _p.BatteryMax; _bubbleBattery = BubbleBatteryMax;
+			Say("You lie down for a while. Patched up, lamp and bubble charged.");
 			return;
 		}
 
@@ -812,7 +879,10 @@ public partial class Game : Node2D
 		_shX = sx; _shY = sy; _camFX += sx; _camFY += sy;
 		_camX = (int)MathF.Floor(_camFX); _camY = (int)MathF.Floor(_camFY);
 		_sprite.Position = new Vector2(-(_camFX - _camX) * CellPx, -(_camFY - _camY) * CellPx);
-		_actors.Cells.Clear(); _actors.Marks.Clear(); _actors.Rot.Clear(); _actors.Texts.Clear();
+		_actors.Cells.Clear(); _actors.Marks.Clear(); _actors.Rot.Clear(); _actors.Texts.Clear(); _actors.Shapes.Clear();
+		_worldShader.SetShaderParameter("cam", new Vector2(_camX, _camY));
+		_worldShader.SetShaderParameter("time", _frame / 60f);
+		if (_p.Grounded && !_inTruck) _walkPhase += MathF.Abs(_p.VX) * dtf * .32f;
 		ComputeLight();
 		DrawWorld();
 		_img.SetData(_vw, _vh, false, Image.Format.Rgba8, _px);
@@ -821,6 +891,7 @@ public partial class Game : Node2D
 		_camFX -= _shX; _camFY -= _shY;    // shake only affects what is drawn
 		UpdateHud();
 		_bodyPanel.QueueRedraw();
+		_hotbar.QueueRedraw();
 
 		_frame++;
 		if (_probe && _frame % 60 == 0) GD.Print($"probe frame {_frame} fps {Engine.GetFramesPerSecond()} physics-ms {Performance.GetMonitor(Performance.Monitor.TimePhysicsProcess) * 1000:F1} player {_p.X:F0},{_p.Y:F0} vx {_p.VX:F1} grounded {_p.Grounded} awake {_world.AwakeChunksLastStep} visited {_world.CellsVisitedLastStep}");
@@ -906,6 +977,7 @@ public partial class Game : Node2D
 		Glow(_p.AnchorX, _p.AnchorY + 2, 16, .3f);    // work light on the winch boom
 
 		if (!_p.CarryingSample) Glow(_site.SampleX, _site.SampleY - 1, 6, .7f);
+		if (_tip != Mat.Empty && _slot == Tool.Pick && TipLook().glow) { var th = Hands(_p.X, _p.Y); Glow(th.x + th.dx * 1.7f, th.y + th.dy * 1.7f, _tip == Mat.Sunstone ? 26 : 12, _tip == Mat.Sunstone ? .9f : .5f); }
 		foreach (var f in _flares) Cone(f.X, f.Y, 0, MathF.Tau, 34, 1.1f * MathF.Min(1, f.Life / 3), 220);
 		foreach (var b in _bits) if (b.Spark) Glow(b.X, b.Y, 3, .5f * b.Life / b.Max);
 
@@ -992,121 +1064,31 @@ public partial class Game : Node2D
 				float t = Math.Clamp((CaveGen.Surface - y) / 160f, 0, 1);
 				float extra = _fullBright ? 0 : MathF.Max(0, _light[vy * _vw + vx] - .55f) * 90;
 				_px[o] = (byte)Math.Min(255, 46 - 28 * t + extra); _px[o + 1] = (byte)Math.Min(255, 50 - 30 * t + extra * .85f);
-				_px[o + 2] = (byte)Math.Min(255, 60 - 30 * t + extra * .6f); _px[o + 3] = 255;
+				_px[o + 2] = (byte)Math.Min(255, 60 - 30 * t + extra * .6f); _px[o + 3] = 16;
 				continue;
 			}
 			byte m = mat[i];
 			uint c = MaterialTable.Color[m];
 			float l = MathF.Min(1.2f, _light[vy * _vw + vx] + MaterialTable.Emission[m]);
-			float var = .88f + shade[i] / 255f * .24f;
+			float var = .97f + shade[i] / 255f * .06f;
 			if (l > .04f) _seen[i] = true;
 			float k = l * var * (m == Mat.Empty ? 1f : 1.6f);
 			if (l <= .04f && _seen[i] && m != Mat.Empty) k = .07f;    // faint memory of what you have seen
-			if (m == Mat.Empty) { c = y < CaveGen.Surface + 2 ? 0x2A2F38u : _fullBright ? 0x1E1914u : 0x2A2219u; }
+			if (m == Mat.Empty)
+			{
+				// Open cave: the shader draws the back wall; it only needs to know how lit this spot is.
+				byte lv = (byte)Math.Min(255, (l <= .04f && _seen[i] ? .07f : l) / 1.2f * 255);
+				_px[o] = lv; _px[o + 1] = lv; _px[o + 2] = lv; _px[o + 3] = 0;
+				continue;
+			}
 			if (m == Mat.Ore && (shade[i] & 7) == 0) c = 0xD08850;   // glints in ore
 			_px[o] = (byte)Math.Min(255, ((c >> 16) & 255) * k);
 			_px[o + 1] = (byte)Math.Min(255, ((c >> 8) & 255) * k);
 			_px[o + 2] = (byte)Math.Min(255, (c & 255) * k);
-			_px[o + 3] = 255;
+			_px[o + 3] = MaterialTable.Gas[m] ? (byte)64 : MaterialTable.Liquid[m] ? (byte)128 : MaterialTable.Powder[m] ? (byte)192 : (byte)255;
 		}
 
-		DrawBase();
-
-		// The winch line from the boom on the truck. Unclipped, the hook hangs down until it reaches the ground.
-		var (ax0, ay0) = _grappled ? (_hookX, _hookY) : BoomTip();
-		if (_hookFlying) { LineA(_playerX, _playerY - Player.Height + 2, _hookX, _hookY, 0xCFC6B3); PutA(_hookX - .5f, _hookY - .5f, 0xE0E4E8, 1.3f); }
-		if (_grappled) PutA(_hookX - .5f, _hookY - .5f, 0xE0E4E8, 1.3f);
-		var (ex, ey) = _p.Clipped ? (_playerX, _playerY - Player.Height) : (ax0, MathF.Min(ay0 + _p.RopeLen, _truck.GroundAt(ax0) - 1));
-		LineA(ax0, ay0, ex, ey, 0xCFC6B3);
-		if (!_p.Clipped) PutA(ex - .5f, ey, 0xC96A3B, 1);
-
-		if (!_p.CarryingSample) { Put(_site.SampleX, _site.SampleY - 1, 0x6FDCC0, 1.2f); Put(_site.SampleX + 1, _site.SampleY - 1, 0x6FDCC0, 1.2f); }
-		foreach (var f in _flares) { Put((int)f.X, (int)f.Y, 0xFFE0A0, 1.5f); Put((int)f.X + 1, (int)f.Y, 0xFF6040, 1.5f); }
-
-		DrawTruck();
-		if (!_inTruck) { DrawPlayer(); DrawReticle(); DrawStamina(); }
-		foreach (var dr in _spray)
-		{
-			uint dc = MaterialTable.Color[dr.M];
-			int vx0 = (int)dr.X - _camX, vy0 = (int)dr.Y - _camY;
-			float li = MathF.Max(.5f, (uint)vx0 < (uint)_vw && (uint)vy0 < (uint)_vh ? MathF.Min(1.2f, _light[vy0 * _vw + vx0] + .3f + MaterialTable.Emission[dr.M]) : .5f);
-			var dcol = new Color(((dc >> 16) & 255) / 255f * li * 1.2f, ((dc >> 8) & 255) / 255f * li * 1.2f, (dc & 255) / 255f * li * 1.2f);
-			_actors.Marks.Add((new Rect2((dr.X - _camFX) * CellPx - 1, (dr.Y - _camFY) * CellPx - 1, 3, 3), dcol));
-		}
-		foreach (var b in _bits)
-		{
-			float a = MathF.Min(1, b.Life / b.Max * 1.6f);
-			int vx = (int)b.X - _camX, vy = (int)b.Y - _camY;
-			float light = b.Spark ? 1.4f : ((uint)vx < (uint)_vw && (uint)vy < (uint)_vh ? MathF.Min(1, _light[vy * _vw + vx] + .15f) : 0);
-			var col = new Color(((b.Color >> 16) & 255) / 255f * light, ((b.Color >> 8) & 255) / 255f * light, (b.Color & 255) / 255f * light, a);
-			_actors.Marks.Add((new Rect2((b.X - _camFX) * CellPx, (b.Y - _camFY) * CellPx, b.Size, b.Size), col));
-		}
-	}
-
-	void DrawBase()
-	{
-		int g = BaseY, bx = _site.BaseX;
-		// Timber posts, in the background: you walk in front of them.
-		foreach (int px in new[] { bx - 104, bx - 30, bx + 30, bx + 100 })
-			for (int y = g - 26; y < g; y++) if (_world.Get(px, y) == Mat.Empty) Put(px, y, 0x5A4430, .55f);
-		// Work lamps strung along the chamber.
-		foreach (int lx in new[] { -100, -50, 0, 50, 100 })
-		{
-			for (int x = bx + lx - 2; x <= bx + lx + 2; x++) Put(x, g - 23, 0xF0C87A, 1.3f);
-			for (int y = g - 27; y < g - 23; y++) Put(bx + lx, y, 0x4A4038, .9f);
-		}
-		// Supply locker.
-		for (int y = g - 11; y < g; y++) for (int x = LockerX - 3; x <= LockerX + 3; x++) Put(x, y, x == LockerX ? 0x3A4248u : 0x56626Au, .95f);
-		Put(LockerX - 1, g - 6, 0xC0C8CC, 1.1f); Put(LockerX + 1, g - 6, 0xC0C8CC, 1.1f);
-		// Cot.
-		for (int x = CotX - 6; x <= CotX + 6; x++) { Put(x, g - 3, 0x6A7A5A, .95f); }
-		for (int x = CotX - 6; x <= CotX - 3; x++) Put(x, g - 4, 0xD8D0C0, .95f);
-		Put(CotX - 6, g - 2, 0x4A4038, .9f); Put(CotX - 6, g - 1, 0x4A4038, .9f); Put(CotX + 6, g - 2, 0x4A4038, .9f); Put(CotX + 6, g - 1, 0x4A4038, .9f);
-		// Map table: a lit survey sheet on legs.
-		for (int x = MapX - 6; x <= MapX + 6; x++) { Put(x, g - 6, 0x7A5A3C, .95f); Put(x, g - 7, (x + _frame / 30) % 5 == 0 ? 0x6FDCC0u : 0xC8BC98u, 1f); }
-		for (int y = g - 5; y < g; y++) { Put(MapX - 5, y, 0x5A4430, .85f); Put(MapX + 5, y, 0x5A4430, .85f); }
-		// Canister rack: one canister per sprayable material; the loaded one is lifted out.
-		int perShelf = (SprayList.Length + 1) / 2;
-		for (int x = RackX - perShelf / 2 - 1; x <= RackX + perShelf / 2 + 1; x++) { Put(x, g - 5, 0x4A4442, .95f); Put(x, g - 11, 0x4A4442, .95f); }
-		for (int y = g - 12; y < g; y++) { Put(RackX - perShelf / 2 - 1, y, 0x4A4442, .95f); Put(RackX + perShelf / 2 + 1, y, 0x4A4442, .95f); }
-		for (int k = 0; k < SprayList.Length; k++)
-		{
-			int shelf = k / perShelf, cx = RackX - perShelf / 2 + k % perShelf, top = shelf == 0 ? g - 14 : g - 8;
-			bool on = k == _sprayIndex;
-			uint c = MaterialTable.Color[SprayList[k]];
-			Put(cx, top + 1 - (on ? 1 : 0), c, on ? 1.4f : 1f); Put(cx, top + 2 - (on ? 1 : 0), c, on ? 1.4f : .85f);
-		}
-
-		// Labels over the stations.
-		void Label(int x, int y, string t) => _actors.Texts.Add((new Vector2((x - _camFX) * CellPx, (y - _camFY) * CellPx), t, new Color("e4ddcf")));
-		Label(GenX, g - 10, "GENERATOR"); Label(bx - 91, g - 12, "SPECIMEN TANKS"); Label(LockerX, g - 13, "LOCKER");
-		Label(CotX, g - 7, "COT"); Label(BenchX, g - 9, "WORKBENCH"); Label(MapX, g - 10, "MAP TABLE");
-		Label(ForgeX, g - 18, "FORGE"); Label(RackX, g - 15, "CANISTERS"); Label(bx, g - 30, "SHAFT ↑");
-
-		// Generator.
-		for (int y = g - 7; y < g; y++) for (int x = GenX - 5; x <= GenX + 5; x++) Put(x, y, 0x8C6A3C, .9f);
-		Put(GenX - 2, g - 5, 0x6FDCC0, 1.3f); Put(GenX + 2, g - 5, (_frame / 20) % 2 == 0 ? 0xE3A33Fu : 0x3A3F44u, 1.3f);
-		// Bench, with whatever is on it.
-		for (int x = BenchX - 7; x <= BenchX + 7; x++) Put(x, g - 5, 0x7A5A3C, .9f);
-		Put(BenchX - 6, g - 4, 0x5A4430, .8f); Put(BenchX - 6, g - 3, 0x5A4430, .8f); Put(BenchX - 6, g - 2, 0x5A4430, .8f); Put(BenchX - 6, g - 1, 0x5A4430, .8f);
-		Put(BenchX + 6, g - 4, 0x5A4430, .8f); Put(BenchX + 6, g - 3, 0x5A4430, .8f); Put(BenchX + 6, g - 2, 0x5A4430, .8f); Put(BenchX + 6, g - 1, 0x5A4430, .8f);
-		for (int k = 0; k < _bench.On.Count; k++)
-		{
-			uint c = ItemColor(_bench.On[k]);
-			Put(BenchX - 4 + k * 3, g - 6, c, 1); Put(BenchX - 3 + k * 3, g - 6, c, 1);
-		}
-		if (_hammerFlash > 0) for (int k = -1; k <= 1; k++) Put(BenchX + k, g - 7 - _rng.Int(2), 0xFFE0A0, 1.5f);
-		// Forge with chimney.
-		for (int y = g - 8; y < g; y++) for (int x = ForgeX - 4; x <= ForgeX + 4; x++) Put(x, y, 0x4A4442, .9f);
-		for (int y = g - 16; y < g - 8; y++) { Put(ForgeX + 2, y, 0x3A3432, .9f); Put(ForgeX + 3, y, 0x3A3432, .9f); }
-		if (_forge.Content != null)
-		{
-			float heat = _forge.Hot ? 1.4f : .7f;
-			uint c = _forge.Done ? ItemColor(_forge.Result ?? Item.Junk) : ItemColor(_forge.Content.Value);
-			for (int x = ForgeX - 2; x <= ForgeX + 2; x++) Put(x, g - 4, _forge.Hot ? 0xFF8A3Au : 0x6A4A3Au, heat);
-			Put(ForgeX, g - 5, c, heat); Put(ForgeX + 1, g - 5, c, heat);
-		}
-		else for (int x = ForgeX - 2; x <= ForgeX + 2; x++) Put(x, g - 4, 0x8A3A1A, .9f);
+		DrawScene();
 	}
 
 	/// <summary>The survey map: every cell you have seen, at one pixel per cell, with you on it.</summary>
@@ -1140,38 +1122,6 @@ public partial class Game : Node2D
 		return (_truckX - dir * (Truck.HalfLength + Truck.BoomReach), (dir > 0 ? _truckRearY : _truckFrontY) - 14);
 	}
 
-	void DrawTruck()
-	{
-		var t = _truck;
-		int dir = t.Facing ? 1 : -1;
-		float tx = _truckX;
-		const int axle = Truck.HalfLength - Truck.WheelInset;
-		void Wheel(float cx, float gy) { for (int dy = 1; dy <= 3; dy++) for (int dx = -1; dx <= 1; dx++) PutA(cx + dx - .5f, gy - dy, dx == 0 && dy == 2 ? 0x8A9095u : 0x34393Du, 1); }
-		Wheel(tx - axle, _truckRearY); Wheel(tx + axle, _truckFrontY);
-
-		// The body is one rigid piece that tilts with the wheels, instead of every column following the ground.
-		float ang = MathF.Atan2(_truckFrontY - _truckRearY, 2 * axle), cy = (_truckRearY + _truckFrontY) / 2;
-		for (int s = -Truck.HalfLength; s <= Truck.HalfLength; s++)
-		{
-			bool cab = s > Truck.HalfLength - 8;
-			int top = cab ? 9 : 5;
-			for (int h = 0; h < top; h++)
-			{
-				uint c = cab && h >= 5 && h <= 7 && s < Truck.HalfLength - 1 && s > Truck.HalfLength - 6 ? 0x2F4448u : 0x5F6B58u;
-				PutR(tx, cy, s * dir - .5f, -5 - h, ang, c, .95f);
-			}
-		}
-		if (_p.CarryingSample && _inTruck) PutR(tx, cy, -dir * 4 - .5f, -10, ang, 0x6FDCC0, 1.3f);
-
-		// Winch: a mast at the back and a boom reaching out over the edge, with the drum and a work light.
-		var (bx, by) = BoomTip();
-		float mx = tx - dir * Truck.HalfLength, baseY = (dir > 0 ? _truckRearY : _truckFrontY) - 5;
-		for (float y = by; y <= baseY; y += 1) PutA(mx - .5f, y, 0x9AA3A8, .95f);
-		for (float x = 0; x <= Truck.BoomReach; x += 1) PutA(mx - dir * x - .5f, by, 0x9AA3A8, .95f);
-		PutA(bx - .5f, by, 0xC96A3B, 1.1f);
-		PutA(mx + dir * 1 - .5f, baseY - 1, 0x5A4A3A, .95f); PutA(mx + dir * 2 - .5f, baseY - 1, 0x5A4A3A, .95f);
-	}
-
 	/// <summary>Queues one cell of a rotated body: (lx, ly) are local cell coordinates around a world origin.</summary>
 	void PutR(float ox, float oy, float lx, float ly, float ang, uint c, float k)
 	{
@@ -1188,33 +1138,6 @@ public partial class Game : Node2D
 	{
 		float d = MathF.Max(MathF.Abs(x1 - x0), MathF.Abs(y1 - y0));
 		for (int i = 0; i <= d; i++) { float t = d == 0 ? 0 : i / d; PutA(x0 + (x1 - x0) * t - .5f, y0 + (y1 - y0) * t, c, 1); }
-	}
-
-	void DrawPlayer()
-	{
-		float px = _playerX - .5f, py = _playerY - 1;
-		var b = _p.Body;
-		int lx = (int)px - _camX, ly = (int)py - _camY;
-		float pl = MathF.Max(.5f, MathF.Min(1, _light[Math.Clamp(ly * _vw + lx, 0, _light.Length - 1)] + .3f));
-		if (b.Downed)
-		{
-			for (int t = -3; t <= 3; t++) PutA(px + t, py, 0xC96A3B, pl);
-			PutA(px + (_p.Facing ? 4 : -4), py, 0xD9D2C2, pl);
-			return;
-		}
-		PutA(px - 1, py, PartCol(b[Part.LeftLeg]), pl); PutA(px + 1, py, PartCol(b[Part.RightLeg]), pl);
-		PutA(px - 1, py - 1, PartCol(b[Part.LeftLeg]), pl); PutA(px + 1, py - 1, PartCol(b[Part.RightLeg]), pl);
-		for (int t = 2; t <= 4; t++) for (int s = -1; s <= 1; s++) PutA(px + s, py - t, b[Part.Torso] >= Hurt.Hurt ? 0x9A4A2Au : 0xC96A3Bu, pl);
-		if (_p.Clinging)
-		{
-			int d = _p.ClingDir;
-			PutA(px + d * 2, py - 6, PartCol(b[Part.RightArm]), pl); PutA(px + d * 2, py - 5, PartCol(b[Part.LeftArm]), pl);
-		}
-		else PutA(px + (_p.Facing ? 2 : -2), py - 3, PartCol(_p.Facing ? b[Part.RightArm] : b[Part.LeftArm]), pl);
-		if (_pack[_held] > 0) PutA(px + (_p.Facing ? 3 : -3), py - 3, ItemColor(_held), pl + .2f);
-		for (int s = -1; s <= 1; s++) { PutA(px + s, py - 5, 0xD9D2C2, pl); PutA(px + s, py - 6, 0xD9D2C2, pl); }
-		PutA(px + (_p.Facing ? 1 : -1), py - 5, 0x6FDCC0, 1.2f);
-		if (_p.CarryingSample) PutA(px + (_p.Facing ? -2 : 2), py - 3, 0x6FDCC0, 1.2f);
 	}
 
 	/// <summary>A thin bar above the head while stamina is being used or recovering.</summary>
@@ -1239,7 +1162,7 @@ public partial class Game : Node2D
 		bool diggable = m is Mat.Rock or Mat.Sand or Mat.Ore or Mat.Mycelium or Mat.Moss;
 		var col = reach < 12 ? (diggable ? new Color(.44f, .86f, .75f, .95f) : new Color(.9f, .87f, .81f, .55f)) : new Color(.9f, .87f, .81f, .2f);
 		float cx = ((int)ax - _camFX) * CellPx, cy = ((int)ay - _camFY) * CellPx;
-		const float r = 6, len = 3, w = 1.5f;
+		const float r = CellPx * 1.1f, len = CellPx * .7f, w = 2f;
 		foreach (var (sx, sy) in new[] { (-1, -1), (1, -1), (-1, 1), (1, 1) })
 		{
 			float ox = cx + CellPx / 2f + sx * r, oy = cy + CellPx / 2f + sy * r;
@@ -1305,13 +1228,16 @@ public partial class Game : Node2D
 		var (aimX, aimY) = AimPoint(_playerX, _playerY - Player.Height + 1);
 		byte aimM = _world.Get((int)MathF.Floor(aimX), (int)MathF.Floor(aimY));
 		string looking = aimM == Mat.Empty ? "" : $"  ·  aiming at {MaterialTable.Defs[aimM].Name}";
-		string tools = $"flares {_pack[Item.Flare]}{(_pack[Item.Pick] > 0 ? " · pick" : "")} · pack {_pack.BulkUsed}/{_pack.Capacity}{(minerals.Any() ? " · " + string.Join("  ", minerals) : "")}";
+		string bubbleBar = "[" + new string('|', (int)MathF.Ceiling(_bubbleBattery)) + new string('.', (int)(BubbleBatteryMax - MathF.Ceiling(_bubbleBattery))) + "]";
+		string tools = $"bubble {bubbleBar}{(_bubbleOn ? " ON" : "")} · flares {_pack[Item.Flare]}{(_pack[Item.Pick] > 0 ? " · pick" : "")} · pack {_pack.BulkUsed}/{_pack.Capacity}{(minerals.Any() ? " · " + string.Join("  ", minerals) : "")}";
 		var sd = MaterialTable.Defs[SprayMat];
 		string spray = $"SPRAY ▸ {sd.Name}  ({sd.Phase.ToString().ToLowerInvariant()}{(sd.Strange ? ", strange" : "")})  ·  {_sprayIndex + 1}/{SprayList.Length}";
-		_hud.Text = $"{line1}\n{spray}{looking}\n{tools}\nKeys: A/D move · Space jump · W/S climb or reel · LMB dig · RMB spray · wheel or Z/X spray material · G or MMB grapple · hold H rescue beacon" +
-			"\n      E use · C clip · Q flare · F lamp · L lights · N new cave · R restart · P pause" +
-			"\nPad: stick move · right stick aim · A jump · RT dig · LT spray · LB grapple · d-pad ←/→ spray material · hold d-pad ↓ beacon" +
-			"\n      X use · B clip · Y lamp · R3 flare · Start pause · Back restart" +(_paused ? "\nPAUSED" : "");
+		string keys = !_showHelp ? "\nF1 controls" :
+			"\nKeys: A/D move · Space jump · W/S climb or reel · 1-5 or wheel: tool · LMB/RMB use tool · Z/X spray material · Tab held item · G or MMB grapple · V bubble · hold H rescue beacon" +
+			"\n      E use · C clip · Q flare · F lamp · L lights · N new cave · R restart · P pause · F1 hide" +
+			"\nPad: stick move · right stick aim · A jump · d-pad ↑ tool · RT/LT use tool · LB grapple · RB bubble · d-pad ←/→ spray material · hold d-pad ↓ beacon" +
+			"\n      X use · B clip · Y lamp · R3 flare · Start pause · Back restart";
+		_hud.Text = $"{line1}\n{spray}{looking}\n{tools}{keys}" + (_paused ? "\nPAUSED" : "");
 		_hint.Text = Hint();
 		_msg.Text = _p.Body.Downed && !_p.Clipped && !_won ? "Downed and off the line. R to restart." : _p.Message;
 	}
@@ -1336,13 +1262,13 @@ public partial class Game : Node2D
 		if (_held == Item.Rope && _pack[Item.Rope] > 0 && MathF.Abs(_p.X - _p.AnchorX) < 12 && MathF.Abs(_p.Y - _truck.Y) < 10) return "E: splice rope onto the winch line";
 		if (_p.DistanceToLine() < _p.ClipReach) return "C: clip onto the winch line";
 		if (MathF.Abs(_truck.X - _p.X) < Truck.HalfLength + 4 && MathF.Abs(_truck.Y - _p.Y) < 8) return "E: drive";
-		if (MathF.Abs(GenX - _p.X) < 24) return "the generator charges your lamp";
-		if (NearSurface(LockerX, 6)) return "E: take flares and rope";
-		if (NearSurface(CotX, 8)) return "E: rest (heals you, charges the lamp)";
+		if (MathF.Abs(GenX - _p.X) < 24) return "the generator charges your lamp and bubble";
+		if (NearSurface(LockerX, 6)) return _hasJar ? "E: take flares and rope" : "E: take a spare vacuum tank";
+		if (NearSurface(CotX, 8)) return "E: rest (heals you, charges the lamp and bubble)";
 		if (NearSurface(MapX, 8)) return _mapOpen ? "E: put the map down" : "E: look at the survey map";
 		if (NearSurface(RackX, 10)) return $"E: swap canister (now {MaterialTable.Defs[SprayMat].Name})";
 		if (MathF.Abs(_site.BaseX - 91 - _p.X) < 10 && MathF.Abs(_p.Y - BaseY) < 12) return "specimen tanks: spray things in and see what happens";
-		return "";
+		return ToolHint();
 	}
 }
 
@@ -1374,12 +1300,14 @@ public partial class ActorLayer : Node2D
 	public readonly List<(Rect2 rect, Color col)> Marks = [];
 	public readonly List<(Vector2 origin, float angle, Rect2 rect, Color col)> Rot = [];
 	public readonly List<(Vector2 pos, string text, Color col)> Texts = [];
+	public readonly List<Action<CanvasItem>> Shapes = [];
 
 	public override void _Draw()
 	{
 		var s = new Vector2(Size, Size);
 		foreach (var (o, a, r, c) in Rot) { DrawSetTransform(o, a, Vector2.One); DrawRect(r, c); }
 		DrawSetTransform(Vector2.Zero, 0, Vector2.One);
+		foreach (var d in Shapes) d(this);
 		foreach (var (p, c) in Cells) DrawRect(new Rect2(p, s), c);
 		foreach (var (r, c) in Marks) DrawRect(r, c);
 		var font = ThemeDB.FallbackFont;

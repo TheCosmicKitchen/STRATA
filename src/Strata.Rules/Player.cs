@@ -39,6 +39,15 @@ public sealed class Player
 
     /// <summary>Set for one update when a jump starts or a hard landing happens, for camera and sound feedback.</summary>
     public bool Jumped;
+    /// <summary>
+    /// The bubble: a shell of force around you. Hard landings bounce instead of breaking legs, walls bounce you
+    /// back, flames can't reach you, and you keep your momentum in the air. Turned on and off by the game, which
+    /// runs it off its own battery.
+    /// </summary>
+    public bool Bubble;
+    /// <summary>True on the tick the bubble bounced off something hard.</summary>
+    public bool Bounced;
+    public const float BubbleBounce = .55f;
     public float LandingImpact;
 
     float _coyote, _jumpBuffer;
@@ -148,7 +157,8 @@ public sealed class Player
 
     public void Update(in PlayerInput inp, float dt)
     {
-        Jumped = false; LandingImpact = 0; Mantled = false; GripFailed = false;
+        Jumped = false; LandingImpact = 0; Mantled = false; GripFailed = false; Bounced = false;
+        if (Bubble) Clinging = false;
 
         var b = Body;
         byte head = CellAtHead(), feet = CellAtFeet();
@@ -184,6 +194,12 @@ public sealed class Player
         float target = want * speed;
         if (Clinging) { }
         else if (Clipped && !Grounded) VX += want * 40 * dt;      // swing on the line
+        else if (Bubble && !Grounded && !inLiquid)
+        {
+            // In the bubble you keep your momentum: you can steer, but nothing brakes you in the air.
+            float nv = VX + want * AirAccel * .6f * dt;
+            if (MathF.Abs(nv) <= MathF.Max(MathF.Abs(VX), speed)) VX = nv;
+        }
         else
         {
             bool turning = target != 0 && MathF.Sign(target) != MathF.Sign(VX) && VX != 0;
@@ -203,7 +219,7 @@ public sealed class Player
         _regrabDelay = MathF.Max(0, _regrabDelay - dt);
         bool armsOk = !(b[Part.LeftArm] == Hurt.Useless && b[Part.RightArm] == Hurt.Useless) && !b.Downed;
         int push = want > .3f ? 1 : want < -.3f ? -1 : 0;
-        if (!Clinging && !Grounded && !inLiquid && armsOk && push != 0 && Stamina > 5 && _regrabDelay <= 0 && VY > -25 && WallBeside(push))
+        if (!Bubble && !Clinging && !Grounded && !inLiquid && armsOk && push != 0 && Stamina > 5 && _regrabDelay <= 0 && VY > -25 && WallBeside(push))
         { Clinging = true; ClingDir = push; }
         if (Clinging)
         {
@@ -263,8 +279,14 @@ public sealed class Player
             }
         }
 
+        // Landing in the bubble: a hard landing bounces, and nothing breaks.
+        if (Bubble && Grounded && preVY > 0 && VY == 0 && preVY > 20)
+        {
+            LastLanding = preVY; LandingImpact = preVY;
+            if (preVY > 45) { VY = -preVY * BubbleBounce; Grounded = false; Bounced = true; }
+        }
         // Landing injuries.
-        if (Grounded && preVY > 0 && VY == 0 && preVY > 20)
+        else if (Grounded && preVY > 0 && VY == 0 && preVY > 20)
         {
             LastLanding = preVY; LandingImpact = preVY;
             if (preVY > DownFall) { b.Injure(Part.LeftLeg, Hurt.Useless); b.Injure(Part.RightLeg, Hurt.Useless); b.Injure(Part.Torso, Hurt.Hurt); b.Downed = true; Message = "You hit hard and can't get up."; }
@@ -292,7 +314,7 @@ public sealed class Player
         for (int yy = (int)Y - Height; yy < (int)Y; yy++)
         {
             byte c = _w.Get((int)X, yy);
-            if (c == Mat.Fire) { b.Injure(yy < Y - 4 ? Part.Torso : Part.LeftLeg, Hurt.Hurt); Message = "Burned."; }
+            if (c == Mat.Fire && !Bubble) { b.Injure(yy < Y - 4 ? Part.Torso : Part.LeftLeg, Hurt.Hurt); Message = "Burned."; }
             if (c == Mat.Lava) inLava = true;
             if (c == Mat.Acid) { b.Injure(Part.RightLeg, Hurt.Hurt); Message = "Acid through the boots."; }
         }
@@ -344,9 +366,15 @@ public sealed class Player
                 for (int h = 1; h <= maxH && Grounded; h++)
                     if (!Blocked(X + sx, Y + sy - h - .01f)) { X += sx; Y -= h; stepped = true; if (h > 1) _stepCooldown = .15f; break; }
                 if (stepped) continue;
-                VX = 0;
+                if (Bubble && MathF.Abs(VX) > 30) { VX = -VX * BubbleBounce; Bounced = true; }
+                else VX = 0;
             }
-            if (sy != 0) { if (sy > 0) Grounded = true; VY = 0; }
+            if (sy != 0)
+            {
+                if (sy > 0) Grounded = true;
+                if (sy < 0 && Bubble && VY < -30) { VY = -VY * BubbleBounce; Bounced = true; }
+                else VY = 0;
+            }
             break;
         }
         if (dy == 0 && dx != 0 && Grounded && !Blocked(X, Y + .05f) && Blocked(X, Y + 1.05f)) Y += 1;   // step down

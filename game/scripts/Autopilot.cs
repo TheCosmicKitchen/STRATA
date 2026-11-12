@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.IO;
 using Godot;
@@ -229,6 +230,7 @@ public partial class Game
 			c.Aim = new Godot.Vector2(p.X + 60, g.BaseY - 16);
 			byte want = _t < 3f ? Mat.Lava : _t < 5.5f ? Mat.Water : Mat.Coldflame;
 			g._sprayIndex = Array.IndexOf(SprayList, want);
+			g._slot = Tool.Sprayer;
 			c.Spray = _t < 7;
 			foreach (var at in new[] { 2.9f, 5.4f, 7.5f })
 				if (_t - dt < at && _t >= at) g.CallDeferred(nameof(SaveShotDeferred), System.IO.Path.Combine(_dir, $"{++_shot:00}-spray-{at:F1}s.png"));
@@ -280,6 +282,108 @@ public partial class Game
 			if ((int)(_t * 5) != (int)((_t - dt) * 5))
 				GD.Print($"grapple t={_t:F1} x={p.X:F1} y={p.Y:F1} clipped={p.Clipped} grappled={g._grappled} flying={g._hookFlying} rope={p.RopeLen:F1} msg={p.Message}");
 			if (_t > 4.5f) g.GetTree().Quit();
+			return c;
+		}
+	}
+}
+
+public partial class Game
+{
+	/// <summary>--demo-bubble: bubble up, set off a blast right beside you, then run off the east edge of the base.</summary>
+	sealed class BubbleDemo
+	{
+		float _t; bool _blasted, _pressed;
+		public Controls Think(Game g, float dt)
+		{
+			var c = new Controls();
+			var p = g._p;
+			_t += dt;
+			if (_t > .3f && !_pressed) { _pressed = true; c.Bubble = true; }
+			if (_t > .6f && !_blasted) { _blasted = true; for (int k = 0; k < 3; k++) g._world.Set((int)p.X - 4, (int)p.Y - 2 - k, Mat.Blast); }
+			if (_t > 2.5f) c.MoveX = 1;
+			if ((int)(_t * 5) != (int)((_t - dt) * 5))
+				GD.Print($"bubble t={_t:F1} x={p.X:F1} y={p.Y:F1} vx={p.VX:F0} vy={p.VY:F0} on={g._bubbleOn} batt={g._bubbleBattery:F1} hurt={string.Join("", p.Body.Parts.Select(h => (int)h))} downed={p.Body.Downed} msg={p.Message}");
+			if (_t > 9) g.GetTree().Quit();
+			return c;
+		}
+	}
+}
+
+public partial class Game
+{
+	/// <summary>--demo-tools: hoover the specimen tank, blow it out, shovel sand, then hoover fuel and flame.</summary>
+	sealed class ToolsDemo
+	{
+		float _t; int _stage = -1;
+		public Controls Think(Game g, float dt)
+		{
+			var c = new Controls();
+			var p = g._p;
+			_t += dt;
+			int bx = g._site.BaseX, gy = g.BaseY;
+			if (_stage < 0) { _stage = 0; p.X = bx - 80; p.Y = gy; p.Facing = false; }
+			if (_t < 2) { g._slot = Tool.Vacuum; c.Aim = new Godot.Vector2(bx - 86, gy - 3); c.Dig = true; }               // hoover the slime tank
+			else if (_t < 3.2f) { c.Aim = new Godot.Vector2(bx - 60, gy - 14); c.Spray = true; }                           // blow it out
+			else if (_t < 3.3f) { for (int x = 0; x < 6; x++) for (int y = 0; y < 3; y++) g._world.Set(bx - 74 + x, gy - 1 - y, Mat.Sand); }
+			else if (_t < 4.3f) { g._slot = Tool.Shovel; c.Aim = new Godot.Vector2(bx - 72, gy - 2); c.Dig = true; }    // scoop
+			else if (_t < 4.6f) { c.Aim = new Godot.Vector2(bx - 50, gy - 12); c.Spray = true; }                           // throw
+			else if (_t < 4.7f) { for (int x = 0; x < 5; x++) for (int y = 0; y < 4; y++) g._world.Set(bx - 76 + x, gy - 3 - y, Mat.Methane); }
+			else if (_t is > 5.6f and < 5.7f) g._world.Set(bx - 74, gy - 4, Mat.Fire, 60);
+			else if (_t < 6.5f) { g._slot = Tool.Vacuum; c.Aim = new Godot.Vector2(bx - 74, gy - 4); c.Dig = true; }
+			if ((int)(_t * 4) != (int)((_t - dt) * 4))
+				GD.Print($"tools t={_t:F2} slot={g._slot} tank={g._hasJar} n={g._jarTotal} [{g.JarContents()}] temp={g._jarTemp:F0} cracks={g._jarCracks} shovel={g._shovel.Count} hurt={string.Join("", p.Body.Parts.Select(h => (int)h))} msg={p.Message}");
+			if (_t > 7.5f) g.GetTree().Quit();
+			return c;
+		}
+	}
+}
+
+public partial class Game
+{
+	/// <summary>--demo-tips: plain pick vs crystal tip on granite, lava tip quenched in water, cryo tip freezing water, void tip.</summary>
+	sealed class TipsDemo
+	{
+		float _t; int _step = -1;
+		int Count(Game g, byte m, int x0, int x1, int y0, int y1) { int n = 0; for (int x = x0; x < x1; x++) for (int y = y0; y < y1; y++) if (g._world.Get(x, y) == m) n++; return n; }
+		void Fill(Game g, byte m, int x0, int x1, int y0, int y1) { for (int x = x0; x < x1; x++) for (int y = y0; y < y1; y++) g._world.Set(x, y, m); }
+		public Controls Think(Game g, float dt)
+		{
+			var c = new Controls();
+			var p = g._p;
+			_t += dt;
+			int bx = g._site.BaseX, gy = g.BaseY, wx = bx - 60;
+			g._slot = Tool.Pick;
+			int step = (int)(_t / 1.5f);
+			bool first = step != _step; _step = step;
+			var aim = new Godot.Vector2(wx + 1, gy - 4);
+			switch (step)
+			{
+				case 0:
+					if (first) { p.X = wx - 6; p.Y = gy; p.Facing = true; Fill(g, Mat.Granite, wx, wx + 8, gy - 8, gy); g.ResetTip(); }
+					c.Aim = aim; c.Dig = _t < .35f; break;
+				case 1:
+					if (first) { GD.Print($"tips plain pick: granite left {Count(g, Mat.Granite, wx, wx + 8, gy - 8, gy)}/64"); Fill(g, Mat.Granite, wx, wx + 8, gy - 8, gy); g._world.Set(wx + 1, gy - 4, Mat.Crystal); g.ResetTip(); }
+					if (_t < step * 1.5f + .2f) { c.Aim = aim; c.Spray = true; } else { c.Aim = aim; c.Dig = _t < step * 1.5f + .55f || step == 4; }
+					break;
+				case 2:
+					if (first) { GD.Print($"tips crystal tip: granite left {Count(g, Mat.Granite, wx, wx + 8, gy - 8, gy)}/64 tip={g.TipName} msg={p.Message}"); Fill(g, Mat.Empty, wx, wx + 8, gy - 8, gy); g._world.Set(wx + 1, gy - 4, Mat.Lava); g.ResetTip(); }
+					if (_t < step * 1.5f + .2f) { c.Aim = aim; c.Spray = true; }
+					else if (_t < step * 1.5f + .3f) { GD.Print($"tips lava tipped: tip={g.TipName} msg={p.Message}"); Fill(g, Mat.Water, wx, wx + 6, gy - 6, gy); }
+					else { c.Aim = new Godot.Vector2(wx + 2, gy - 2); c.Dig = true; }
+					break;
+				case 3:
+					if (first) { GD.Print($"tips after dunking: tip={g.TipName} msg={p.Message}"); g._world.Set(wx + 1, gy - 4, Mat.Cryo); g.ResetTip(); Fill(g, Mat.Water, wx + 2, wx + 7, gy - 5, gy); }
+					if (_t < step * 1.5f + .2f) { c.Aim = aim; c.Spray = true; }
+					else { c.Aim = new Godot.Vector2(wx + 3, gy - 1); c.Dig = true; }
+					break;
+				case 4:
+					if (first) { GD.Print($"tips cryo tip: tip={g.TipName} ice={Count(g, Mat.Ice, wx - 2, wx + 8, gy - 8, gy)} water={Count(g, Mat.Water, wx - 2, wx + 8, gy - 8, gy)} msg={p.Message}"); Fill(g, Mat.Granite, wx, wx + 8, gy - 8, gy); g._world.Set(wx + 1, gy - 4, Mat.Void); g.ResetTip(); }
+					if (_t < step * 1.5f + .2f) { c.Aim = aim; c.Spray = true; } else { c.Aim = aim; c.Dig = _t < step * 1.5f + .55f || step == 4; }
+					break;
+				default:
+					GD.Print($"tips void tip: tip={g.TipName} granite left {Count(g, Mat.Granite, wx, wx + 8, gy - 8, gy)}/64 pick={g._pack[Item.Pick]} msg={p.Message}");
+					g.GetTree().Quit(); break;
+			}
 			return c;
 		}
 	}
